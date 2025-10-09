@@ -1,0 +1,1604 @@
+{% extends 'ecgdatabank/base.html' %}
+{% block title %}ECG Analytics Dashboard{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+{% block extra_css %}
+
+
+  <style>
+/* Enhanced CSS Variables for Premium Theme */
+:root {
+  --bg-primary: #0a0f1c;
+  --bg-secondary: #1a1f2e;
+  --bg-tertiary: #242938;
+  --bg-gradient-start: #0a0f1c;
+  --bg-gradient-end: #1a1f2e;
+  --text-primary: #ffffff;
+  --text-secondary: #a8b3cf;
+  --text-muted: #6b7280;
+  --border-color: #2d3748;
+  --accent-blue: #00d4ff;
+  --accent-green: #00ff88;
+  --accent-purple: #8b5cf6;
+  --accent-red: #ff4757;
+  --accent-orange: #ffa726;
+  --glass-bg: rgba(26, 31, 46, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-glow: 0 0 30px rgba(0, 212, 255, 0.3);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --alert-success: #34d399;
+  --alert-success-bg: #1a2e2a;
+  --alert-success-text: #a7f3d0;
+  --alert-error: #f87171;
+  --alert-error-bg: #3d1f1f;
+  --alert-error-text: #fecaca;
+  --alert-warning: #fbbf24;
+  --alert-warning-bg: #3d2e1a;
+  --alert-warning-text: #fcdf9c;
+  --alert-info: #60a5fa;
+  --alert-info-bg: #1e2a44;
+  --alert-info-text: #bfdbfe;
+  --alert-primary: #60a5fa;
+  --alert-primary-bg: #2b2a44;
+  --alert-primary-text: #bfdbfe;
+  --alert-secondary: #9ca3af;
+  --alert-secondary-bg: #2d3748;
+  --alert-secondary-text: #d1d5db;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-gradient-start: #f8fafc;
+  --bg-gradient-end: #e2e8f0;
+  --text-primary: #1a202c;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --border-color: #e2e8f0;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.2);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+  --alert-success: #22c55e;
+  --alert-success-bg: #ecfdf5;
+  --alert-success-text: #065f46;
+  --alert-error: #ef4444;
+  --alert-error-bg: #fef2f2;
+  --alert-error-text: #991b1b;
+  --alert-warning: #f59e0b;
+  --alert-warning-bg: #fffbeb;
+  --alert-warning-text: #92400e;
+  --alert-info: #3b82f6;
+  --alert-info-bg: #eff6ff;
+  --alert-info-text: #1e40af;
+  --alert-primary: #3b82f6;
+  --alert-primary-bg: #f5f3ff;
+  --alert-primary-text: #2563eb;
+  --alert-secondary: #6b7280;
+  --alert-secondary-bg: #f9fafb;
+  --alert-secondary-text: #374151;
+}
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Alert System Styles */
+.alert-system-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 420px;
+    width: 100%;
+    pointer-events: none;
+}
+
+.alert-item {
+    background: var(--background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+    overflow: hidden;
+    pointer-events: auto;
+    position: relative;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.alert-item.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.alert-item.hide {
+    transform: translateX(100%);
+    opacity: 0;
+    margin-bottom: 0;
+    max-height: 0;
+}
+
+.alert-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--alert-color);
+}
+
+.alert-item.type-success {
+    --alert-color: var(--alert-success);
+    --alert-bg: var(--alert-success-bg);
+    --alert-text: var(--alert-success-text);
+}
+
+.alert-item.type-error {
+    --alert-color: var(--alert-error);
+    --alert-bg: var(--alert-error-bg);
+    --alert-text: var(--alert-error-text);
+}
+
+.alert-item.type-warning {
+    --alert-color: var(--alert-warning);
+    --alert-bg: var(--alert-warning-bg);
+    --alert-text: var(--alert-warning-text);
+}
+
+.alert-item.type-info {
+    --alert-color: var(--alert-info);
+    --alert-bg: var(--alert-info-bg);
+    --alert-text: var(--alert-info-text);
+}
+
+.alert-item.type-primary {
+    --alert-color: var(--alert-primary);
+    --alert-bg: var(--alert-primary-bg);
+    --alert-text: var(--alert-primary-text);
+}
+
+.alert-item.type-secondary {
+    --alert-color: var(--alert-secondary);
+    --alert-bg: var(--alert-secondary-bg);
+    --alert-text: var(--alert-secondary-text);
+}
+
+.alert-content {
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    background: var(--alert-bg);
+    color: var(--alert-text);
+}
+
+.alert-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    margin-top: 2px;
+    color: var(--alert-color);
+}
+
+.alert-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.alert-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.alert-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--alert-text);
+}
+
+.alert-message {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--alert-text);
+    opacity: 0.8;
+}
+
+.alert-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.alert-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--alert-color);
+    color: white;
+}
+
+.alert-action:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.alert-action.secondary {
+    background: transparent;
+    color: var(--alert-color);
+    border: 1px solid var(--alert-color);
+}
+
+.alert-close {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    margin-left: 8px;
+    color: var(--alert-text);
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+.alert-close svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.alert-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--alert-color);
+    transition: width 0.1s linear;
+    opacity: 0.7;
+}
+
+/* Animated Background */
+.animated-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.floating-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.floating-particles::before,
+.floating-particles::after {
+  content: '';
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-blue) 0%, transparent 70%);
+  opacity: 0.1;
+  animation: float 20s infinite ease-in-out;
+}
+
+.floating-particles::before {
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.floating-particles::after {
+  bottom: 10%;
+  right: 10%;
+  background: radial-gradient(circle, var(--accent-purple) 0%, transparent 70%);
+  animation-delay: 10s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-30px) rotate(120deg); }
+  66% { transform: translateY(30px) rotate(240deg); }
+}
+
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--accent-blue);
+  border-radius: 1rem;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Main Content */
+.main-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+/* Enhanced Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.stats-card {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  border: 1px solid var(--glass-border);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+  animation: shimmer 3s infinite;
+}
+
+.stats-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-glow);
+}
+
+.stats-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.05;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  transition: opacity 0.3s ease;
+}
+
+.stats-card:hover .stats-background {
+  opacity: 0.1;
+}
+
+.stats-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stats-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-value {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.stats-trend {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.stats-trend svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.stats-icon {
+  position: relative;
+  padding: 1rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.stats-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
+
+.stats-card:hover .stats-icon::before {
+  opacity: 0.2;
+}
+
+.stats-icon svg {
+  width: 2rem;
+  height: 2rem;
+  z-index: 2;
+}
+
+.stats-icon.blue svg {
+  color: var(--accent-blue);
+}
+
+.stats-icon.green svg {
+  color: var(--accent-green);
+}
+
+.stats-icon.purple svg {
+  color: var(--accent-purple);
+}
+
+.stats-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  border-radius: 0 0 1.5rem 1.5rem;
+  animation: expandBar 2s ease-out forwards;
+}
+
+.stats-bar.blue {
+  background: linear-gradient(90deg, var(--accent-blue), #0099cc);
+}
+
+.stats-bar.green {
+  background: linear-gradient(90deg, var(--accent-green), #00cc66);
+}
+
+.stats-bar.purple {
+  background: linear-gradient(90deg, var(--accent-purple), #6d28d9);
+}
+
+@keyframes expandBar {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Content Grid */
+.content-grid {
+  display: grid;
+}
+
+@media (min-width: 1200px) {
+  .content-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+}
+
+/* Revolutionary Chart Container */
+.chart-container {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 2rem;
+  border: 1px solid var(--glass-border);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-xl);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  width:90%;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple), var(--accent-green));
+  border-radius: 2rem;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chart-container:hover::before {
+  opacity: 0.3;
+}
+
+.chart-container:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.chart-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.chart-icon {
+  position: relative;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.chart-icon:hover {
+  transform: scale(1.1);
+}
+
+.chart-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: white;
+  z-index: 2;
+}
+
+.icon-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 1rem;
+  filter: blur(10px);
+  opacity: 0.5;
+  animation: iconPulse 2s infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.chart-title-group h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.chart-title-group p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-secondary);
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.chart-btn {
+  padding: 0.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--text-muted);
+}
+
+.chart-btn.active,
+.chart-btn:hover {
+  background: var(--accent-blue);
+  transform: scale(1.1);
+}
+
+.chart-btn.active svg,
+.chart-btn:hover svg {
+  color: white;
+}
+
+.chart-content {
+  position: relative;
+  height: 28rem;
+}
+
+.chart-spinner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.medical-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.heartbeat-line {
+  width: 100px;
+  height: 2px;
+  background: var(--accent-blue);
+  position: relative;
+  overflow: hidden;
+}
+
+.heartbeat-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, white, transparent);
+  animation: heartbeat 1.5s infinite;
+}
+
+@keyframes heartbeat {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.spinner-text {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.chart-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chart-center-info {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--glass-border);
+}
+
+
+/* Enhanced Table Container */
+.table-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 2rem;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--glass-border);
+  {% comment %} overflow: hidden; {% endcomment %}
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+} 
+
+.table-container:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+}
+
+.table-header {
+  padding: 2rem;
+  {% comment %} border-bottom: 1px solid var(--border-color); {% endcomment %}
+  {% comment %} background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary)); {% endcomment %}
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 2rem 2rem 0 0;
+  
+}
+
+.table-title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.table-icon {
+  position: relative;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-green), #00cc66);
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.table-icon:hover {
+  transform: scale(1.1);
+}
+
+.table-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: white;
+  z-index: 2;
+}
+
+.table-title-group h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  border-radius: 0.5rem;
+}
+
+.table-title-group p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.records-table th {
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 2px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.th-content:hover {
+  color: var(--accent-blue);
+  
+}
+
+.sort-indicator {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.records-table td {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.records-table tbody tr {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.records-table tbody tr:hover {
+  background: linear-gradient(90deg, var(--bg-tertiary), var(--bg-secondary));
+  transform: scale(1.01);
+}
+
+.records-table tbody tr:hover td {
+  color: var(--accent-blue);
+}
+
+.records-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Enhanced Arrhythmia Badges */
+.arrhythmia-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.arrhythmia-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.arrhythmia-badge:hover::before {
+  left: 100%;
+}
+
+/* Loading States */
+.skeleton {
+  background: linear-gradient(90deg, var(--border-color), var(--bg-tertiary), var(--border-color));
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+  height: 1.25rem;
+  width: 100%;
+}
+
+.loading-row .skeleton {
+  height: 1rem;
+  width: 85%;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header-content {
+    padding: 0 1rem;
+  }
+  
+  .main-content {
+    padding: 2rem 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .chart-container,
+  .table-container {
+    padding: 1.5rem;
+  }
+  
+  .header-text h1 {
+    font-size: 1.25rem;
+  }
+  
+  .header-text p {
+    display: none;
+  }
+  
+  .stats-value {
+    font-size: 2rem;
+  }
+  
+  .chart-content {
+    height: 24rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .records-table th,
+  .records-table td {
+    padding: 1rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .stats-card {
+    padding: 1.5rem;
+  }
+  
+  .header-content {
+    padding: 0 0.75rem;
+  }
+  
+  .main-content {
+    padding: 1.5rem 0.75rem;
+  }
+  
+  .chart-content {
+    height: 20rem;
+  }
+}
+
+/* Advanced Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stats-card,
+.chart-container,
+.table-container {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.stats-card:nth-child(1) { animation-delay: 0.1s; }
+.stats-card:nth-child(2) { animation-delay: 0.2s; }
+.stats-card:nth-child(3) { animation-delay: 0.3s; }
+.chart-container { animation-delay: 0.4s; }
+.table-container { animation-delay: 0.5s; }
+
+/* Glowing effects for dark theme */
+[data-theme="dark"] .stats-card:hover {
+  box-shadow: 
+    0 0 30px rgba(0, 212, 255, 0.2),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .chart-container:hover {
+  box-shadow: 
+    0 0 40px rgba(139, 92, 246, 0.3),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .table-container:hover {
+  box-shadow: 
+    0 0 35px rgba(0, 255, 136, 0.2),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="app">
+        <!-- Animated Background -->
+        <div class="animated-bg">
+            <div class="floating-particles"></div>
+        </div>
+        <main class="main-content">
+            <!-- Enhanced Stats Grid -->
+            <div class="stats-grid">
+                <div class="stats-card blue" data-aos="fade-up" data-aos-delay="100">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Patients</p>
+                            <p class="stats-value" id="totalPatient">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                               
+                                
+                            </div>
+                        </div>
+                        <div class="stats-icon blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar blue"></div>
+                </div>
+
+                <div class="stats-card green" data-aos="fade-up" data-aos-delay="200">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Records</p>
+                            <p class="stats-value" id="totalRecords">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                            </div>
+                        </div>
+                        <div class="stats-icon green">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar green"></div>
+                </div>
+
+                <div class="stats-card purple" data-aos="fade-up" data-aos-delay="300">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Time (mins)</p>
+                            <p class="stats-value" id="TotalTimes">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                            </div>
+                        </div>
+                        <div class="stats-icon purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12,6 12,12 16,14"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar purple"></div>
+                </div>
+            </div>
+
+            <!-- Enhanced Content Grid -->
+            <div class="content-grid">
+                <!-- Revolutionary Chart Container -->
+                <div class="chart-container" data-aos="fade-right" data-aos-delay="400">
+                    <div class="chart-header">
+                        <div class="chart-title-group">
+                            <div class="chart-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                                </svg>
+                                <div class="icon-glow"></div>
+                            </div>
+                            <div>
+                                <h2>Arrhythmia Distribution</h2>
+                                <p>Real-time patient condition analysis</p>
+                            </div>
+                        </div>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-view="doughnut">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <circle cx="12" cy="12" r="4"/>
+                                </svg>
+                            </button>
+                            <button class="chart-btn" data-view="pie">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-content">
+                        <div id="chart-loader" class="chart-spinner">
+                            <div class="medical-spinner">
+                                <div class="heartbeat-line"></div>
+                                <div class="spinner-text">Analyzing Data...</div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="patientChart"></canvas>
+                            <div class="chart-overlay">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Recent Records -->
+                <div class="table-container" data-aos="fade-left" data-aos-delay="500">
+                    <div class="table-header">
+                        <div class="table-title-group">
+                            <div class="table-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 3h18v18H3zM9 9h6v6H9z"/>
+                                    <path d="M9 1v6M15 1v6M9 15v6M15 15v6M1 9h6M1 15h6M15 9h6M15 15h6"/>
+                                </svg>
+                                <div class="icon-pulse"></div>
+                            </div>
+                            <div>
+                                <h3>Recent ECG Records</h3>
+                                <p>Latest 5 cardiac monitoring entries</p>
+                            </div>
+                        </div>
+                        {% comment %} <div class="table-actions">
+                            <button class="refresh-btn" id="refreshRecords">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"/>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                                </svg>
+                            </button>
+                        </div> {% endcomment %}
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="records-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Sr. No.</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Patient ID</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Lead</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Arrhythmia</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Duration</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-records">
+                                <!-- Loading skeleton rows -->
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+   // ===================== ECG Dashboard =====================
+let ecgChartInstance = null;
+let currentChartType = 'doughnut'; // default doughnut
+
+const labelMap = {
+    'Premature Ventricular Contraction': 'PVC',
+    'Ventricular Fibrillation and Asystole': 'VFL',
+    'HeartBlock': 'HeartBlock',
+    'Atrial Fibrillation & Atrial Flutter': 'AFIB',
+    'Myocardial Infarction': 'MI',
+    'Premature Atrial Contraction': 'PAC',
+    'Junctional Rhythm': 'Junctional',
+    'LBBB': 'LBBB & RBBB',
+    'SINUS-ARR': 'SINUS-ARR',
+    'ShortPause': 'ShortPause',
+    'WIDE-QRS': 'WIDE-QRS',
+    'Artifacts':'Artifacts',
+    'TC': 'TC',
+    'Noise': 'Noise',
+    'Normal':'Normal',
+    'Abnormal':'Abnormal',
+    'Others': 'Others',
+};
+
+// ========= Chart Update =========
+function updatePieChart(collectionDataCount) {
+    window.collectionDataCount = collectionDataCount;
+    document.getElementById("chart-loader").style.display = "none";    
+    document.getElementById("patientChart").style.display = "block";
+
+    const ctx = document.getElementById('patientChart').getContext('2d');
+
+    const dbLabels = Object.keys(labelMap);
+    const shortLabels = dbLabels.map(full => labelMap[full]);
+    const values = dbLabels.map(label => collectionDataCount[label] || 0);
+    const total = values.reduce((a, b) => a + b, 0);
+
+    const chartData = {
+        labels: shortLabels,
+        datasets: [{
+            data: values,
+            backgroundColor: [
+                '#00d4ff', '#ff4757', '#00ff88', '#ffa726',
+                '#8b5cf6', '#ff6b9d', '#26de81', '#fd79a8',
+                '#fdcb6e', '#6c5ce7', '#a29bfe', '#fd79a8',
+                '#00b894', '#e17055', '#74b9ff', '#0015ffff',
+                '#520000ff'
+            ],
+            borderColor: () => 
+                document.documentElement.getAttribute('data-theme') === 'dark' 
+                ? '#1a1f2e' 
+                : '#ffffff',
+            borderWidth: 3,
+            hoverBorderWidth: 5,
+            hoverOffset: 15
+        }]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: currentChartType === 'doughnut' ? '60%' : '0%',
+        plugins: {
+            legend: {
+                position: 'left',
+                labels: {
+                    // ? compute dynamically
+                    color: (ctx) => 
+                        document.documentElement.getAttribute('data-theme') === 'dark'
+                        ? '#ffffff'
+                        : '#1e2a44',
+                    font: { size: 12, weight: '600' },
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    formatter: (value, ctx) => {
+                        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const val = ctx.chart.data.datasets[0].data[ctx.index];
+                        const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
+                        return `${value} (${percentage}%)`;
+                    }
+                },
+                onClick: (e, legendItem, legend) => {
+                    const chart = legend.chart;
+                    chart.toggleDataVisibility(legendItem.index);
+                    chart.update();
+                }
+            },
+            tooltip: {
+                backgroundColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? 'rgba(26, 31, 46, 0.95)'
+                    : 'rgba(255, 255, 255, 0.95)',
+                titleColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#ffffff'
+                    : '#1a202c',
+                bodyColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#a8b3cf'
+                    : '#4a5568',
+                borderColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#2d3748'
+                    : '#e2e8f0',
+                borderWidth: 1,
+                cornerRadius: 12,
+                callbacks: {
+                    title: (ctx) => dbLabels[ctx[0].dataIndex],
+                    label: (ctx) => {
+                        const value = ctx.raw;
+                        const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                        return [`Percentage: ${percentage}%`, `Duration: ${value} mins`];
+                    }
+                }
+            }
+        },
+        animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 2000,
+            easing: 'easeOutQuart'
+        }
+    };
+
+    if (ecgChartInstance) ecgChartInstance.destroy();
+
+    ecgChartInstance = new Chart(ctx, {
+        type: currentChartType,
+        data: chartData,
+        options: chartOptions
+    });
+}
+
+// ========= Fetch APIs =========
+function fetchPieChart() {
+    fetch("{% url 'pie_chart_api' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => updatePieChart(data))
+    .catch(err => console.error("Error fetching pie chart data:", err));
+}
+
+function fetchRecentRecords() {
+    fetch("{% url 'recent_records_api' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById("recent-records");
+        tbody.innerHTML = "";
+        data.records.forEach((rec, i) => {
+            const row = document.createElement('tr');
+            row.style.opacity = "0";
+            row.style.transform = "translateX(-20px)";
+            row.style.transition = "all 0.4s ease";
+
+            row.innerHTML = `
+                <td><strong>${i + 1}</strong></td>
+                <td><div class="patient-id">${rec.PatientID}</div></td>
+                <td><span class="lead-badge">${rec.Lead}</span></td>
+                <td><span class="arrhythmia-badge">${rec.Arrhythmia}</span></td>
+                <td><div class="duration-info">${rec.Duration}</div></td>
+            `;
+            tbody.appendChild(row);
+            setTimeout(() => { row.style.opacity = "1"; row.style.transform = "translateX(0)"; }, i * 200);
+        });
+    })
+    .catch(err => console.error("Error fetching records:", err));
+}
+
+function fetchData() {
+    fetch("{% url 'total_data' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        if (data.total_patients) animateNumber(document.getElementById("totalPatient"), data.total_patients);
+        if (data.total_records) animateNumber(document.getElementById("totalRecords"), data.total_records);
+        if (data.total_time) animateNumber(document.getElementById("TotalTimes"), data.total_time, true);
+        document.querySelectorAll(".skeleton").forEach(el => el.remove());
+    })
+    .catch(err => console.error("Error fetching data:", err));
+}
+
+// ========= Animations =========
+function animateNumber(element, finalValue, isTime = false) {
+    const numericValue = parseInt(finalValue.toString().replace(/,/g, ''));
+    const duration = 1500, steps = 60;
+    const increment = numericValue / steps;
+    let current = 0, step = 0;
+
+    const timer = setInterval(() => {
+        current += increment; step++;
+        if (step >= steps) { current = numericValue; clearInterval(timer); }
+        const display = Math.floor(current).toLocaleString("en-IN");
+        element.textContent = isTime ? `${display}` : display;
+    }, duration / steps);
+}
+
+// ========= Theme =========
+document.addEventListener("DOMContentLoaded", function () {
+    const initialPieData = {{ initial_pie_data|safe }};
+    updatePieChart(initialPieData);
+
+    fetchData();
+    fetchPieChart();
+    fetchRecentRecords();
+
+    // Chart type toggle
+    document.querySelectorAll('.chart-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+            e.target.closest('.chart-btn').classList.add('active');
+            currentChartType = e.target.closest('.chart-btn').dataset.view;
+            if (window.collectionDataCount) updatePieChart(window.collectionDataCount);
+        });
+    });
+});
+
+async function loadRecentRecords() {
+  try {
+    const response = await fetch("{% url 'recent_records_api' %}");
+    const data = await response.json();
+    const tbody = document.getElementById("recent-records");
+
+    tbody.innerHTML = ""; // clear skeleton rows
+
+    data.records.forEach((record, index) => {
+      const tr = document.createElement("tr");
+      tr.classList.add("clickable-row");
+
+      // point to waveform_by_id view
+      tr.dataset.url = `{% url 'waveform_by_id' 'COLLECTION' 'RECORD' %}`
+      
+        .replace("COLLECTION", record.collection)
+        .replace("RECORD", record._id);
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${record.PatientID}</td>
+        <td>${record.Lead}</td>
+        <td>${record.Arrhythmia}</td>
+        <td>${record.Duration}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // attach click events
+    document.querySelectorAll(".clickable-row").forEach(row => {
+      row.addEventListener("click", function () {
+        const pageLoader = document.getElementById('page-loader');
+        if (pageLoader) pageLoader.style.display = 'flex'; // show loader
+        window.location.href = this.dataset.url; // redirect
+      });
+    });
+
+  } catch (error) {
+    console.error("Error loading records:", error);
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) pageLoader.style.display = 'none';
+  }
+}
+
+// On DOM ready
+document.addEventListener("DOMContentLoaded", loadRecentRecords);
+
+// On new page load -> hide loader
+window.addEventListener("load", function () {
+  const pageLoader = document.getElementById('page-loader');
+  if (pageLoader) pageLoader.style.display = 'none';
+});
+
+// Watch for theme changes
+const observer = new MutationObserver(() => {
+    if (window.collectionDataCount) {
+        updatePieChart(window.collectionDataCount);
+    }
+});
+
+observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+});
+
+</script>
+{% endblock %}
