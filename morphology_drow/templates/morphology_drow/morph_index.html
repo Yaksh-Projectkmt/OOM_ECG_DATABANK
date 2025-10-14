@@ -4,775 +4,187 @@
   {% block title %}ECG Morphology Analysis{% endblock %}
   
   {% block extra_css %}
-  <style>
-  :root {
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --success: #22c55e;
-      --success-dark: #16a34a;
-      --secondary: #6b7280;
-      --secondary-dark: #4b5563;
-      --background: #f9fafb;
-      --text: #1f2937;
-      --border: #d1d5db;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      --hover-shadow: 0 6px 12px rgba(59, 130, 246, 0.15);
-      --border-radius: 8px;
-      --transition: all 0.3s ease;
-      --morphology-bg: #f9fafb;
-      --morphology-text: #333333;
-      --canvas-border: #00796b;
-      --input-bg: #ffffff;
-      --input-border: #cccccc;
-      --input-text: #333333;
-      --button-shadow: rgba(0, 0, 0, 0.08);
-      --plot-bg: #f9f9f9;
-      --augment-btn-start: #42a5f5;
-      --augment-btn-end: #1e88e5;
-      --augment-btn-hover-start: #1e88e5;
-      --augment-btn-hover-end: #1565c0;
-      --save-btn-start: #4caf50;
-      --save-btn-end: #388e3c;
-      --save-btn-hover-start: #388e3c;
-      --save-btn-hover-end: #2e7d32;
-      /* Alert system colors */
-      --alert-success: #22c55e;
-      --alert-success-bg: #ecfdf5;
-      --alert-success-text: #065f46;
-      --alert-error: #ef4444;
-      --alert-error-bg: #fef2f2;
-      --alert-error-text: #991b1b;
-      --alert-warning: #f59e0b;
-      --alert-warning-bg: #fffbeb;
-      --alert-warning-text: #92400e;
-      --alert-info: #3b82f6;
-      --alert-info-bg: #eff6ff;
-      --alert-info-text: #1e40af;
-      --alert-primary: #3b82f6;
-      --alert-primary-bg: #f5f3ff;
-      --alert-primary-text: #2563eb;
-      --alert-secondary: #6b7280;
-      --alert-secondary-bg: #f9fafb;
-      --alert-secondary-text: #374151;
-  }
-  
-  [data-theme="dark"] {
-      --primary: #60a5fa;
-      --primary-dark: #3b82f6;
-      --success: #22c55e;
-      --success-dark: #16a34a;
-      --secondary: #6b7280;
-      --secondary-dark: #4b5563;
-      --background: #111827;
-      --text: #e5e7eb;
-      --border: #4b5563;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      --hover-shadow: 0 6px 12px rgba(96, 165, 250, 0.2);
-      --morphology-bg: #1e2a44;
-      --morphology-text: #ffffff;
-      --canvas-border: #4db6ac;
-      --input-bg: #2c3e50;
-      --input-border: #546e7a;
-      --input-text: #ffffff;
-      --button-shadow: rgba(0, 0, 0, 0.2);
-      --plot-bg: #263238;
-      --augment-btn-start: #64b5f6;
-      --augment-btn-end: #42a5f5;
-      --augment-btn-hover-start: #42a5f5;
-      --augment-btn-hover-end: #2196f3;
-      --save-btn-start: #66bb6a;
-      --save-btn-end: #4caf50;
-      --save-btn-hover-start: #4caf50;
-      --save-btn-hover-end: #388e3c;
-      /* Alert system colors for dark mode */
-      --alert-success: #34d399;
-      --alert-success-bg: #1a2e2a;
-      --alert-success-text: #a7f3d0;
-      --alert-error: #f87171;
-      --alert-error-bg: #3d1f1f;
-      --alert-error-text: #fecaca;
-      --alert-warning: #fbbf24;
-      --alert-warning-bg: #3d2e1a;
-      --alert-warning-text: #fcdf9c;
-      --alert-info: #60a5fa;
-      --alert-info-bg: #1e2a44;
-      --alert-info-text: #bfdbfe;
-      --alert-primary: #60a5fa;
-      --alert-primary-bg: #2b2a44;
-      --alert-primary-text: #bfdbfe;
-      --alert-secondary: #9ca3af;
-      --alert-secondary-bg: #2d3748;
-      --alert-secondary-text: #d1d5db;
-  }
-  
-  /* Alert System Styles */
-  .alert-system-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 10000;
-      max-width: 420px;
-      width: 100%;
-      pointer-events: none;
-  }
-  
-  .alert-item {
-      background: var(--background);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      margin-bottom: 12px;
-      overflow: hidden;
-      pointer-events: auto;
-      position: relative;
-      transform: translateX(100%);
-      opacity: 0;
-      transition: var(--transition);
-  }
-  
-  .alert-item.show {
-      transform: translateX(0);
-      opacity: 1;
-  }
-  
-  .alert-item.hide {
-      transform: translateX(100%);
-      opacity: 0;
-      margin-bottom: 0;
-      max-height: 0;
-  }
-  
-  .alert-item::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: var(--alert-color);
-  }
-  
-  .alert-item.type-success {
-      --alert-color: var(--alert-success);
-      --alert-bg: var(--alert-success-bg);
-      --alert-text: var(--alert-success-text);
-  }
-  
-  .alert-item.type-error {
-      --alert-color: var(--alert-error);
-      --alert-bg: var(--alert-error-bg);
-      --alert-text: var(--alert-error-text);
-  }
-  
-  .alert-item.type-warning {
-      --alert-color: var(--alert-warning);
-      --alert-bg: var(--alert-warning-bg);
-      --alert-text: var(--alert-warning-text);
-  }
-  
-  .alert-item.type-info {
-      --alert-color: var(--alert-info);
-      --alert-bg: var(--alert-info-bg);
-      --alert-text: var(--alert-info-text);
-  }
-  
-  .alert-item.type-primary {
-      --alert-color: var(--alert-primary);
-      --alert-bg: var(--alert-primary-bg);
-      --alert-text: var(--alert-primary-text);
-  }
-  
-  .alert-item.type-secondary {
-      --alert-color: var(--alert-secondary);
-      --alert-bg: var(--alert-secondary-bg);
-      --alert-text: var(--alert-secondary-text);
-  }
-  
-  .alert-content {
-      padding: 16px 20px;
-      display: flex;
-      align-items: flex-start;
-      background: var(--alert-bg);
-      color: var(--alert-text);
-  }
-  
-  .alert-icon {
-      flex-shrink: 0;
-      width: 24px;
-      height: 24px;
-      margin-right: 12px;
-      margin-top: 2px;
-      color: var(--alert-color);
-  }
-  
-  .alert-icon svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-  }
-  
-  .alert-body {
-      flex: 1;
-      min-width: 0;
-  }
-  
-  .alert-title {
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 4px;
-      color: var(--alert-text);
-  }
-  
-  .alert-message {
-      font-size: 13px;
-      line-height: 1.4;
-      color: var(--alert-text);
-      opacity: 0.8;
-  }
-  
-  .alert-actions {
-      margin-top: 12px;
-      display: flex;
-      gap: 8px;
-  }
-  
-  .alert-action {
-      padding: 6px 12px;
-      border: none;
-      border-radius: var(--border-radius);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: var(--transition);
-      background: var(--alert-color);
-      color: white;
-  }
-  
-  .alert-action:hover {
-      opacity: 0.8;
-      transform: translateY(-1px);
-  }
-  
-  .alert-action.secondary {
-      background: transparent;
-      color: var(--alert-color);
-      border: 1px solid var(--alert-color);
-  }
-  
-  .alert-close {
-      flex-shrink: 0;
-      width: 20px;
-      height: 20px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      opacity: 0.5;
-      transition: opacity 0.2s ease;
-      margin-left: 8px;
-      color: var(--alert-text);
-  }
-  
-  .alert-close:hover {
-      opacity: 1;
-  }
-  
-  .alert-close svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-  }
-  
-  .alert-progress {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 3px;
-      background: var(--alert-color);
-      transition: width 0.1s linear;
-      opacity: 0.7;
-  }
-  
-  /* Rest of your existing styles (content, file-input-container, etc.) */
-  .content {
-      padding: 2rem;
-  }
-  
-  h2 {
-      color: var(--morphology-text);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-  }
-  
-  .file-input-container {
-      border: 2px dashed var(--primary);
-      border-radius: var(--border-radius);
-      padding: 1.5rem;
-      text-align: center;
-      cursor: pointer; 
-      background: var(--background);
-      transition: var(--transition);
-      position: relative;
-      overflow: hidden;
-  }
-  
-  .file-input-container:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--hover-shadow);
-      border-color: var(--primary-dark);
-  }
-  
-  .file-input-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 80%;
-      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
-      transition: 0.5s;
-  }
-  
-  .file-input-container:hover::before {
-      left: 100%;
-  }
-  
-  .file-label {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: 0.5rem;
-      display: block;
-      cursor: pointer; 
-  }
-  
-  .file-input {
-      display: none;
-  }
-  
-  .btn {
-      padding: 0.5rem 1rem;
-      border-radius: var(--border-radius);
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: var(--transition);
-      position: relative;
-      overflow: hidden;
-  }
-  
-  .btn::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      transition: width 0.3s, height 0.3s;
-  }
-  
-  .btn:hover::after {
-      width: 150px;
-      height: 150px;
-  }
-  
-  .btn-primary {
-      background: var(--primary);
-      color: white;
-  }
-  
-  .btn-primary:hover {
-      background: var(--primary-dark);
-      transform: translateY(-2px);
-      box-shadow: var(--hover-shadow);
-  }
-  
-  .btn-success {
-      background: var(--success);
-      color: white;
-  }
-  
-  .btn-success:hover {
-      background: var(--success-dark);
-      transform: translateY(-2px);
-      box-shadow: var(--hover-shadow);
-  }
-  
-  .btn-secondary {
-      background: var(--secondary);
-      color: white;
-  }
-  
-  .btn-secondary:hover {
-      background: var(--secondary-dark);
-      transform: translateY(-2px);
-      box-shadow: var(--hover-shadow);
-  }
-  
-  .form-select {
-      background: var(--background);
-      border: 1px solid var(--border);
-      border-radius: var(--border-radius);
-      padding: 0.5rem;
-      font-size: 0.9rem;
-      color: var(--text);
-      width: 100%;
-      transition: var(--transition);
-  }
-  
-  .form-select:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      outline: none;
-  }
-  
-  .plot {
-      border-radius: var(--border-radius);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      background: var(--background);
-      padding: 1rem;
-      margin: 1rem 0;
-      height: 300px;
-      width: 100%;
-      box-sizing: border-box;
-  }
-  
-  #ecgChart {
-      width: 100%;
-      height: 80%;
-  }
-  
-  .file-input-container.uploading .file-label,
-  .file-input-container.uploading .btn {
-      opacity: 0.5;
-      pointer-events: none;
-  }
-  
-  .select-group {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: nowrap;
-      align-items: center;
-      margin-bottom: 1rem;
-  }
-  
-  .select-group label {
-      font-size: 0.9rem;
-      margin-right: 0.5rem;
-      white-space: nowrap;
-  }
-  
-  .select-group select {
-      flex: 1;
-      min-width: 150px;
-  }
-  
-  .button-group {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: nowrap;
-  }
-  
-  .flex-columns {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px 20px;
-      max-width: 900px;
-      margin: auto;
-      background-color: var(--morphology-bg);
-      color: var(--morphology-text);
-      font-family: serif;
-  }
-  
-  #drawingArea {
-      width: 100%;
-      height: 320px;
-      border: 2px dashed var(--canvas-border);
-      background: var(--input-bg);
-      border-radius: 12px;
-      box-shadow: 0 8px 16px var(--button-shadow);
-      overflow: hidden;
-      position: relative;
-      transition: box-shadow 0.3s ease-in-out;
-  }
-  
-  #drawingArea:hover {
-      box-shadow: 0 12px 24px var(--button-shadow);
-  }
-  
-  #drawingCanvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-      cursor: crosshair;
-  }
-  
-  .btn-group {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 25px;
-      align-items: center;
-  }
-  
-  .top-row, .bottom-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      width: 100%;
-  }
-  
-  .btn-group button,
-  .btn-group input[type="number"],
-  .btn-group input[type="text"],
-  .btn-group select {
-      padding: 10px;
-      font-size: 15px;
-      border-radius: 8px;
-      border: 1px solid var(--input-border);
-      box-shadow: 0 2px 6px var(--button-shadow);
-      outline: none;
-      background-color: var(--input-bg);
-      color: var(--input-text);
-      transition: all 0.3s ease;
-      font-family: serif;
-  }
-  
-  .btn-group button {
-      background: linear-gradient(to right, var(--augment-btn-start), var(--augment-btn-end));
-      color: white;
-      border: none;
-      padding: 10px 18px;
-      box-shadow: 0 4px 10px var(--button-shadow);
-      cursor: pointer;
-  }
-  
-  .btn-group button:hover {
-      background: linear-gradient(to right, var(--augment-btn-hover-start), var(--augment-btn-hover-end));
-  }
-  
-  .btn-group button:focus {
-      outline: 2px solid var(--primary);
-      outline-offset: 2px;
-  }
-  
-  .btn-group select {
-      min-width: 220px;
-  }
-  
-  .btn-group input[type="number"],
-  .btn-group input[type="text"] {
-      min-width: 220px;
-  }
-  
-  .btn-group input:focus,
-  .btn-group select:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 8px var(--hover-shadow);
-  }
-  
-  #saveBtn {
-      background: linear-gradient(to right, var(--save-btn-start), var(--save-btn-end));
-  }
-  
-  #saveBtn:hover {
-      background: linear-gradient(to right, var(--save-btn-hover-start), var(--save-btn-hover-end));
-  }
-  
-  #signalPlot {
-      display: none;
-      margin-top: 40px;
-      height: 360px;
-      width: 100%;
-      background-color: var(--plot-bg);
-      border-radius: 12px;
-      box-shadow: 0 6px 20px var(--button-shadow);
-      padding: 10px;
-      box-sizing: border-box;
-      overflow: hidden;
-  }
-  
-  @media (max-width: 768px) {
-      #drawingArea {
-          height: 260px;
-      }
-  
-      .flex-columns {
-          padding: 20px 10px;
-      }
-  
-      .btn-group {
-          flex-direction: column;
-          gap: 14px;
-          width: 100%;
-          align-items: stretch;
-      }
-  
-      .top-row, .bottom-row {
-          flex-direction: column;
-          align-items: stretch;
-      }
-  
-      .btn-group button,
-      .btn-group input[type="number"],
-      .btn-group input[type="text"],
-      .btn-group select {
-          width: 100%;
-          box-sizing: border-box;
-      }
-  
-      .btn-group select:hover,
-      .btn-group input[type="number"]:hover,
-      .btn-group input[type="text"]:hover {
-          border-color: var(--primary);
-          box-shadow: 0 0 8px var(--hover-shadow);
-      }
-  }
-  .custom-alert {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #333;
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-family: Arial, sans-serif;
-  }
-  
-  .custom-alert .close-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-      padding: 0 5px;
-  }
-  </style>
+  <link rel="stylesheet" href="{% static 'CSS/Morphology.css' %}">
   {% endblock %}
   
   {% block content %}
   <div class="content">
-      <h2 id="mainTitle">
-          ECG Morphology Analysis
-      </h2>
-      <div id="buttonSection">
-          <div class="d-flex gap-2">
-              <button class="btn btn-primary" onclick="showMorphologySection()">Morphology Draw</button>
-              <button class="btn btn-primary" onclick="showUploadSection()">Upload ECG Image</button>
-          </div>
+<header class="header">
+  <div class="header-content">
+    <div class="header-left">
+      <h2>ECG Morphology Analysis</h2>
+    </div>
+
+    <div class="header-right">
+      <div class="view-toggle">
+        <button class="toggle-btn " onclick="showMorphologySection()">Morphology Draw</button>
+        <button class="toggle-btn" onclick="showUploadSection()">Upload ECG Image</button>
       </div>
-  
-      <div id="uploadSection" class="upload-section" style="display: none;">
+    </div>
+  </div>
+</header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Morphology Draw Section -->
+    <div id="morphologySection">
+      <div class="card">
+        <div class="card-header">
+          <div class="header-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+              <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+              <path d="M2 2l7.586 7.586"></path>
+              <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+          </div>
+          <h2 class="card-title">Morphology Draw</h2>
+        </div>
+
+        <div id="drawingArea" class="canvas-container">
+          <canvas id="drawingCanvas" style="width:100%; height:400px; border:1px solid #ccc; background-color:#fff;"></canvas>
+        </div>
+
+        <div class="controls-grid">
+        <div class="control-group">
+            <label for="replicationCount" class="control-label">Replication Count</label>
+            <input type="number" id="replicationCount" placeholder="Enter replication (<200)" min="1" max="199"
+            class="control-input">
+        </div>
+
+        <div class="button-group">
+            <button id="augmentBtn" onclick="augmentSignal()" class="btn btn-secondary">Augment</button>
+            <button id="viewBtn" onclick="showGraph()" class="btn btn-secondary">View Signal</button>
+            <button id="resetBtn" onclick="resetDrawing()" class="btn btn-tertiary">Reset Drawing</button>
+        </div>
+        </div>
+
+        <div class="action-section">
+        <input type="text" id="patientIdInput" placeholder="Enter Patient ID" class="control-input">
+        <select id="arrhythmiaSelect" onchange="updateSubarrhythmia()" class="control-input">
+            <option value="">Select Arrhythmia</option>
+        </select>
+        <select id="subarrhythmiaSelect" class="control-input" style="display: none;">
+            <option value="">Select Subarrhythmia</option>
+        </select>
+        <button id="saveBtn" onclick="saveData()" class="btn btn-primary">Save Drawing</button>
+        </div>
+
+        <!-- Signal plot initially hidden -->
+        <div id="signalPlot" class="signal-card" style="display: none;"></div>
+      </div>
+    </div>
+    
+    <!-- Upload ECG Image Section -->
+    <div id="uploadSection" class="section" >
+      <div class="card">
+        <div class="card-header">
+          <div class="header-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+          </svg>
+          </div>
+          <h2 class="card-title">ECG Image Analysis</h2>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
           <form id="uploadForm" method="POST" enctype="multipart/form-data">
-              {% csrf_token %}
-              <div class="file-input-container">                
-                  <label for="fileInput" class="file-label" id="fileLabel" onclick="event.stopPropagation();">Click to Upload ECG Image</label>
-                  <input type="file" id="fileInput" class="file-input" accept="image/jpeg,image/png" onchange="handleFileSelection(this)">
-                  {% comment %} <button type="button" class="btn btn-primary mt-3" onclick="uploadFile()">Upload</button> {% endcomment %}
-              </div>
+            {% csrf_token %}
+            <div class="upload-icon">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </div>
+            <label for="fileInput" class="file-label" id="fileLabel" onclick="event.stopPropagation();">
+              Click to Upload ECG Image
+            </label>
+            <input type="file" id="fileInput" class="file-input" accept="image/jpeg,image/png"
+              onchange="handleFileSelection(this)">
           </form>
-  
-          <div class="plot" id="plot" style="display: none;">
-               <h3>
-                ECG Signal
-              <a onclick="originalimage()" 
-                  style="display: inline-block; margin-left: 10px; color: #007bff; text-decoration: none; font-weight: 500; cursor: pointer;">
-                  <i class="fa-solid fa-image"></i>
-              </a>
-              </h3>            
-              <div id="ecgChart"></div>
-          </div>
-  
-          <form id="ecgForm" method="POST" enctype="multipart/form-data" style="display: none;">
-              {% csrf_token %}
-              <fieldset class="mb-4">
-                  <legend class="h2 mb-3">Classify Arrhythmia</legend>
-                  <div class="select-group">
-                      <div>
-                          <label for="leads" class="form-label">Lead:</label>
-                          <select id="leads" name="lead" class="form-select" required>
-                              <option value="">Select Lead</option>
-                          </select>
-                      </div>
-                      <div>
-                          <label for="arrhythmia" class="form-label">Arrhythmia:</label>
-                          <select id="arrhythmia" name="arrhythmia" class="form-select" required>
-                              <option value="">Select Main Arrhythmia</option>
-                              <option value="Myocardial Infarction">Myocardial Infarction</option>
-                              <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
-                              <option value="Blocks">HeartBlock</option>
-                              <option value="Junctional Rhythm">Junctional Rhythm</option>
-                              <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
-                              <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
-                              <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
-                              <option value="Noise">Noise</option>
-                              <option value="Others">Others</option>
-                              <option value="LBBB">LBBB & RBBB</option>
-                              <option value="Artifacts">Artifacts</option>
-                              <option value="SINUS-ARR">SINUS-ARR</option>
-                              <option value="ShortPause">ShortPause</option>
-                              <option value="TC">TC</option>
-                              <option value="WIDE-QRS">WIDE-QRS</option>
-                              <option value="Abnormal">Abnormal</option>
-                              <option value="Normal">Normal</option>
-                          </select>
-                      </div>
-                      <div>
-                          <label for="subArrhythmia" class="form-label">Sub-Arrhythmia:</label>
-                          <select id="subArrhythmia" name="sub_arrhythmia" class="form-select" required>
-                              <option value="">Select Sub-Arrhythmia</option>
-                          </select>
-                      </div>
-                  </div>
-                  <div class="button-group">
-                      <button type="button" class="btn btn-primary" onclick="uploadECG()">Re-upload</button>
-                      <button type="button" class="btn btn-success" onclick="handleECGSubmit()">Submit</button>
-                      <button type="button" class="btn btn-secondary" onclick="hide()">Reset</button>
-                  </div>
-              </fieldset>
-          </form>
-      </div>
-  
-      <div id="morphologySection" class="flex-columns" style="display: none;">
-          <h2>
-              <img src="{% static 'images/morphology_icon.png' %}" alt="Morphology Icon" style="height: 50px; width: auto;">
-              Morphology Draw
-          </h2>
-          <div id="drawingArea" role="region" aria-label="ECG Drawing Canvas">
-              <canvas id="drawingCanvas" aria-label="Draw ECG signal here"></canvas>
-          </div>
-          <div class="btn-group">
-              <div class="top-row">
-                  <input type="number" id="replicationCount" placeholder="Enter replication (<200)" min="1" max="199" aria-label="Number of signal replications">
-                  <button id="augmentBtn" onclick="augmentSignal()" aria-label="Augment ECG signal">Augment</button>
-                  <button id="viewBtn" onclick="showGraph()" aria-label="View ECG signal graph">View Signal</button>
-                  <button id="resetBtn" onclick="resetDrawing()" aria-label="Reset drawing canvas">Reset Drawing</button>
+        </div>
+
+        <div id="plot" class="card hidden">
+          <h3 class="signal-title">
+            ECG Signal
+            <a onclick="originalimage()" class="link-inline"><i class="fa-solid fa-image"></i></a>
+          </h3>
+          <div id="ecgChart" class="ecgChart"></div>
+        </div>
+
+        <form id="ecgForm" method="POST" enctype="multipart/form-data" class="hidden">
+          {% csrf_token %}
+          <div class="classification-card">
+            <h3 class="classification-title">Classify Arrhythmia</h3>
+            <div class="classification-grid">
+              <div class="control-group">
+                <label for="leads" class="control-label">Lead:</label>
+                <select id="leads" name="lead" class="control-input" required>
+                  <option value="">Select Lead</option>
+                </select>
               </div>
-              <div class="bottom-row">
-                  <input type="text" id="patientIdInput" placeholder="Enter Patient ID" aria-label="Patient ID">
-                  <select id="arrhythmiaSelect" onchange="updateSubarrhythmia()" aria-label="Select Arrhythmia Type">
-                      <option value="">Select Arrhythmia</option>
-                  </select>
-                  <select id="subarrhythmiaSelect" aria-label="Select Subarrhythmia Type" style="display: none;">
-                      <option value="">Select Subarrhythmia</option>
-                  </select>
-                  <button id="saveBtn" onclick="saveData()" aria-label="Save drawn ECG signal">Save Drawing</button>
+              <div class="control-group">
+                <label for="arrhythmia" class="control-label">Arrhythmia:</label>
+                <select id="arrhythmia" name="arrhythmia" class="control-input" required>
+                  <option value="">Select Main Arrhythmia</option>
+                  <option value="Myocardial Infarction">Myocardial Infarction</option>
+                  <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
+                  <option value="Blocks">HeartBlock</option>
+                  <option value="Junctional Rhythm">Junctional Rhythm</option>
+                  <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
+                  <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
+                  <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
+                  <option value="Noise">Noise</option>
+                  <option value="Others">Others</option>
+                  <option value="LBBB">LBBB & RBBB</option>
+                  <option value="Artifacts">Artifacts</option>
+                  <option value="SINUS-ARR">SINUS-ARR</option>
+                  <option value="ShortPause">ShortPause</option>
+                  <option value="TC">TC</option>
+                  <option value="WIDE-QRS">WIDE-QRS</option>
+                  <option value="Abnormal">Abnormal</option>
+                  <option value="Normal">Normal</option>
+                </select>
               </div>
+              <div class="control-group">
+                <label for="subArrhythmia" class="control-label">Sub-Arrhythmia:</label>
+                <select id="subArrhythmia" name="sub_arrhythmia" class="control-input" required>
+                  <option value="">Select Sub-Arrhythmia</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="action-buttons">
+                 <button type="button" class="btn btn-primary flex-grow" onclick="handleECGSubmit()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>Submit</button>
+
+                <button type="button" class="btn btn-tertiary" onclick="hide()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <polyline points="23 20 23 14 17 14"></polyline>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                </svg>
+                Reset</button>
+
+              <button type="button" class="btn btn-secondary" onclick="uploadECG()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>Re-upload</button>         
+            </div>
           </div>
-          <div id="signalPlot" role="region" aria-label="ECG Signal Plot"></div>
-      </div>
+        </form>
+      </div>    
+    </div>
+
+    
+  </main>
   </div>
   {% endblock %}
   

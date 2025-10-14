@@ -8,550 +8,186 @@
     <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-
-        /* Define CSS variables for light and dark themes */
-        :root {
-            --background-color: #f9fafb;
-            --text-color: #333;
-            --sidebar-bg: linear-gradient(150deg, #1e3a8a, #764ba2);
-            --sidebar-text: #fff;
-            --stat-box-bg: #162459;
-            --highlight-color: #facc15;
-            --header-bg: #fff;
-            --header-text: #333;
-            --nav-link-hover: #3b82f6;
-            --small-text: #666;
-            --task-bar-bg: #ffffff;
-            --task-bar-border: #e5e7eb;
-            --task-item-bg: #f9fafb;
-            --task-item-hover: #f3f4f6;
-        }
-
-        [data-theme="dark"] {
-            --background-color: #1e2a44;
-            --text-color: #fff;
-            --sidebar-bg: linear-gradient(150deg, #1e3a8a, #764ba2);
-            --sidebar-text: #fff;
-            --stat-box-bg: #1e2a44;
-            --highlight-color: #facc15;
-            --header-bg: #1e2a44;
-            --header-text: #fff;
-            --nav-link-hover: #60a5fa;
-            --small-text: #fff;
-            --task-bar-bg: #1e2a44;
-            --task-bar-border: #374151;
-            --task-item-bg: #374151;
-            --task-item-hover: #4b5563;
-        }
-
-        body {
-            font-family: "Roboto", "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            transition: all 0.3s ease;
-        }
-        .small-text {
-            color: var(--small-text);
-        }
-        .sidebar {
-            background: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            height: 100vh;
-            padding: 1rem;
-            position: fixed;
-            width: 250px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow: hidden;
-            transition: width 0.3s ease;
-        }
-
-        .sidebar.collapsed {
-            width: 80px;
-        }
-
-        .sidebar h4 {
-            margin-left: 10px;
-            transition: opacity 0.3s ease;
-        }
-
-        .nav-link {
-            color: var(--sidebar-text);
-            margin: 0.5rem 0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1rem;
-            border-radius: 5px;
-            transition: background 0.3s;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        .nav-link i {
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .nav-link span {
-            margin-left: 10px;
-        }
-
-        .nav-link:hover {
-            background-color: var(--nav-link-hover);
-        }
-
-        .stat-box,
-        .profile-card {
-            background-color: var(--stat-box-bg);
-            border-radius: 12px;
-            padding: 1rem;
-            color: var(--sidebar-text);
-            text-align: center;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-        }
-
-        .highlight {
-            color: var(--highlight-color);
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: var(--sidebar-text);
-            cursor: pointer;
-            transition: transform 0.3s;
-            text-align: center;
-        }
-
-        .sidebar.collapsed h4,
-        .sidebar.collapsed .nav-link span,
-        .sidebar.collapsed .stat-box,
-        .sidebar.collapsed .profile-card {
-            display: none;
-        }
-
-        .sidebar.collapsed .nav-link {
-            justify-content: center;
-            padding-left: 0;
-            padding-right: 0;
-        }
-
-        .sidebar.collapsed .nav-link i {
-            margin: 0 auto;
-        }
-
-        main {
-            margin-left: 250px;
-            transition: margin-left 0.3s ease;
-        }
-
-        .sidebar.collapsed + main {
-            margin-left: 80px;
-        }
-
-        header {
-            background-color: var(--header-bg);
-            padding: 15px 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: var(--header-text);
-        }
-
-        header .left-section {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        header .title {
-              font-family: "Roboto", "Helvetica Neue", Arial, sans-serif;
-            font-size: 25px;
-        }
-
-        header .actions {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        header .actions i {
-            cursor: pointer;
-            color: var(--header-text);
-        }
-
-        /* Task Bar Styles */
-        .task-bar {
-            position: fixed;
-            top: 70px;
-            right: -350px;
-            width: 350px;
-            height: calc(100vh - 70px);
-            background: var(--task-bar-bg);
-            border-left: 1px solid var(--task-bar-border);
-            z-index: 1000;
-            transition: right 0.3s ease;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .task-bar.open {
-            right: 0;
-        }
-
-        .task-bar-toggle {
-            position: absolute;
-            left: auto;
-            right: 7px;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            width: 40px;
-            height: 40px; 
-            cursor: pointer;
-            z-index: 1001;
-            transition: all 0.3s ease;
-        }
-
-        .task-bar-toggle i {
-            font-size: 1.3rem; /* same as toggle icon */
-        }
-        .task-bar-toggle:hover {
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .task-bar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--task-bar-border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .task-bar-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-color);
-        }
-
-        .task-clear-all {
-            background: none;
-            border: none;
-            color: var(--nav-link-hover);
-            cursor: pointer;
-            font-size: 12px;
-            text-decoration: underline;
-        }
-
-        .task-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-        }
-
-        .task-item {
-            background: var(--task-item-bg);
-            border: 1px solid var(--task-bar-border);
-            border-radius: 8px;
-            margin-bottom: 10px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .task-item:hover {
-            background: var(--task-item-hover);
-        }
-
-        .task-item.processing {
-            border-left: 4px solid #3b82f6;
-        }
-
-        .task-item.completed {
-            border-left: 4px solid #10b981;
-        }
-
-        .task-item.error {
-            border-left: 4px solid #ef4444;
-        }
-
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .task-title {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-color);
-        }
-
-        .task-status {
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-
-        .task-status.processing {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .task-status.completed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .task-status.error {
-            background: #fef2f2;
-            color: #991b1b;
-        }
-
-        .task-description {
-            font-size: 12px;
-            color: var(--small-text);
-            margin-bottom: 10px;
-        }
-
-        .task-progress {
-            width: 100%;
-            height: 4px;
-            background: var(--task-bar-border);
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-
-        .task-progress-bar {
-            height: 100%;
-            background: #3b82f6;
-            transition: width 0.3s ease;
-        }
-
-        .task-progress-bar.completed {
-            background: #10b981;
-        }
-
-        .task-progress-bar.error {
-            background: #ef4444;
-        }
-
-        .task-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .task-time {
-            font-size: 11px;
-            color: var(--small-text);
-        }
-
-        .task-remove {
-            background: none;
-            border: none;
-            color: var(--small-text);
-            cursor: pointer;
-            font-size: 12px;
-            opacity: 0.7;
-        }
-
-        .task-remove:hover {
-            opacity: 1;
-            color: #ef4444;
-        }
-
-        .task-spinner {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border: 2px solid var(--task-bar-border);
-            border-radius: 50%;
-            border-top-color: #3b82f6;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 5px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .empty-tasks {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--small-text);
-            font-size: 14px;
-        }
-
-        .empty-tasks i {
-            font-size: 48px;
-            margin-bottom: 15px;
-            opacity: 0.5;
-        }
-
-        #page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(249, 250, 251, 0.66); /* Light background */
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .ecg-loader {
-            width: 150px; /* Increased width */
-            height: 60px;
-            position: relative;
-        }
-
-        .ecg-loader svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .ecg-line {
-            fill: none;
-            stroke:rgb(227, 6, 6);
-            stroke-width: 3;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: 0;
-            }
-            50% {
-                stroke-dasharray: 50 50;
-                stroke-dashoffset: -25;
-            }
-            100% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: -50;
-            }
-        }
-
-        .theme-toggle i {
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--header-text);
-            transition: color 0.3s ease;
-        }
-
-        .theme-toggle i:hover {
-            color: var(--nav-link-hover);
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            color: var(--header-text);
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-
-        .back-btn:hover {
-            color: var(--nav-link-hover);
-        }
-
-        /* Dark theme adjustments for task bar */
-        [data-theme="dark"] .task-status.processing {
-            background: #1e3a8a;
-            color: #bfdbfe;
-        }
-
-        [data-theme="dark"] .task-status.completed {
-            background: #064e3b;
-            color: #a7f3d0;
-        }
-
-        [data-theme="dark"] .task-status.error {
-            background: #7f1d1d;
-            color: #fecaca;
-        }
-
-        /* Task notification badge */
-        .task-badge {
-    position: absolute; /* change from flex-like placement */
-    top: -5px;
-    right: -5px;
-    background: #ef4444;
-    color: white;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 11px;
-    display: flex; 
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'CSS/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 
-<body>
-    <div class="sidebar d-flex flex-column" id="sidebar">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="fw-bold m-0" id="sidebarTitle">ECG Data Bank</h4>
-            <button class="toggle-btn" id="toggleSidebar">
-                <i class="fas fa-angle-double-left"></i>
-            </button>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar sidebar-open">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="sidebar-header-content">
+                <div class="logo-section">
+                    <div class="logo-container">
+                        <div class="logo-glow"></div>
+                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" alt="Logo" style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 10px;">
+                    </div>
+                    <div>
+                        <h1 class="sidebar-title"> OOM ECG DataBank</h1>
+                    </div>
+                      
+                </div>
+            </div>
         </div>
-
         {% if user_session %}
-            <a href="{% url 'oom_ecg_index' %}" class="nav-link active">
-                <i class="fas fa-heart-pulse"></i><span>ECG Data</span>
-            </a>
-            <a href="{% url 'morphology_index' %}" class="nav-link">
-                <i class="fas fa-pencil-ruler"></i><span>Morphology Draw</span>
-            </a>
-            <a href="{% url 'analysis_index' %}" class="nav-link">
-                <i class="fas fa-chart-line"></i><span>Analysis Tool</span>
-            </a>
-            <a href="{% url 'report_index' %}" class="nav-link">
-                <i class="fas fa-chart-bar"></i><span>Dashboard</span>
-            </a>
-            <a href="{% url 'profile' %}" class="nav-link">
-                <i class="fa fa-cog" aria-hidden="true" ></i><span>Settings</span>
-            </a>
+        <!-- Navigation -->
+        <div class="sidebar-content">
+            <div class="nav-section">
+                <p class="nav-section-title">MAIN MENU</p>
+                <nav class="nav-menu">
+
+                    <a href="{% url 'oom_ecg_index' %}" class="nav-link active">
+                        <button class="nav-item active" data-page="ecg-data">
+                            <div class="active-indicator"></div>
+                            <div class="nav-shimmer"></div>
+                            
+                            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                            <span class="nav-label">ECG Data</span>
+
+                        </button>
+                    </a>
+
+                    <a href="{% url 'morphology_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="morphology">
+                            <div class="nav-shimmer"></div>
+                            
+                            <i class="fa-solid fa-file-signature"></i>
+                            <span class="nav-label">Morphology Draw</span>
+
+                        </button>
+                    </a>
+
+                    <a href="{% url 'analysis_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="analysis">
+                            <div class="nav-shimmer"></div>
+                            
+                            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                            <span class="nav-label">Analysis Tool</span>
+
+                        </button>
+                    </a>  
+
+                    <a href="{% url 'report_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="Dashboard">
+                            <div class="nav-shimmer"></div>
+                                <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                <span class="nav-label">Dashboard</span>
+                            
+                        </button>
+                    </a>
+
+                    <!-- Notification Button -->
+                    <button class="nav-item" id="taskBarToggle">
+                        <div class="nav-shimmer"></div>
+                        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="nav-label">Task Notifications</span>
+                        <span class="nav-badge new" id="taskBadge" style="display: none;">0</span>
+                    </button>
+
+                    <!-- Floating Task Bar (Outside the button, right side of sidebar) -->
+                    <div class="task-tooltip" id="taskTooltip">
+                        <div class="task-bar-header">
+                            <div class="task-bar-title">Active Tasks</div>
+                            <button class="task-clear-all" id="taskClearAll">Clear All</button>
+                        </div>
+
+                        <div class="task-list" id="taskList">
+                            <div class="empty-tasks" id="emptyTasks">
+                            <i class="fas fa-clipboard-list"></i>
+                            <div>No active tasks</div>
+                            <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'profile' %}" class="nav-link">
+
+                        <button class="nav-item" data-page="settings">
+                            <div class="nav-shimmer"></div>
+                            <i class="fa fa-cog" aria-hidden="true" ></i>
+                            <span class="nav-label">Settings</span>
+                        </button>
+                    </a>
+                </nav>
+            </div>
         {% else %}
             <p><a href="{% url 'login' %}">Login</a></p>
         {% endif %}
-
-        <div class="ecg-stats mt-auto">
-            <div class="stat-box">
-                <div>Total Patients</div>
-                <div class="highlight" id="totalPatients">Loading...</div>
-            </div>
-            <div class="stat-box">
-                <div>Total Time</div>
-                <div class="highlight" id="totalTime">Loading...</div>
-            </div>
+            <!-- Stats Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-glow"></div>
+                    <div class="stat-header">
+                        <p class="stat-label">Total Patients</p>
+                        <svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-value secondary" id="totalPatients">Loading...</div>
+                    <div class="stat-progress"></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-glow"></div>
+                    <div class="stat-header">
+                        <p class="stat-label">Total Time</p>
+                        <svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+                    <div class="stat-value-container">
+                        <div id="convertedTime"></div>
+                        <div class="stat-value secondary" id="totalTime" style="font-size:20px;">Loading...</div>
+                    </div>
+                    <div class="stat-progress"></div>
+                </div>
+            </div>  
         </div>
-    </div>
 
-    <main>
-        <div id="page-loader">
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <button class="footer-btn" onclick="window.location.href='{% url 'help' %}'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Help & Support</span>
+            </button>
+            <button class="footer-btn logout-btn" onclick="confirmLogout()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content main-content-shifted">
+        <!-- Header -->
+         <div id="page-loader">
             <div class="ecg-loader">
                 <svg viewBox="0 0 100 60">
                     <path class="ecg-line" d="M0 30 H20 L30 10 L40 50 L50 20 L60 40 L70 10 L80 30 H100"/>
@@ -559,50 +195,39 @@
             </div>
         </div>
 
-      <header>
-            <div class="left-section">
-                {% if request.resolver_match.view_name not in 'oom_ecg_index,report_index,profile' %}
-                    <button class="back-btn"
-                        onclick="window.location.href='{% if request.path|slice:':8' == '/report/' %}/report/{% elif request.resolver_match.view_name == 'morphology_index' %}/morphology/{% elif request.resolver_match.view_name == 'analysis_index' %}/analysis/{% else %}/ommecgdata/{% endif %}'"
-                        aria-label="Go back">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                {% endif %}
-                <div class="title">Arrhythmia & MI</div>
-            </div>
-            <div class="actions">
-                <div class="theme-toggle">
-                    <i class="fas fa-moon" id="theme-icon"></i> 
-                </div>
+        <header class="main-header">
+            <div class="header-left">
+                    <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
                 <div>
-                    <button class="task-bar-toggle" id="taskBarToggle">
-                        <i class="fa-solid fa-bars"></i>
-                        <span class="task-badge" id="taskBadge" style="display: none;">0</span>
-                    </button> 
+                    <h2 class="page-title">Arrhythmia & MI</h2>
                 </div>
             </div>
-        </header> 
-
-        <!-- Task Bar Toggle Button -->
-       
-
-        <!-- Task Bar -->
-        <div class="task-bar" id="taskBar">
-            <div class="task-bar-header">
-                <div class="task-bar-title">
-                    Active Tasks
-                </div>
-                <button class="task-clear-all" id="taskClearAll">Clear All</button>
+            <div class="header-right">
+                <button class="icon-btn theme-toggle" onclick="toggleTheme()">
+                    <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
             </div>
-            <div class="task-list" id="taskList">
-                <div class="empty-tasks" id="emptyTasks">
-                    <i class="fas fa-clipboard-list"></i>
-                    <div>No active tasks</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
-                </div>
-            </div>
-        </div>
-
+        </header>
         {% block content %}{% endblock %}
     </main>
 
@@ -611,6 +236,12 @@
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
     <script>
+    function confirmLogout() {
+    const confirmAction =  confirm("Are you sure you want to sign out?");
+    if (confirmAction) {
+        window.location.href = "{% url 'logout' %}";
+    }
+}
         // Advanced Alert System - Pure JavaScript
         class AlertSystem {
             constructor(options = {}) {
@@ -870,7 +501,7 @@
             constructor() {
                 this.tasks = new Map();
                 this.taskCounter = 0;
-                this.timerIntervals = new Map(); 
+                 this.timerIntervals = new Map(); 
                 this.init();
             }
 
@@ -882,8 +513,10 @@
 
             bindEvents() {
                 const taskBarToggle = document.getElementById('taskBarToggle');
-                const taskBar = document.getElementById('taskBar');
+                const taskBar = document.getElementById('taskTooltip');
                 const taskClearAll = document.getElementById('taskClearAll');
+
+                if (!taskBarToggle || !taskBar) return; // safety check
 
                 // Toggle task bar
                 taskBarToggle.addEventListener('click', () => {
@@ -891,13 +524,19 @@
                 });
 
                 // Clear all tasks
-                taskClearAll.addEventListener('click', () => {
-                    this.clearAllTasks();
-                });
+                if (taskClearAll) {
+                    taskClearAll.addEventListener('click', () => {
+                        this.clearAllTasks();
+                    });
+                }
 
                 // Close task bar when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (!taskBar.contains(e.target) && !taskBarToggle.contains(e.target)) {
+                    if (
+                        taskBar && taskBarToggle && 
+                        !taskBar.contains(e.target) && 
+                        !taskBarToggle.contains(e.target)
+                    ) {
                         taskBar.classList.remove('open');
                     }
                 });
@@ -963,59 +602,59 @@
                 });
             }
 
-          removeTask(taskId) {
-                const task = this.tasks.get(taskId);
-                if (!task) return; // Task doesn't exist
-    
-                // Only show confirmation for pending tasks
-                if (task.status === 'processing') {
-                    const alertId = alertSystem.show(
-                        'warning',
-                        'Confirm Deletion',
-                        'This task is still pending. Are you sure you want to delete it?',
-                        {
-                            actions: [
-                                {
-                                    text: 'Delete',
-                                    type: 'primary',
-                                    handler: () => {
-                                        document.getElementById(alertId)?.remove();
-                                        this._deleteTask(taskId);
-                                        alertSystem.success('Success', 'Task deleted successfully!');
-                                    }                 
-                                },
-                                {
-                                    text: 'Cancel',
-                                    type: 'secondary',
-                                    handler: () => {
-                                        document.getElementById(alertId)?.remove();
-                                        alertSystem.info('Cancelled', 'Delete action cancelled.');
-                                    }
+            removeTask(taskId) {
+            const task = this.tasks.get(taskId);
+            if (!task) return; // Task doesn't exist
+
+            // Only show confirmation for pending tasks
+            if (task.status === 'processing') {
+                const alertId = alertSystem.show(
+                    'warning',
+                    'Confirm Deletion',
+                    'This task is still pending. Are you sure you want to delete it?',
+                    {
+                        actions: [
+                            {
+                                text: 'Delete',
+                                type: 'primary',
+                                handler: () => {
+                                    document.getElementById(alertId)?.remove();
+                                    this._deleteTask(taskId);
+                                    alertSystem.success('Success', 'Task deleted successfully!');
                                 }
-                            ],
-                            persistent: true
-                        }
-                    );
-                } else {
-                    // Directly delete non-pending tasks
-                    this._deleteTask(taskId);
-                }
+                            },
+                            {
+                                text: 'Cancel',
+                                type: 'secondary',
+                                handler: () => {
+                                    document.getElementById(alertId)?.remove();
+                                    alertSystem.info('Cancelled', 'Delete action cancelled.');
+                                }
+                            }
+                        ],
+                        persistent: true
+                    }
+                );
+            } else {
+                // Directly delete non-pending tasks
+                this._deleteTask(taskId);
             }
-    
+            }
+
             // Separate function for actual deletion logic
             _deleteTask(taskId) {
                 this.tasks.delete(taskId);
                 this.saveTasks();
-    
+
                 const taskElement = document.getElementById(taskId);
                 if (taskElement) taskElement.remove();
-    
+
                 this.updateTaskCounter();
                 this.showEmptyState();
             }
 
             clearAllTasks() {
-                 // Get all tasks that can be cleared (completed and error tasks only)
+                // Get all tasks that can be cleared (completed and error tasks only)
                 const clearableTasks = Array.from(this.tasks.values()).filter(task => 
                     task.status === 'completed' || task.status === 'error'
                 );
@@ -1043,7 +682,7 @@
                     alertSystem.info('Partial Clear', `Cleared ${clearableTasks.length} completed/error tasks. ${pendingTasks.length} pending tasks remain.`);
                 } else {
                     alertSystem.success('Tasks Cleared', `Cleared ${clearableTasks.length} tasks successfully.`);
-            }
+                }
             }
 
             renderTask(task) {
@@ -1121,186 +760,187 @@
                             }
                         });
 
-                        statusEl.addEventListener("mouseleave", () => {
-                            if (autoRemoveTimer) {
-                                clearTimeout(autoRemoveTimer);
-                                autoRemoveTimer = null;
-                            }
-                            if (taskElement._errorAlertId) {
-                                alertSystem.remove(taskElement._errorAlertId);
-                                delete taskElement._errorAlertId;
+                            statusEl.addEventListener("mouseleave", () => {
+                                if (autoRemoveTimer) {
+                                    clearTimeout(autoRemoveTimer);
+                                    autoRemoveTimer = null;
+                                }
+                                if (taskElement._errorAlertId) {
+                                    alertSystem.remove(taskElement._errorAlertId);
+                                    delete taskElement._errorAlertId;
+                                }
+                            });
+                        }
+                    }
+
+
+                    // Add click handler for completed tasks
+                    if (task.status === 'completed' && task.result) {
+                        taskElement.style.cursor = 'pointer';
+                        taskElement.addEventListener('click', (e) => {
+                            if (!e.target.closest('.task-remove')) {
+                                this.handleTaskClick(task);
                             }
                         });
                     }
+
+                    return taskElement;
                 }
 
+                handleTaskClick(task) {
+                    if (task.status !== 'completed' || !task.result) return;
 
-                // Add click handler for completed tasks
-                if (task.status === 'completed' && task.result) {
-                    taskElement.style.cursor = 'pointer';
-                    taskElement.addEventListener('click', (e) => {
-                        if (!e.target.closest('.task-remove')) {
-                            this.handleTaskClick(task);
-                        }
-                    });
-                }
+                    // Close task bar
+                    document.getElementById('taskTooltip')?.classList.remove('active');
+                    // Remove the completed task after successful click
+                    this.removeTask(task.id);
 
-                return taskElement;
-            }
-
-            handleTaskClick(task) {
-                if (task.status !== 'completed' || !task.result) return;
-
-                // Close task bar
-                document.getElementById('taskBar').classList.remove('open');
-                // Remove the completed task after successful click
-                this.removeTask(task.id);
-
-                // Navigate based on task type
-                switch (task.type) {
-                    case 'single_search':
-                        this.handleSingleSearchResult(task);
-                        break;
-                    case 'multiple_search':
-                        this.handleMultipleSearchResult(task);
-                        break;
-                }
-            }
-
-            handleSingleSearchResult(task) {
-                const result = task.result;
-                if (result && result.data && result.data.length > 0) {
-                    // Store result in session storage
-                    sessionStorage.setItem('searchResults', JSON.stringify(result.data));
-                    sessionStorage.setItem('totalPages', result.total_pages || 1);
-                    sessionStorage.setItem('selectedArrhythmia', result.arrhythmia);
-                    sessionStorage.setItem('dataSource', 'search');
-                    
-                    // Navigate to ECG details page
-                    window.location.href = `/ommecgdata/ecg_details/${result.arrhythmia}/`;
-                } else {
-                    alertSystem.info('No Data', 'No ECG data found for this search.');
-                }
-            }
-
-            handleMultipleSearchResult(task) {
-                const result = task.result;
-                if (result && result.data && result.data.length > 0) {
-                    // Store result in session storage
-                    sessionStorage.setItem('searchResults', JSON.stringify(result.data));
-                    sessionStorage.setItem('totalPages', result.total_pages || 1);
-                    sessionStorage.setItem('selectedArrhythmia', result.arrhythmias.join(','));
-                    sessionStorage.setItem('dataSource', 'multiple_segments');
-                    
-                    // Navigate to first arrhythmia's detail page
-                    window.location.href = `/ommecgdata/ecg_details/${result.arrhythmias[0]}/`;
-                } else {
-                    alertSystem.info('No Data', 'No ECG data found for this search.');
-                }
-            }
-
-            updateTaskCounter() {
-                const taskBadge = document.getElementById('taskBadge');
-                const taskBarToggle = document.getElementById('taskBarToggle');
-                const taskClearAll = document.getElementById('taskClearAll');
-                
-                const activeTasks = Array.from(this.tasks.values()).filter(task => 
-                    task.status === 'processing' || task.status === 'completed'
-                ).length;
-
-                if (activeTasks > 0) {
-                    taskBadge.textContent = activeTasks;
-                    taskBadge.style.display = 'flex';
-                    taskBarToggle.classList.add('has-tasks');
-                    taskClearAll.style.display = 'inline';
-                } else {
-                    taskBadge.style.display = 'none';
-                    taskBarToggle.classList.remove('has-tasks');
-                    taskClearAll.style.display = 'none'; 
-                }
-            }
-
-            showEmptyState() {
-                const taskList = document.getElementById('taskList');
-                const emptyTasks = document.getElementById('emptyTasks');
-                
-                if (this.tasks.size === 0) {
-                    if (!emptyTasks) {
-                        taskList.innerHTML = `
-                            <div class="empty-tasks" id="emptyTasks">
-                                <i class="fas fa-clipboard-list"></i>
-                                <div>No active tasks</div>
-                                <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
-                            </div>
-                        `;
-                    } else {
-                        emptyTasks.style.display = 'block';
+                    // Navigate based on task type
+                    switch (task.type) {
+                        case 'single_search':
+                            this.handleSingleSearchResult(task);
+                            break;
+                        case 'multiple_search':
+                            this.handleMultipleSearchResult(task);
+                            break;
                     }
                 }
-            }
-            updateTaskTimes() {
+
+                handleSingleSearchResult(task) {
+                    const result = task.result;
+                    if (result && result.data && result.data.length > 0) {
+                        // Store result in session storage
+                        sessionStorage.setItem('searchResults', JSON.stringify(result.data));
+                        sessionStorage.setItem('totalPages', result.total_pages || 1);
+                        sessionStorage.setItem('selectedArrhythmia', result.arrhythmia);
+                        sessionStorage.setItem('dataSource', 'search');
+                        
+                        // Navigate to ECG details page
+                        window.location.href = `/ommecgdata/ecg_details/${result.arrhythmia}/`;
+                    } else {
+                        alertSystem.info('No Data', 'No ECG data found for this search.');
+                    }
+                }
+
+                handleMultipleSearchResult(task) {
+                    const result = task.result;
+                    if (result && result.data && result.data.length > 0) {
+                        // Store result in session storage
+                        sessionStorage.setItem('searchResults', JSON.stringify(result.data));
+                        sessionStorage.setItem('totalPages', result.total_pages || 1);
+                        sessionStorage.setItem('selectedArrhythmia', result.arrhythmias.join(','));
+                        sessionStorage.setItem('dataSource', 'multiple_segments');
+                        
+                        // Navigate to first arrhythmia's detail page
+                        window.location.href = `/ommecgdata/ecg_details/${result.arrhythmias[0]}/`;
+                    } else {
+                        alertSystem.info('No Data', 'No ECG data found for this search.');
+                    }
+                }
+
+                updateTaskCounter() {
+                    const taskBadge = document.getElementById('taskBadge');
+                    const taskBarToggle = document.getElementById('taskBarToggle');
+                    const taskClearAll = document.getElementById('taskClearAll');
+                    
+                    const activeTasks = Array.from(this.tasks.values()).filter(task => 
+                        task.status === 'processing' || task.status === 'completed'
+                    ).length;
+
+                    if (activeTasks > 0) {
+                        taskBadge.textContent = activeTasks;
+                        taskBadge.style.display = 'flex';
+                        taskBarToggle.classList.add('has-tasks');
+                        taskClearAll.style.display = 'inline';
+                    } else {
+                        taskBadge.style.display = 'none';
+                        taskBarToggle.classList.remove('has-tasks');
+                        taskClearAll.style.display = 'none'; 
+                    }
+                }
+
+                showEmptyState() {
+                    const taskList = document.getElementById('taskList');
+                    const emptyTasks = document.getElementById('emptyTasks');
+                    
+                    if (this.tasks.size === 0) {
+                        if (!emptyTasks) {
+                            taskList.innerHTML = `
+                                <div class="empty-tasks" id="emptyTasks">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <div>No active tasks</div>
+                                    <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
+                                </div>
+                            `;
+                        } else {
+                            emptyTasks.style.display = 'block';
+                        }
+                    }
+                }
+                updateTaskTimes() {
                     this.tasks.forEach(task => {
                         if (task.status === 'processing') {
                             this.renderTask(task);
                         }
                     });
                 }
-            formatTime(date) {
-                const now = new Date();
-                const diff = now - date;
-                const seconds = Math.floor(diff / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const hours = Math.floor(minutes / 60);
+                formatTime(date) {
+                    const now = new Date();
+                    const diff = now - date;
+                    const seconds = Math.floor(diff / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const hours = Math.floor(minutes / 60);
 
-                if (hours > 0) {
-                    return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-                } else if (minutes > 0) {
-                    return `${minutes}m ${seconds % 60}s`;
-                } else {
-                    return `${seconds}s`;
-                }
-            }
-
-            saveTasks() {
-                const tasksArray = Array.from(this.tasks.entries()).map(([id, task]) => ({
-                    ...task,
-                    createdAt: task.createdAt.getTime()
-                }));
-                localStorage.setItem('ecg_tasks', JSON.stringify(tasksArray));
-            }
-
-            loadTasks() {
-                const saved = localStorage.getItem('ecg_tasks');
-                if (saved) {
-                    try {
-                        const tasksArray = JSON.parse(saved);
-                        tasksArray.forEach(taskData => {
-                            taskData.createdAt = new Date(taskData.createdAt);
-                            this.tasks.set(taskData.id, taskData);
-                            this.renderTask(taskData);
-                        });
-                        this.updateTaskCounter();
-                        if (this.tasks.size === 0) {
-                            this.showEmptyState();
-                        }
-                    } catch (error) {
-                        console.error('Error loading tasks:', error);
-                        localStorage.removeItem('ecg_tasks');
+                    if (hours > 0) {
+                        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+                    } else if (minutes > 0) {
+                        return `${minutes}m ${seconds % 60}s`;
+                    } else {
+                        return `${seconds}s`;
                     }
-                } else {
-                    this.showEmptyState();
+                }
+
+                saveTasks() {
+                    const tasksArray = Array.from(this.tasks.entries()).map(([id, task]) => ({
+                        ...task,
+                        createdAt: task.createdAt.getTime()
+                    }));
+                    localStorage.setItem('ecg_tasks', JSON.stringify(tasksArray));
+                }
+
+                loadTasks() {
+                    const saved = localStorage.getItem('ecg_tasks');
+                    if (saved) {
+                        try {
+                            const tasksArray = JSON.parse(saved);
+                            tasksArray.forEach(taskData => {
+                                taskData.createdAt = new Date(taskData.createdAt);
+                                this.tasks.set(taskData.id, taskData);
+                                this.renderTask(taskData);
+                            });
+                            this.updateTaskCounter();
+                            if (this.tasks.size === 0) {
+                                this.showEmptyState();
+                            }
+                        } catch (error) {
+                            console.error('Error loading tasks:', error);
+                            localStorage.removeItem('ecg_tasks');
+                        }
+                    } else {
+                        this.showEmptyState();
+                    }
                 }
             }
-        }
 
-        // Initialize global systems
-        window.alertSystem = new AlertSystem({
-            autoCloseDelay: 2000,
-            progress: true
-        });
+            // Initialize global systems
+            window.alertSystem = new AlertSystem({
+                autoCloseDelay: 2000,
+                progress: true
+            });
 
-        window.taskManager = new TaskManager();
-        function fetchData() {
+            window.taskManager = new TaskManager(); 
+            
+           function fetchData() {
             fetch("{% url 'total_data' %}", {
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             })
@@ -1308,15 +948,15 @@
             .then(data => {
                 if (data.total_patients !== undefined) {
                     document.getElementById("totalPatients").textContent = 
-                        data.total_patients.toLocaleString("en-IN");
+                    data.total_patients.toLocaleString("en-IN");
                     localStorage.setItem("totalPatients", data.total_patients);
                 }
                 if (data.total_time !== undefined) {
-                    const totalTimeInt = parseInt(data.total_time, 10); 
-                    let formattedTime = totalTimeInt.toLocaleString("en-IN");
-                    document.getElementById("totalTime").textContent = formattedTime + " mins";
-                    localStorage.setItem("totalTime", totalTimeInt);
-                }
+    const totalTimeInt = parseInt(data.total_time, 10);
+    let formattedTime = totalTimeInt.toLocaleString("en-IN");
+    document.getElementById("totalTime").textContent = formattedTime + " mins";
+    localStorage.setItem("totalTime", totalTimeInt);
+}
             })
             .catch(error => console.error("Error fetching data:", error));
         }
@@ -1326,11 +966,11 @@
             const storedTime = localStorage.getItem("totalTime");
 
             if (storedPatients) 
-              document.getElementById("totalPatients").textContent = 
-                  parseInt(storedPatients).toLocaleString("en-IN");
+                document.getElementById("totalPatients").textContent = 
+                    parseInt(storedPatients).toLocaleString("en-IN");
             if (storedTime) 
-              document.getElementById("totalTime").textContent = 
-                  parseInt(storedTime).toLocaleString("en-IN") + " mins";
+                document.getElementById("totalTime").textContent =
+                    parseInt(storedTime).toLocaleString("en-IN") + " mins";
 
             fetchData();
             setInterval(fetchData, 100000000);
@@ -1345,29 +985,62 @@
             });
 
             window.addEventListener("load", () => loader.style.display = "none");
-
-            document.getElementById('toggleSidebar').addEventListener('click', function () {
-                const sidebar = document.getElementById('sidebar');
-                sidebar.classList.toggle('collapsed');
-
-                const icon = this.querySelector('i');
-                icon.classList.toggle('fa-angle-double-left');
-                icon.classList.toggle('fa-angle-double-right');
-            });
-
-            // Theme toggle functionality
-            const themeIcon = document.getElementById('theme-icon');
-            const currentTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', currentTheme);
-            themeIcon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-
-            themeIcon.addEventListener('click', () => {
-                const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-                themeIcon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            });
         });
+
+// Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+
+            sidebar.classList.toggle('sidebar-open');
+            mainContent.classList.toggle('main-content-shifted');
+        }
+
+        // Toggle Theme
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-mode');
+
+            if (isDark) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+        const toggleBtn = document.getElementById("taskBarToggle");
+        const tooltip = document.getElementById("taskTooltip");
+
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            tooltip.classList.toggle("active");
+        });
+
+        // Close when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!tooltip.contains(e.target) && !toggleBtn.contains(e.target)) {
+            tooltip.classList.remove("active");
+            }
+        });
+        });
+      
+        document.addEventListener("DOMContentLoaded", function () {
+        // Check stored theme on load
+        const savedTheme = localStorage.getItem("theme");
+
+        if (savedTheme === "dark") {
+            document.body.classList.add("dark-mode");
+            document.body.classList.remove("light-mode");
+        } else {
+            // Default is light if not saved
+            document.body.classList.add("light-mode");
+            document.body.classList.remove("dark-mode");
+        }
+    });
     </script>
 
     {% block scripts %}{% endblock %}

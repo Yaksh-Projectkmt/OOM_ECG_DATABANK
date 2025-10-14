@@ -23,7 +23,8 @@ def home(request):
     else:
         return redirect('/auth/login/')  # explicitly use auth prefix
   # use the login route you already made
-
+def help(request):
+    return render(request, 'authuser/help.html')
 collections = [
     'Myocardial Infarction',
     'Atrial Fibrillation & Atrial Flutter',
@@ -71,9 +72,9 @@ def register(request):
 
     return render(request, 'authuser/register.html')
 
-# User Login
+
 def login(request):
-    # If user is already logged in ? redirect
+    # If user is already logged in redirect
     if 'user_session' in request.session:
         return redirect('/ommecgdata/')
 
@@ -163,18 +164,11 @@ def change_password(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
-# User Dashboard
-def dashboard(request):
-    return redirect('/ommecgdata/')
-
 # User Logout
 def logout(request):
     request.session.flush()  # Clear session
     messages.success(request, "Logged out successfully.")
     return redirect('login')
-
-
 
 def process_collection_data(collection_name):
     """Process collection data directly from Patients DB (fast)."""

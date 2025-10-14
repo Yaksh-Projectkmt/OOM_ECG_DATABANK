@@ -1,4 +1,3 @@
-// const uploadFileUrl = "{% url 'uploaded_file' %}";
 const leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 const arrhythmiaDict = {
 'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
@@ -278,7 +277,6 @@ async function handleECGSubmit() {
 async function hide() {
     const fileInput = document.getElementById('fileInput');
     const fileLabel = document.getElementById('fileLabel');
-    const uploadSection = document.getElementById('uploadSection');
     const morphologySection = document.getElementById('morphologySection');
     const ecgForm = document.getElementById('ecgForm');
     const plot = document.getElementById('plot');
@@ -287,20 +285,28 @@ async function hide() {
     const arrhythmiaSelect = document.getElementById('arrhythmia');
     const subArrhythmiaSelect = document.getElementById('subArrhythmia');
 
+    // Reset inputs and labels
     fileInput.value = '';
     fileLabel.textContent = 'Click to Upload ECG Image';
-    uploadSection.style.display = 'none';
+
+    // Hide sections
     morphologySection.style.display = 'none';
     ecgForm.style.display = 'none';
     if (plot.style.display !== 'none') {
         plot.style.display = 'none';
         Plotly.purge('ecgChart');
     }
+
+    // Reset selects
     leadSelect.selectedIndex = 0;
     arrhythmiaSelect.selectedIndex = 0;
     subArrhythmiaSelect.selectedIndex = 0;
-    buttonSection.style.display = 'block';
 
+    // Show button section and main title
+    buttonSection.style.display = 'block';
+    document.getElementById('mainTitle').style.display = 'flex';
+
+    // Cleanup CSVs via POST
     try {
         const response = await fetch('/morphology/remove_all_csvs/', {
             method: 'POST',
@@ -314,7 +320,6 @@ async function hide() {
     } catch (error) {
         console.error('Cleanup fetch error:', error);
     }
-    document.getElementById('mainTitle').style.display = 'flex';
 }
 function originalimage() {
     const fileInput = document.getElementById('fileInput');
@@ -410,32 +415,65 @@ if (canvas) {
 
 let painting = false;
 let rawPoints = [];
-let augmentedData = [];
-
+// Initialize the canvas and grid
 function initCanvas() {
-    if (canvas) {
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!canvas) return;
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawECGGrid(ctx, canvas.width, canvas.height);
+}
+
+// Draw ECG-style grid
+function drawECGGrid(ctx, width, height) {
+    const majorGridSpacing = 50;  // large grid every 50px
+    const minorGridSpacing = 10;  // small grid every 10px
+
+    ctx.save();
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = 'rgba(244, 210, 216, 0.92)'; // light pink minor grid
+    for (let x = 0; x <= width; x += minorGridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
     }
+    for (let y = 0; y <= height; y += minorGridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+
+    // Draw thicker major grid lines
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = 'rgba(245, 121, 121, 0.93)'; // darker red major grid
+    for (let x = 0; x <= width; x += majorGridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+    }
+    for (let y = 0; y <= height; y += majorGridSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+
+    ctx.restore();
 }
 
 function getPointerPos(e) {
     const rect = canvas.getBoundingClientRect();
-    return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
 function startDrawing(e) {
     painting = true;
     const pos = getPointerPos(e);
     rawPoints.push(pos);
-    const ctx = canvas.getContext('2d');
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
     drawLoop();
 }
 
@@ -447,14 +485,13 @@ function addPoint(e) {
 
 function stopDrawing() {
     painting = false;
-    const ctx = canvas.getContext('2d');
-    ctx.beginPath();
 }
 
 function drawLoop() {
     if (!painting) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawECGGrid(ctx, canvas.width, canvas.height); // redraw grid each frame
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#FF0000';
@@ -469,18 +506,33 @@ function drawLoop() {
     }
     requestAnimationFrame(drawLoop);
 }
+// Show grid immediately when page loads
+window.addEventListener('load', initCanvas);
+
+// Optional: add event listeners for drawing
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', addPoint);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseleave', stopDrawing);
 
 function resetDrawing() {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Reset data arrays
     rawPoints = [];
     augmentedData = [];
+
+    // Reset form/UI fields
     document.getElementById('replicationCount').value = '';
     document.getElementById('signalPlot').style.display = 'none';
     document.getElementById('subarrhythmiaSelect').style.display = 'none';
     document.getElementById('patientIdInput').value = '';
     document.getElementById('arrhythmiaSelect').selectedIndex = 0;
     document.getElementById('subarrhythmiaSelect').selectedIndex = 0;
+
+    // Redraw ECG grid
+    drawECGGrid(ctx, canvas.width, canvas.height);
 }
 
 function augmentSignal() {
@@ -697,29 +749,18 @@ document.addEventListener('DOMContentLoaded', () => {
         arrhythmiaMorphSelect.appendChild(option);
     }
 
-    // New code to handle file-input-container clicks
+    // File input click handling
     const fileInputContainer = document.querySelector('.file-input-container');
     if (fileInputContainer) {
-        // Remove any existing click listeners to prevent duplicates
-        fileInputContainer.replaceWith(fileInputContainer.cloneNode(true)); // Clears existing listeners
+        fileInputContainer.replaceWith(fileInputContainer.cloneNode(true));
         const newFileInputContainer = document.querySelector('.file-input-container');
-        
         newFileInputContainer.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent event from bubbling to other elements
+            event.stopPropagation();
             const fileInput = document.getElementById('fileInput');
-            fileInput.click(); // Trigger file input dialog
+            fileInput.click();
         });
     }
 
-    // Debug: Log all click listeners on fileInput
-    const fileInput = document.getElementById('fileInput');
-    if (fileInput && typeof getEventListeners === 'function') {
-    }
-
-    if (canvas) {
-        canvas.addEventListener('pointerdown', startDrawing);
-        canvas.addEventListener('pointermove', addPoint);
-        canvas.addEventListener('pointerup', stopDrawing);
-        canvas.addEventListener('pointerout', stopDrawing);
-    }
+    //  Make Morphology Section the default active view
+    showMorphologySection();
 });

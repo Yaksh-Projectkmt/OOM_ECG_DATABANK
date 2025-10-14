@@ -1,7 +1,7 @@
 /* CSS Variables */
-:root {
+body.light-mode {
     --background-color: #f9fafb;
-    --text-color: #111827;
+    --text-color: #010101;
     --stat-box-bg: #162459;
     --highlight-color: #facc15;
     --header-bg: #fff;
@@ -38,7 +38,7 @@
     --alert-secondary-text: #374151;
 }
 
-[data-theme="dark"] {
+body.dark-mode {
     --background-color: #1e2a44;
     --text-color: #f9fafb;
     --stat-box-bg: #1e2a44;
@@ -575,6 +575,7 @@ h1 {
     font-size: 12px;
     font-weight: 600;
     color: var(--small-text);
+    text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
 }

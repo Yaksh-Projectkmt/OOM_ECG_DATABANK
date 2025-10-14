@@ -153,7 +153,7 @@ def upload_ecg(request):
             
             # Dynamically Select the Correct MongoDB Collection
             collection = db[arrhythmia]# Collection name = Arrhythmia Type
-            morphology_data_insert_db(csv_name,arrhythmia,datalength)
+            
             # Check for Duplicate Entry
             exists = collection.count_documents(
                 {'PatientID': csv_name, 'Arrhythmia': sub_arrhythmia, 'leadtype': lead_type, 'Lead': 2, 'Frequency': 200}
@@ -162,6 +162,7 @@ def upload_ecg(request):
                 return JsonResponse({"error": "Duplicate data found. Skipping insertion."}, status=400)  # Changed to error
             else:
                 collection.insert_one(ecg_data_dic)
+                morphology_data_insert_db(csv_name,arrhythmia,datalength)
                 msg = f"ECG data inserted successfully into `{arrhythmia}` collection."
                 return JsonResponse({"message": msg})
 
@@ -230,7 +231,7 @@ def open_morphology_script(request):
             }
             # Save to MongoDB
             collection = db[arrhythmia]
-            morphology_data_insert_db(pid, arrhythmia,datalength)
+            
             # Check for duplicate data
             existing_document = collection.find_one({
                 "PatientID": pid,
@@ -247,6 +248,7 @@ def open_morphology_script(request):
             
             # Insert if no duplicate found
             collection.insert_one(document)
+            morphology_data_insert_db(pid, arrhythmia,datalength)
             return JsonResponse({"status": "success", "message": "Data inserted successfully!"})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})

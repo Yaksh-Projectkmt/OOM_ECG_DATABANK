@@ -24,7 +24,7 @@ def load_tflite_model(model_path):
 
 # Load TFLite models
 with tf.device('/CPU:0'):
-    r_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/rnn_model1_29_09_Unet.tflite")
+    r_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/rnn_model2_07_10_Unet.tflite")
     pt_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/ecg_pt_detection_LSTMGRU_TCN_Transpose_v27.tflite")
 
 def lowpass(file, cutoff=0.3):
@@ -88,7 +88,7 @@ def detect_beats(ecg, rate, ransac_window_size=3.35, lowfreq=5.0, highfreq=15.0)
 def find_normalize(signal):
     return (signal - np.mean(signal)) / np.std(signal)
 
-def refined_non_max_suppression(ecg_signal, valid_indices, suppression_radius=40):
+def refined_non_max_suppression(ecg_signal, valid_indices, suppression_radius=25):
     if len(valid_indices) == 0:
         return []
     sorted_indices = sorted(valid_indices, reverse=True)

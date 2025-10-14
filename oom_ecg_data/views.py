@@ -1337,7 +1337,10 @@ def ecg_details(request, arrhythmia):
         total_pages = paginator.num_pages
         current_page = page
 
-    card_name = full_data[0]['collection_name'] if full_data else normalized_arrhythmia
+    if is_segment_mode and len(ecg_data) > 1:
+        card_name = "Data Management"
+    else:
+        card_name = full_data[0]['collection_name'] if full_data else normalized_arrhythmia
 
     # AJAX: Return JSON
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":

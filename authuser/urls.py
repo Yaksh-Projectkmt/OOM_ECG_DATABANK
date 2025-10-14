@@ -1,12 +1,12 @@
 from django.urls import path
-from .views import register, login, logout,dashboard,profile,change_password,update_profile,home
+from .views import register, login, logout,help,profile,change_password,update_profile,home
 #from report.views import index
 
 urlpatterns = [
     path('', home, name='home'),
     path('register/', register, name='register'),
     path('login/', login, name='login'),
-    path('dashboard/', dashboard, name='dashboard'),
+    path('help/', help, name='help'),
     path('logout/', logout, name='logout'),
     path('profile/', profile, name='profile'),  # Redirect to index view
     path('change_password/',change_password,name='change_password'),

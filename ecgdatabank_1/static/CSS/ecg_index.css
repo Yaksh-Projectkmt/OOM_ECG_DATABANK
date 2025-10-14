@@ -1,0 +1,536 @@
+body{
+    overflow: hidden;
+}
+/* ==========================
+   Unified Modal Theming
+   ========================== */
+
+/* Modal Base Styling */
+.modal-content {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+    transition: all 0.3s ease;
+}
+
+/* Modal Header + Footer */
+.modal-header, .modal-footer {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
+    color: var(--text-primary);
+}
+.modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* Modal Body */
+.modal-body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: 0 0 14px 14px;
+}
+
+/* Close button (X) styling */
+body.dark-mode .btn-close {
+    filter: invert(1); /* White close icon */
+    opacity: 0.9;
+}
+body.light-mode .btn-close {
+    filter: invert(0); /* Default black */
+    opacity: 0.7;
+}
+.btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    transition: all 0.25s ease;
+}
+
+/* Inputs, selects, and forms */
+.form-control, .form-select {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--action-primary-bg);
+    box-shadow: 0 0 8px var(--glow-color);
+    color:black;
+    background: var(--card-bg);
+}
+
+/* Buttons inside modals */
+.btn {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--action-primary-bg);
+    color: var(--action-primary-text);
+    border: 1px solid var(--action-primary-bg);
+}
+.btn-primary:hover {
+    background: var(--action-primary-hover);
+}
+
+.btn-secondary {
+    background: var(--action-secondary-bg);
+    color: var(--action-secondary-text);
+    border: 1px solid var(--action-secondary-bg);
+}
+.btn-secondary:hover {
+    background: var(--action-secondary-hover);
+}
+
+.btn-outline-primary, .btn-outline-info {
+    color: var(--action-primary-bg);
+    border: 1px solid var(--action-primary-bg);
+    background: transparent;
+}
+.btn-outline-primary:hover, .btn-outline-info:hover {
+    background: var(--action-primary-bg);
+    color: var(--action-primary-text);
+}
+
+/* Tabs inside the search modal */
+.search-tabs {
+    border-bottom: 1px solid var(--card-border);
+}
+.search-tabs .nav-link {
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.search-tabs .nav-link:hover {
+    color: var(--text-primary);
+}
+
+/* ECG Preview Area */
+#preview-lead-container {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+/* Input Group Spacing */
+.arrhythmia-group {
+    border-bottom: 1px dashed var(--card-border);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+/* Smooth Modal Animation */
+.modal.fade .modal-dialog {
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+}
+.modal.fade.show .modal-dialog {
+    transform: scale(1);
+}
+
+/* Content Area */
+.content-area {
+    padding: 32px;
+}
+
+.content-header {
+    margin-bottom: 32px;
+}
+
+.content-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.content-description {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 300ms;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 700ms;
+}
+
+.action-btn:hover .btn-shimmer {
+    transform: translateX(100%);
+}
+
+.action-btn svg {
+    position: relative;
+    z-index: 10;
+    transition: transform 200ms;
+}
+
+.action-btn:hover svg {
+    transform: rotate(12deg);
+}
+
+.action-btn span {
+    position: relative;
+    z-index: 10;
+}
+
+.action-btn.primary {
+    background: var(--action-primary-bg);
+    color: var(--action-primary-text);
+}
+
+.action-btn.primary:hover {
+    background: var(--action-primary-hover);
+}
+
+.action-btn.secondary {
+    background: var(--action-secondary-bg);
+    color: var(--action-secondary-text);
+}
+
+.action-btn.secondary:hover {
+    background: var(--action-secondary-hover);
+}
+
+.action-btn.tertiary {
+    background: var(--action-tertiary-bg);
+    color: var(--action-tertiary-text);
+    border: 1px solid var(--action-tertiary-border);
+}
+
+.action-btn.tertiary:hover {
+    background: var(--action-tertiary-hover);
+}
+
+/* Cards Grid */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.condition-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 500ms;
+    position: relative;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 600ms ease-out forwards;
+}
+
+.condition-card:hover {
+    border-color: var(--card-hover-border);
+    transform: translateY(0) scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom right, transparent, transparent);
+    transition: all 500ms;
+}
+
+.condition-card:hover .card-gradient {
+    background: linear-gradient(to bottom right, rgba(128, 128, 128, 0.05), rgba(128, 128, 128, 0.1));
+}
+
+.ecg-pattern {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 160px;
+    height: 80px;
+    opacity: var(--ecg-opacity);
+    transition: all 500ms;
+}
+
+.condition-card:hover .ecg-pattern {
+    opacity: var(--ecg-opacity-hover);
+}
+
+.ecg-pattern svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ecg-line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    animation: ecg 3s linear infinite;
+}
+
+.card-glow {
+    position: absolute;
+    inset: 0;
+    background: var(--glow-color);
+    opacity: 0;
+    filter: blur(32px);
+    transition: opacity 500ms;
+}
+
+.condition-card:hover .card-glow {
+    opacity: 0.05;
+}
+
+.card-content {
+    position: relative;
+    z-index: 10;
+}
+
+.card-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 700;
+    transition: all 300ms;
+}
+
+.condition-card:hover .card-title {
+    transform: scale(1.05) translateX(4px);
+}
+
+.card-icon {
+    color: var(--text-secondary);
+    opacity: 0;
+    transform: translateX(8px);
+    transition: all 300ms;
+}
+
+.condition-card:hover .card-icon {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.card-subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+    transition: color 300ms;
+}
+
+.condition-card:hover .card-subtitle {
+    color: var(--text-primary);
+}
+
+.card-progress {
+    margin-top: 16px;
+    height: 4px;
+    width: 0;
+    background: linear-gradient(to right, var(--text-secondary), var(--text-primary));
+    border-radius: 9999px;
+    transition: width 700ms;
+}
+
+.condition-card:hover .card-progress {
+    width: 100%;
+}
+
+.card-indicator {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    opacity: 0;
+    transition: opacity 300ms;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    cursor: pointer;
+
+}
+
+.condition-card:hover .card-indicator {
+    opacity: 1;
+}
+
+.card-corner-glow {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: var(--glow-color);
+    opacity: 0;
+    filter: blur(48px);
+    border-radius: 50%;
+    transition: opacity 500ms;
+}
+
+.condition-card:hover .card-corner-glow {
+    opacity: 0.05;
+}
+
+.card-indicator:hover {
+  transform: scale(1.2);
+}
+
+/* --- Tooltip popup --- */
+.subtitle-popup {
+  position: absolute;
+  bottom: 140%;
+  right: 50%;
+  transform: translateX(50%);
+  background: rgba(20, 20, 20, 0.95);
+  color: rgb(98, 194, 194);
+  border: 1px solid rgba(14, 14, 13, 0.715);
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+  z-index: 10;
+}
+
+/* Small arrow below tooltip */
+.subtitle-popup::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  right: 50%;
+  transform: translateX(50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(20, 20, 20, 0.95) transparent transparent transparent;
+}
+
+/* --- Show popup on hover --- */
+.card-indicator:hover .subtitle-popup {
+  opacity: 1;
+  transform: translateX(50%) translateY(-5px);
+  pointer-events: auto;
+}
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes heartbeat {
+    0%, 100% {
+        transform: scale(1);
+    }
+    10%, 30% {
+        transform: scale(1.1);
+    }
+    20%, 40% {
+        transform: scale(1);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes ecg {
+    0% {
+        stroke-dasharray: 0, 1000;
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dasharray: 1000, 0;
+        stroke-dashoffset: -1000;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 0;
+    }
+
+    .main-content-shifted {
+        margin-left: 0;
+    }
+
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .content-area {
+        padding: 16px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .action-btn {
+        width: 100%;
+    }
+
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+}

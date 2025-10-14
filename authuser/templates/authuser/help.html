@@ -1,0 +1,334 @@
+{% load static %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help & Support | Databank Healthcare</title>
+
+  <style>
+    /* ====== BASE STYLES ====== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: #0d0d0d;
+      color: #f0f0f0;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: linear-gradient(90deg, #111, #1c1c1c);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    nav a {
+      margin: 0 1rem;
+      text-decoration: none;
+      color: #ccc;
+      font-size: 0.95rem;
+      transition: color 0.3s ease;
+    }
+
+    nav a:hover {
+      color: #fff;
+    }
+
+    /* ====== HERO SECTION ====== */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: linear-gradient(180deg, #111 0%, #1a1a1a 100%);
+      animation: fadeIn 1.2s ease;
+    }
+
+    .hero h2 {
+      font-size: 2.5rem;
+      color: #fff;
+      margin-bottom: 1rem;
+      letter-spacing: 1px;
+    }
+
+    .hero p {
+      color: #ccc;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .hero button {
+      background: #fff;
+      color: #111;
+      padding: 0.8rem 2rem;
+      border: none;
+      border-radius: 25px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.4s ease;
+    }
+
+    .hero button:hover {
+      background: #999;
+      transform: translateY(-3px);
+    }
+
+    /* ====== FAQ SECTION ====== */
+    .faq-section {
+      max-width: 800px;
+      margin: 4rem auto;
+      padding: 0 2rem;
+    }
+
+    .faq-item {
+      background: #1a1a1a;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+
+    .faq-item:hover {
+      transform: translateY(-3px);
+    }
+
+    .faq-question {
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
+
+    .faq-question span {
+      transition: transform 0.3s ease;
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      background: #141414;
+      padding: 0 1.5rem;
+      color: #ccc;
+      transition: max-height 0.5s ease, padding 0.3s ease;
+    }
+
+    .faq-item.active .faq-answer {
+      max-height: 200px;
+      padding: 1rem 1.5rem;
+    }
+
+    .faq-item.active .faq-question span {
+      transform: rotate(45deg);
+    }
+
+    /* ====== CONTACT SECTION ====== */
+    .contact-section {
+      background: #111;
+      padding: 4rem 2rem;
+      text-align: center;
+      border-top: 1px solid #222;
+    }
+
+    .contact-section h3 {
+      color: #fff;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .contact-section p {
+      color: #aaa;
+      margin-bottom: 2rem;
+    }
+
+    form {
+      max-width: 500px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    input, textarea {
+      background: #1c1c1c;
+      border: 1px solid #333;
+      color: #eee;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.3s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #888;
+    }
+
+    button.submit {
+      background: #fff;
+      color: #111;
+      font-weight: 600;
+      border: none;
+      border-radius: 25px;
+      padding: 0.8rem;
+      cursor: pointer;
+      transition: all 0.4s ease;
+    }
+
+    button.submit:hover {
+      background: #999;
+      transform: translateY(-3px);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+      background: #0d0d0d;
+      border-top: 1px solid #222;
+      font-size: 0.9rem;
+    }
+
+    /* ====== ANIMATIONS ====== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .sidebar-header {
+    padding: 12px;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.sidebar-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.logo-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-container {
+    position: relative;
+}
+
+.sidebar-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.sidebar-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="sidebar-header">
+            <div class="sidebar-header-content">
+                <div class="logo-section">
+                    <div class="logo-container">
+                        <div class="logo-glow"></div>
+                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" alt="Logo" style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 10px;">
+                    </div>
+                    <div>
+                        <h1 class="sidebar-title"> OOM ECG DataBank</h1>
+                    </div>
+                      
+                </div>
+            </div>
+        </div>
+    <nav>
+      <a onclick="window.location.href='{% url 'oom_ecg_index' %}'">Back</a>
+      <a href="#">Contact</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h2>Need Help or Support?</h2>
+    <p>We’re here to assist you with any questions about your health data, reports, or our platform. Explore FAQs or reach out directly.</p>
+    <button id="scrollToFaq">View FAQs</button>
+  </section>
+
+  <section class="faq-section" id="faq">
+    <div class="faq-item">
+      <div class="faq-question">How can I access my health reports? <span>+</span></div>
+      <div class="faq-answer">You can log in to your account dashboard and navigate to “My Reports” to view or download your health reports securely.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">Is my data safe on Databank? <span>+</span></div>
+      <div class="faq-answer">Absolutely. We use advanced encryption and follow healthcare-grade data privacy standards to protect all user information.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">How do I contact technical support? <span>+</span></div>
+      <div class="faq-answer">You can fill out the contact form below or email us at <b>support@databankhealth.com</b>. Our team responds within 24 hours.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-question">Can I update my personal information? <span>+</span></div>
+      <div class="faq-answer">Yes, visit your profile settings and select “Edit Profile” to update your information anytime.</div>
+    </div>
+  </section>
+
+  <section class="contact-section">
+    <h3>Contact Support</h3>
+    <p>Still have questions? Send us a message and we’ll get back to you shortly.</p>
+    <form id="contactForm">
+      <input type="text" placeholder="Your Name" required />
+      <input type="email" placeholder="Your Email" required />
+      <textarea rows="4" placeholder="Your Message" required></textarea>
+      <button type="submit" class="submit">Send Message</button>
+    </form>
+  </section>
+
+  <footer>
+   © 2025–2026 Kali MedTech Pvt. Ltd. All rights reserved.
+  </footer>
+
+  <script>
+    // ===== FAQ Toggle =====
+    const faqItems = document.querySelectorAll(".faq-item");
+    faqItems.forEach(item => {
+      item.querySelector(".faq-question").addEventListener("click", () => {
+        item.classList.toggle("active");
+      });
+    });
+
+    // ===== Scroll to FAQ =====
+    document.getElementById("scrollToFaq").addEventListener("click", () => {
+      document.getElementById("faq").scrollIntoView({ behavior: "smooth" });
+    });
+
+    // ===== Contact Form Animation =====
+    const form = document.getElementById("contactForm");
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      alert("Thank you! Your message has been sent successfully.");
+      form.reset();
+    });
+  </script>
+</body>
+</html>
