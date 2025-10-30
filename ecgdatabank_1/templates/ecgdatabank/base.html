@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}ECG Dashboard{% endblock %}</title>
-    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/x-icon">
+    <link rel="icon" href="{% static 'images/Oom Logo Black (1).jpg' %}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'CSS/base.css' %}">
@@ -20,12 +20,20 @@
                 <div class="logo-section">
                     <div class="logo-container">
                         <div class="logo-glow"></div>
-                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" alt="Logo" style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 10px;">
+                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" 
+     alt="Logo" 
+     style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 10px; border: 1.5px solid #bc1a00; animation: pulse 2s infinite;">
                     </div>
-                    <div>
-                        <h1 class="sidebar-title"> OOM ECG DataBank</h1>
-                    </div>
-                      
+                  <div>
+                    <h1 class="sidebar-title">OOM ECG DataBank</h1>
+                    <p class="sidebar-subtitle">
+                      Powered by 
+                      <span>
+                        <a href="https://projectkmt.com/" target="_blank" rel="noopener noreferrer">Kali MedTech Pvt. Ltd.</a>
+                      </span>
+                    </p>
+                  </div>
+                                    
                 </div>
             </div>
         </div>
@@ -33,7 +41,6 @@
         <!-- Navigation -->
         <div class="sidebar-content">
             <div class="nav-section">
-                <p class="nav-section-title">MAIN MENU</p>
                 <nav class="nav-menu">
 
                     <a href="{% url 'oom_ecg_index' %}" class="nav-link active">
@@ -206,7 +213,7 @@
                 </button>
                 
                 <div>
-                    <h2 class="page-title">Arrhythmia & MI</h2>
+                    <h2 class="page-title">Arrhythmias & MI</h2>
                 </div>
             </div>
             <div class="header-right">

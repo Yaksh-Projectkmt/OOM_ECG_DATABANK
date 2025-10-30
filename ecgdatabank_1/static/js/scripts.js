@@ -414,12 +414,12 @@ const attachRowEventListeners = () => {
                   height = 400;
                   break;
                 case 7: // 7-lead ECG
-                  width = 1200;
-                  height = 1000;
+                  width = 700;
+                  height = 1800;
                   break;
                 case 12: // 12-lead ECG (standard)
-                  width = 1600;
-                  height = 1500;
+                  width = 1000;
+                  height = 3000;
                   break;
                 default: // Fallback for other configurations
                   width = 1600;
@@ -643,8 +643,8 @@ document.addEventListener("click", async function (e) {
                 return;
             }
             let width = 1000, height = 400;
-            if (leadNumeric == 7) { width = 1200; height = 1000; }
-            else if (leadNumeric == 12) { width = 1600; height = 1500; }
+            if (leadNumeric == 7) { width = 700; height = 1800; }
+            else if (leadNumeric == 12) { width = 1000; height = 3000; }
             fileContent = await Plotly.toImage(plotDiv, { format: "png", width, height });
         } else if (downloadType === "selected_data") {
             if (!window.selectedData) {
@@ -1242,7 +1242,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
     }
 
     plotElement.style.width = '100%';
-    plotElement.style.height = '650px';
+    plotElement.style.height = '400px';
     Plotly.purge(plotElement);
     plotElement.innerHTML = '';
 
@@ -1470,13 +1470,13 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
 
       const rawDtick = (dataLength < windowSize)
         ? Math.round(dataLength / 25)   // e.g., 500/25 = 20
-        : 100;
+        : 50;
 
       const xDtick = Math.ceil(rawDtick / 5) * 5;  // round to nearest 5
       const xMinorDtick = xDtick / 5;
       const layout = {
         grid: { rows: gridRows, columns: 1, pattern: 'independent' },
-        height: 500 * gridRows,
+        height: 300 * gridRows,
         showlegend: true,
         legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255, 255, 255, 0.5)' },
         margin: { t: 40, b: 40, l: 50, r: 40 },
@@ -1501,7 +1501,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
           fixedrange: false 
         };
         layout[axisY] = {
-          range: [0, 4],
+          range: [-0.1, 4.1],
           title: { text: lead, standoff: 15, font: { size: 14 } },
           showgrid: true,
           gridcolor: 'rgba(245, 129, 129, 1)',
@@ -1751,7 +1751,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
   // --- Grid calculations ---
   const dataLength = data.x.length;
   const windowSize = 2000;
-  const rawDtick = dataLength < windowSize ? Math.round(dataLength / 25) : 100;
+  const rawDtick = dataLength < windowSize ? Math.round(dataLength / 25) : 50;
   const xDtick = Math.ceil(rawDtick / 5) * 5;
   const xMinorDtick = xDtick / 5;
 
@@ -1763,18 +1763,20 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
       autorange: false,
       title: { text: 'Time Index', standoff: 20 },
       showgrid: true,
-      gridcolor: 'rgba(245, 121, 121, 0.93)',
+      gridcolor: 'rgba(240, 140, 140, 0.93)',
+      gridwidth: 0.8,
       zeroline: false,
       dtick: xDtick,
       minor: {
         showgrid: true,
         gridcolor: 'rgba(244, 210, 216, 0.92)',
+        gridwidth: 0.5,
         dtick: xMinorDtick,
         tick0: 0
       },
       rangeslider: {
         visible: true,
-        thickness: 0.07,
+        thickness: 1.02,
         bgcolor: 'rgba(245,121,121,0.1)',
         bordercolor: 'rgba(245,121,121,0.4)',
       }
@@ -1790,13 +1792,14 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
     },
 
     yaxis: {
-      range: [0, 4.1],
+      range: [-0.1, 4.1],
       title: { text: 'ECG (mV)' },
       showgrid: true,
-      gridcolor: 'rgba(245, 121, 121, 0.93)',
+      gridcolor: 'rgba(240, 140, 140, 0.93)',
+      gridwidth: 0.8,
       zeroline: false,
       dtick: 0.5,
-      minor: { showgrid: true, gridcolor: 'rgba(244, 210, 216, 0.92)' }
+      minor: { showgrid: true, gridcolor: 'rgba(244, 210, 216, 0.92)',gridwidth: 0.5, }
     },
 
     margin: { t: 60, b: 70, l: 40, r: 40 },
@@ -2733,3 +2736,38 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+async function patientSearch() {
+  const patientId = document.getElementById("newpatientId1").value.trim();
+
+  if (!patientId) {
+    alertSystem.warning('Warning', 'Please enter a Patient ID.');
+    return;
+  }
+
+  const pageLoader = document.getElementById('page-loader');
+  if (pageLoader) pageLoader.style.display = 'flex';
+
+  try {
+    const response = await fetch(`/ommecgdata/check_patient/?patientId=${encodeURIComponent(patientId)}`);
+    const data = await response.json();
+
+    if (data.status === "found") {
+      // Show loader briefly before redirect
+      if (pageLoader) pageLoader.style.display = 'flex';
+      await new Promise(r => setTimeout(r, 300)); // give 300ms for loader to appear
+      window.location.href = `/ommecgdata/patient_search_view?patientId=${encodeURIComponent(patientId)}`;
+    } 
+    else if (data.status === "not_found") {
+      if (pageLoader) pageLoader.style.display = 'none';
+      alertSystem.error('Error', 'Patient not found. Please check the ID and try again.');
+    } 
+    else {
+      if (pageLoader) pageLoader.style.display = 'none';
+      alertSystem.error('Error', data.message || 'Unexpected error occurred.');
+    }
+  } catch (error) {
+    console.error("Error checking patient:", error);
+    if (pageLoader) pageLoader.style.display = 'none';
+    alertSystem.error('Error', 'Unable to verify patient at the moment. Please try again later.');
+  }
+}

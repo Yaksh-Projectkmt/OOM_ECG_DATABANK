@@ -166,7 +166,7 @@ body.light-mode .btn-close {
   .icon-btn.delete {
     background-color: rgb(239 68 68 / 0.1);
     color: var(--danger);
-    z-index: 3000;
+    z-index: 10;
   }
 
   .icon-btn.delete:hover {

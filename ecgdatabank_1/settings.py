@@ -52,7 +52,7 @@ SECRET_KEY = 'django-insecure-vd(#wx^&i9u@q%op3md)-ose(q(cdjgya7p*=9@miw)3o1t+tr
 DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.2.96']
-
+MAINTENANCE_MODE = False
 
 # Application definition
 INSTALLED_APPS = [
@@ -77,6 +77,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'ecgdatabank_1.context_processors.MaintenanceModeMiddleware'
+
 ]
 
 ROOT_URLCONF = 'ecgdatabank_1.urls'

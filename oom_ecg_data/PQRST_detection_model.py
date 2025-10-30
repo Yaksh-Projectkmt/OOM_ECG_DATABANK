@@ -24,7 +24,7 @@ def load_tflite_model(model_path):
 
 # Load TFLite models
 with tf.device('/CPU:0'):
-    r_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/rnn_model2_07_10_Unet.tflite")
+    r_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/rnn_model1_29_10_Unet.tflite")
     pt_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/ecg_pt_detection_LSTMGRU_TCN_Transpose_v27.tflite")
 
 def lowpass(file, cutoff=0.3):

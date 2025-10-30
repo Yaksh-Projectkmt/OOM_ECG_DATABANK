@@ -30,6 +30,7 @@ import base64
 import matplotlib
 import datetime
 from datetime import datetime, timezone
+from scipy.signal import butter, filtfilt
 matplotlib.use('Agg')
 
 client = pymongo.MongoClient("mongodb://192.168.1.65:27017/")
@@ -1129,7 +1130,7 @@ def get_multiple_segments(request):
         channels_map = {
             2: ["II"],
             7: ["I", "II", "III", "aVR", "aVL", "aVF", "v5"],
-            12: ["I", "II", "III", "AVR", "AVL", "AVF",
+            12: ["I", "II", "III", "AVF", "AVL", "AVR",
                  "V1", "V2", "V3", "V4", "V5", "V6"]
         }
         required_channels = channels_map.get(lead)
@@ -1151,7 +1152,8 @@ def get_multiple_segments(request):
                 collection = db[arrhythmia]
 
                 # Always combine smaller docs, ignore docs bigger than needed
-                query = {"Lead": lead, "datalength": {"$gt": 0, "$lte": sample_count}}
+#                query = {"Lead": lead, "datalength": {"$gt": 0, "$lte": sample_count}}
+                query = {"Lead": lead, "datalength": {"$gt": 0}}
                 projection = {
                     "PatientID": 1,
                     "Arrhythmia": 1,
@@ -1361,3 +1363,360 @@ def ecg_details(request, arrhythmia):
         "arrhythmia": arrhythmia,
         "card_name": card_name,
     })
+    
+# ========= UTILITIES =========
+def get_ecg_collection(patient_id):
+    MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"
+    client = MongoClient(MONGO_URI)
+    DB_NAME = "oom-ecg"
+    db1 = client[DB_NAME]
+    patients_collection = db1["patients"]
+    """Get patient document and ECG collection handle."""
+    patient = patients_collection.find_one({"patientId": patient_id})
+    if not patient:
+        return None, None
+    ecg_collection = db1[f"{patient['_id']}_ecgs"]
+    return patient, ecg_collection
+
+
+def decode_ecg_hex(hex_string):
+    try:
+        data_bytes = bytes.fromhex(hex_string)
+        val = np.frombuffer(data_bytes, dtype='<i2').astype(np.float32)
+        val = val * (4.6 / 4095) / 4
+        return val
+    except Exception:
+        return np.array([], dtype=np.float32)
+
+
+def lowpass_filter(signal, cutoff=0.3, fs=200):
+    try:
+        b, a = butter(2, cutoff / (fs / 2), btype="low")
+        return filtfilt(b, a, signal)
+    except Exception:
+        return signal
+
+
+def baseline_correction(signal, window_size=1000):
+    try:
+        baseline = np.convolve(signal, np.ones(window_size) / window_size, mode="same")
+        return signal - baseline
+    except Exception:
+        return signal
+
+
+# ========= API ENDPOINTS =========
+def check_patient(request):
+    MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"
+    client = MongoClient(MONGO_URI)
+    DB_NAME = "oom-ecg"
+    db1 = client[DB_NAME]
+    patients_collection = db1["patients"]
+    patient_id = request.GET.get("patientId")
+    if not patient_id:
+        return JsonResponse({"status": "error", "message": "Missing patientId"})
+
+    patient = patients_collection.find_one({"patientId": patient_id})
+    if patient:
+        return JsonResponse({"status": "found", "message": "Patient found"})
+    else:
+        return JsonResponse({"status": "not_found"})
+
+def patient_search_view(request):
+    patient_id = request.GET.get("patientId")
+    if not patient_id:
+        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Missing patientId"})
+
+    patient, ecg_collection = get_ecg_collection(patient_id)
+    if not ecg_collection:
+        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Patient not found"})
+
+    try:
+        version_summary = list(ecg_collection.aggregate([
+            {"$group": {"_id": "$version", "count": {"$sum": 1}}},
+            {"$sort": {"_id": 1}}
+        ]))
+        available_versions = [v['_id'] for v in version_summary]
+
+        lead_mapping = {
+            2: ["II"],
+            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
+            12: ["I", "II", "III", "aVR", "aVL", "aVF",
+                 "V1", "V2", "V3", "V4", "V5", "V6"]
+        }
+
+        all_versions_data = []
+        for vdoc in version_summary:
+            version = vdoc["_id"]
+            cursor = ecg_collection.find(
+                {"version": version}, {"_id": 0, "data": 1, "dateTime": 1}
+            ).sort("dateTime", 1)
+
+            ecg_wave, times = [], []
+            for doc in cursor:
+                ecg_wave.extend(decode_ecg_hex(doc["data"]))
+                times.append(doc["dateTime"])
+
+            if not ecg_wave:
+                continue
+
+            # Keep signal raw (no filter / no baseline correction)
+            ecg_np = np.array(ecg_wave, dtype=np.float32)
+            leads = lead_mapping.get(version, ["II"])
+
+            all_versions_data.append({
+                "version": version,
+                "lead_count": len(leads),
+                "leads": leads,
+                "start_time": times[0].isoformat() if times else None,
+                "end_time": times[-1].isoformat() if times else None,
+                "data": np.round(ecg_np, 4).tolist(),
+            })
+
+        context = {
+            "patient_id": patient_id,
+            "sampling_rate": 200,
+            "total_docs": ecg_collection.estimated_document_count(),
+            "all_versions_data": all_versions_data,
+            "available_versions": available_versions,
+        }
+
+        return render(request, "oom_ecg_data/patient_search_view.html", context)
+    except Exception as e:
+        return render(request, "oom_ecg_data/patient_search_view.html", {"error": str(e)})
+
+
+def fetch_more_ecg(request):
+    try:
+        patient_id = request.GET.get("patientId")
+        version = int(request.GET.get("version", 2))
+        skip_samples = int(request.GET.get("skip", 0))
+        limit_samples = int(request.GET.get("limit", 2000))
+        sampling_rate = 200.0  # Hz
+
+        version_map = {7: 5, 12: 8}
+        actual_version = version_map.get(version, version)
+
+        patient, ecg_collection = get_ecg_collection(patient_id)
+        if not ecg_collection:
+            return JsonResponse({"error": "Patient not found"}, status=404)
+
+        lead_mapping = {
+            2: ["II"],
+            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
+            12: ["I", "II", "III", "aVR", "aVL", "aVF",
+                 "V1", "V2", "V3", "V4", "V5", "V6"]
+        }
+        leads = lead_mapping.get(version, ["II"])
+        lead_data = {lead: [] for lead in leads}
+
+        cursor = ecg_collection.find(
+            {"version": actual_version},
+            {"_id": 0, "data": 1, "dateTime": 1}
+        ).sort("dateTime", 1)
+
+        # Flatten all samples
+        for doc in cursor:
+            d = doc.get("data")
+            if isinstance(d, dict):
+                for lead in leads:
+                    if lead in d:
+                        lead_data[lead].extend(decode_ecg_hex(d[lead]))
+            elif isinstance(d, str):
+                decoded = decode_ecg_hex(d)
+                for lead in leads:
+                    lead_data[lead].extend(decoded)
+
+        # --- Summary calculations ---
+        sliced_data = {}
+        lead_summary = {}
+        total_points_all = 0
+        max_total_len = 0
+
+        for lead in leads:
+            arr = np.array(lead_data[lead], dtype=np.float32)
+            total_len = len(arr)
+            max_total_len = max(max_total_len, total_len)
+            total_points_all += total_len
+
+            # Just slice raw data (no filtering / no baseline)
+            sliced = arr[skip_samples:skip_samples + limit_samples]
+            sliced_data[lead] = np.round(sliced, 4).tolist()
+
+            # Duration calculations
+            total_duration = round(total_len / sampling_rate, 2)
+            visible_duration = round(len(sliced) / sampling_rate, 2)
+
+            lead_summary[lead] = {
+                "total_points": total_len,
+                "visible_points": len(sliced),
+                "visible_duration_sec": visible_duration,
+                "total_duration_sec": total_duration,
+            }
+
+        total_duration_sec = round(max_total_len / sampling_rate, 2)
+
+        return JsonResponse({
+            "version": version,
+            "leads": leads,
+            "ecg_data": sliced_data,
+            "lead_summary": lead_summary,
+            "summary_total": {
+                "total_leads": len(leads),
+                "total_points_all_leads": total_points_all,
+                "total_duration_sec": total_duration_sec
+            }
+        })
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+#def patient_search_view(request):
+#    patient_id = request.GET.get("patientId")
+#    if not patient_id:
+#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Missing patientId"})
+#
+#    patient, ecg_collection = get_ecg_collection(patient_id)
+#    if not ecg_collection:
+#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Patient not found"})
+#
+#    try:
+#        version_summary = list(ecg_collection.aggregate([
+#            {"$group": {"_id": "$version", "count": {"$sum": 1}}},
+#            {"$sort": {"_id": 1}}
+#        ]))
+#        available_versions = [v['_id'] for v in version_summary]
+#
+#        lead_mapping = {
+#            2: ["II"],
+#            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
+#            12: ["I", "II", "III", "aVR", "aVL", "aVF",
+#                 "V1", "V2", "V3", "V4", "V5", "V6"]
+#        }
+#
+#        all_versions_data = []
+#        for vdoc in version_summary:
+#            version = vdoc["_id"]
+#            cursor = ecg_collection.find(
+#                {"version": version}, {"_id": 0, "data": 1, "dateTime": 1}
+#            ).sort("dateTime", 1)
+#
+#            ecg_wave, times = [], []
+#            for doc in cursor:
+#                ecg_wave.extend(decode_ecg_hex(doc["data"]))
+#                times.append(doc["dateTime"])
+#
+#            if not ecg_wave:
+#                continue
+#
+#            ecg_np = baseline_correction(lowpass_filter(np.array(ecg_wave, dtype=np.float32)))
+#            leads = lead_mapping.get(version, ["II"])
+#
+#            all_versions_data.append({
+#                "version": version,
+#                "lead_count": len(leads),
+#                "leads": leads,
+#                "start_time": times[0].isoformat() if times else None,
+#                "end_time": times[-1].isoformat() if times else None,
+#                "data": np.round(ecg_np, 4).tolist(),
+#            })
+#
+#        context = {
+#            "patient_id": patient_id,
+#            "sampling_rate": 200,
+#            "total_docs": ecg_collection.estimated_document_count(),
+#            "all_versions_data": all_versions_data,
+#            "available_versions": available_versions,
+#        }
+#
+#        return render(request, "oom_ecg_data/patient_search_view.html", context)
+#    except Exception as e:
+#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": str(e)})
+#
+#
+#def fetch_more_ecg(request):
+#    try:
+#        patient_id = request.GET.get("patientId")
+#        version = int(request.GET.get("version", 2))
+#        skip_samples = int(request.GET.get("skip", 0))
+#        limit_samples = int(request.GET.get("limit", 2000))
+#        sampling_rate = 200.0  # Hz
+#
+#        version_map = {7: 5, 12: 8}
+#        actual_version = version_map.get(version, version)
+#
+#        patient, ecg_collection = get_ecg_collection(patient_id)
+#        if not ecg_collection:
+#            return JsonResponse({"error": "Patient not found"}, status=404)
+#
+#        lead_mapping = {
+#            2: ["II"],
+#            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
+#            12: ["I", "II", "III", "aVR", "aVL", "aVF",
+#                 "V1", "V2", "V3", "V4", "V5", "V6"]
+#        }
+#        leads = lead_mapping.get(version, ["II"])
+#        lead_data = {lead: [] for lead in leads}
+#
+#        cursor = ecg_collection.find(
+#            {"version": actual_version},
+#            {"_id": 0, "data": 1, "dateTime": 1}
+#        ).sort("dateTime", 1)
+#
+#        # Flatten all samples
+#        for doc in cursor:
+#            d = doc.get("data")
+#            if isinstance(d, dict):
+#                for lead in leads:
+#                    if lead in d:
+#                        lead_data[lead].extend(decode_ecg_hex(d[lead]))
+#            elif isinstance(d, str):
+#                decoded = decode_ecg_hex(d)
+#                for lead in leads:
+#                    lead_data[lead].extend(decoded)
+#
+#        # --- Summary calculations ---
+#        sliced_data = {}
+#        lead_summary = {}
+#        total_points_all = 0
+#        max_total_len = 0
+#
+#        for lead in leads:
+#            arr = np.array(lead_data[lead], dtype=np.float32)
+#            total_len = len(arr)
+#            max_total_len = max(max_total_len, total_len)
+#            total_points_all += total_len
+#
+#            # Pagination slicing
+#            sliced = arr[skip_samples:skip_samples + limit_samples]
+#            if len(sliced) > 0:
+#                sliced = baseline_correction(lowpass_filter(sliced))
+#            sliced_data[lead] = np.round(sliced, 4).tolist()
+#
+#            # Duration calculations
+#            total_duration = round(total_len / sampling_rate, 2)
+#            visible_duration = round(len(sliced) / sampling_rate, 2)
+#
+#            lead_summary[lead] = {
+#                "total_points": total_len,
+#                "visible_points": len(sliced),
+#                "visible_duration_sec": visible_duration,
+#                "total_duration_sec": total_duration,
+#            }
+#
+#        total_duration_sec = round(max_total_len / sampling_rate, 2)
+#
+#        return JsonResponse({
+#            "version": version,
+#            "leads": leads,
+#            "ecg_data": sliced_data,
+#            "lead_summary": lead_summary,
+#            "summary_total": {
+#                "total_leads": len(leads),
+#                "total_points_all_leads": total_points_all,
+#                "total_duration_sec": total_duration_sec
+#            }
+#        })
+#
+#    except Exception as e:
+#        return JsonResponse({"error": str(e)}, status=500)

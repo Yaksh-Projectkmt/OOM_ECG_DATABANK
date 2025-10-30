@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import register, login, logout,help,profile,change_password,update_profile,home
+from .views import register, login, logout,help,profile,change_password,update_profile,home,save_contact
 #from report.views import index
 
 urlpatterns = [
@@ -11,6 +11,8 @@ urlpatterns = [
     path('profile/', profile, name='profile'),  # Redirect to index view
     path('change_password/',change_password,name='change_password'),
     path('update-profile/',update_profile, name='update_profile'),  # New endpoint
+    path('save-contact/', save_contact, name='save_contact'),
+
 
 ]
 

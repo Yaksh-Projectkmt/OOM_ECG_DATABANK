@@ -130,6 +130,7 @@ document.getElementById('passwordChangeForm').addEventListener('submit', async f
         if (response.ok) {
             alertSystem.success('Success', result.message || 'Password changed successfully!');
             document.getElementById('passwordChangeForm').reset();
+            navigateToSection('main');
         } else {
             alertSystem.warning('Warning', result.error || 'Password change failed!');
         }

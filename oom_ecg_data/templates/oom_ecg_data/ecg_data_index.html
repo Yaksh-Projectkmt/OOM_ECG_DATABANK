@@ -10,7 +10,7 @@
 {% block content %}
     <div class="content-area">
         <div class="content-header">
-            <h3 class="content-title">ECG Arrhythmia & MI</h3>
+            <h3 class="content-title">ECG Arrhythmias & MI</h3>
             <p class="content-description">
                 Select a condition to view detailed information and manage patient records
             </p>
@@ -145,7 +145,7 @@
                 </div>
             </div>
 
-            <div class="condition-card" data-arrhythmia="Junctional" style="animation-delay: 100ms;">
+            <div class="condition-card" data-arrhythmia="Junctional Rhythm" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
                 <div class="ecg-pattern">
                     <svg viewBox="0 0 100 40" preserveAspectRatio="none">
@@ -155,7 +155,7 @@
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
-                        <h3 class="card-title">Junctional</h3>
+                        <h3 class="card-title">Junctional Rhythm</h3>
                         <svg class="card-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                     </div>
                 </div>
@@ -381,6 +381,12 @@
                                 <i class="fas fa-users me-2"></i>Multiple Search
                             </button>
                         </li>
+                        <li class="nav-item1" role="presentation">
+                            <button class="nav-link" id="patient-search-tab" data-bs-toggle="tab" data-bs-target="#patientSearchTab" type="button" role="tab">
+                                <i class="fas fa-id-card me-2"></i>Raw Data Search
+                                <span class="beta-badge">Beta</span>
+                            </button>
+                        </li>
                     </ul>
 
                     <!-- Tab Content -->
@@ -495,8 +501,28 @@
                                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
                                         <i class="fas fa-times me-2"></i>Cancel
                                     </button>
-                                    
-                                </div>
+                                
+                            </div>
+                            </form>
+                            
+                        </div>
+                        <div class="tab-pane fade" id="patientSearchTab" role="tabpanel" aria-labelledby="patient-search-tab">
+                            <form id="Search" method="GET">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="newpatientId" class="form-label">
+                                <i class="fas fa-id-card me-2"></i>Patient ID
+                                </label>
+                                <input type="text" class="form-control" id="newpatientId1" name="patientId" placeholder="Enter patient ID" required>
+                            </div>
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancel
+                                </button>
+                                <button class="btn btn-primary" type="button" onclick="patientSearch()">
+                                <i class="fas fa-search me-2"></i>Search
+                                </button>
+                            </div>
                             </form>
                         </div>
                     </div>

@@ -243,6 +243,10 @@
     font-size: 12px;
     color: var(--text-secondary);
 }
+.sidebar-subtitle span {
+    font-weight: 600;
+    color: var(--sidebar-accent); /* Automatically changes with mode */
+}
   </style>
 </head>
 
@@ -257,6 +261,7 @@
                     </div>
                     <div>
                         <h1 class="sidebar-title"> OOM ECG DataBank</h1>
+                        <p class="sidebar-subtitle">Powered by <span>Kali MedTech Pvt. Ltd.</span></p>
                     </div>
                       
                 </div>
@@ -276,30 +281,31 @@
 
   <section class="faq-section" id="faq">
     <div class="faq-item">
-      <div class="faq-question">How can I access my health reports? <span>+</span></div>
-      <div class="faq-answer">You can log in to your account dashboard and navigate to “My Reports” to view or download your health reports securely.</div>
-    </div>
+    <div class="faq-question">How can I analyze my ECG report or CSV file? <span>+</span></div>
+    <div class="faq-answer">You can analyze your ECG report or CSV file in the “Analysis” section under the OEA card. Simply upload your file to view detailed analysis results.</div>
+  </div>
     <div class="faq-item">
       <div class="faq-question">Is my data safe on Databank? <span>+</span></div>
       <div class="faq-answer">Absolutely. We use advanced encryption and follow healthcare-grade data privacy standards to protect all user information.</div>
     </div>
     <div class="faq-item">
       <div class="faq-question">How do I contact technical support? <span>+</span></div>
-      <div class="faq-answer">You can fill out the contact form below or email us at <b>support@databankhealth.com</b>. Our team responds within 24 hours.</div>
+      <div class="faq-answer">You can fill out the contact form below or email us at <b>support@projectKmt.com</b>. Our team responds within 24 hours.</div>
     </div>
     <div class="faq-item">
       <div class="faq-question">Can I update my personal information? <span>+</span></div>
-      <div class="faq-answer">Yes, visit your profile settings and select “Edit Profile” to update your information anytime.</div>
+      <div class="faq-answer">Yes, visit your settings then user Profile select and  “Edit Profile” to update your information anytime.</div>
     </div>
   </section>
 
-  <section class="contact-section">
+  <section class="contact-section" id="contact">
     <h3>Contact Support</h3>
     <p>Still have questions? Send us a message and we’ll get back to you shortly.</p>
-    <form id="contactForm">
-      <input type="text" placeholder="Your Name" required />
-      <input type="email" placeholder="Your Email" required />
-      <textarea rows="4" placeholder="Your Message" required></textarea>
+    <form id="contactForm" method="POST" action="{% url 'save_contact' %}">
+      {% csrf_token %}
+      <input type="text" name="name" placeholder="Your Name" required />
+      <input type="email" name="email" placeholder="Your Email" required />
+      <textarea name="message" rows="4" placeholder="Your Message" required></textarea>
       <button type="submit" class="submit">Send Message</button>
     </form>
   </section>
@@ -320,14 +326,6 @@
     // ===== Scroll to FAQ =====
     document.getElementById("scrollToFaq").addEventListener("click", () => {
       document.getElementById("faq").scrollIntoView({ behavior: "smooth" });
-    });
-
-    // ===== Contact Form Animation =====
-    const form = document.getElementById("contactForm");
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      alert("Thank you! Your message has been sent successfully.");
-      form.reset();
     });
   </script>
 </body>

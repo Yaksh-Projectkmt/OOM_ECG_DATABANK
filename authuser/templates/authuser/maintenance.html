@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Under Maintenance</title>
+  <style>
+    /* ===== Global Styles ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", "Poppins", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+      color: #1e293b;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      text-align: center;
+      padding: 1rem;
+    }
+
+    /* ===== Card ===== */
+    .card {
+      background: #ffffff;
+      padding: 3rem 2rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+      max-width: 440px;
+      width: 100%;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ===== Icon ===== */
+    .icon {
+      background: #2563eb;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    .icon svg {
+      width: 38px;
+      height: 38px;
+      fill: #ffffff;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.07); opacity: 0.9; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ===== Typography ===== */
+    h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      color: #0f172a;
+    }
+
+    p {
+      color: #475569;
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* ===== Info Box ===== */
+    .info-box {
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    .info-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.4rem;
+    }
+
+    .info-title svg {
+      width: 16px;
+      height: 16px;
+      fill: #1e293b;
+    }
+
+    /* ===== Note Box ===== */
+    .note {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+
+    .note strong {
+      font-size: 1.1rem;
+      margin-right: 6px;
+    }
+
+    /* ===== Footer ===== */
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    footer a {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .footer2 {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 1rem;
+      width: 100%;
+      max-width: 440px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 480px) {
+      .card {
+        padding: 2rem 1.5rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+      }
+      p {
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <img src= "{% static 'images/Oom Logo Black (1).jpg' %}" alt="Logo" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 10px;">
+    </div>
+    <h1>Under Maintenance</h1>
+    <p>We’re currently performing scheduled maintenance to improve your experience.</p>
+
+    <div>
+      <p>We’ll be back shortly.</p>
+    </div>
+
+    <div class="note">
+      <strong>ℹ️</strong> Please check back in a few minutes. We apologize for any inconvenience.
+    </div>
+
+    <footer>
+      Need help? Contact <a href="mailto:support@projectKmt.com">support@projectKmt.com</a>
+    </footer>
+  </div>
+  
+  <footer class="footer2">
+    © 2025–2026 Kali MedTech Pvt. Ltd. All rights reserved.
+  </footer>
+</body>
+</html>

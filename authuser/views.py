@@ -17,6 +17,8 @@ db = mongo_client['ecgarrhythmias']
 patients_db = mongo_client['Patients']
 users_collection = db["users"]
 sessions_collection = db["sessions"] 
+contact_collection = db["contact_messages"]
+
 def home(request):
     if 'user_session' in request.session:
         return redirect('/ommecgdata/')
@@ -25,6 +27,7 @@ def home(request):
   # use the login route you already made
 def help(request):
     return render(request, 'authuser/help.html')
+
 collections = [
     'Myocardial Infarction',
     'Atrial Fibrillation & Atrial Flutter',
@@ -148,13 +151,26 @@ def change_password(request):
         if not user or not check_password(current_password, user['password']):
             return JsonResponse({"error": "Current password is incorrect."}, status=400)
 
+        # Disallow same as current password
         if check_password(new_password, user['password']):
             return JsonResponse({"error": "New password must be different from the current password."}, status=400)
 
+        # ---- Password history check ----
+        password_history = user.get('password_history', [])
+        for old_hash in password_history[-3:]:  # check last 3 passwords
+            if check_password(new_password, old_hash):
+                return JsonResponse({"error": "New password cannot match any of your last 3 passwords."}, status=400)
+
+        # ---- Update password ----
         hashed_new_password = make_password(new_password)
+        updated_history = (password_history + [hashed_new_password])[-3:]  # keep only last 3
+
         users_collection.update_one(
             {"username": user_session['username']},
-            {"$set": {"password": hashed_new_password}}
+            {"$set": {
+                "password": hashed_new_password,
+                "password_history": updated_history
+            }}
         )
 
         return JsonResponse({"message": "Password changed successfully."}, status=200)
@@ -163,7 +179,7 @@ def change_password(request):
         return JsonResponse({"error": "Invalid JSON data."}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
+        
 # User Logout
 def logout(request):
     request.session.flush()  # Clear session
@@ -264,3 +280,40 @@ def update_profile(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
+    
+def save_contact(request):
+  if request.method == "POST":
+      name = request.POST.get("name", "").strip()
+      email = request.POST.get("email", "").strip()
+      message_text = request.POST.get("message", "").strip()
+
+      # --- Validation ---
+      if not name or not email or not message_text:
+          messages.error(request, "Please fill out all fields before submitting.")
+          return redirect('help')
+
+      # --- Optional: basic email validation ---
+      if "@" not in email or "." not in email:
+          messages.error(request, "Please enter a valid email address.")
+          return redirect('help')
+
+      # --- Save message to MongoDB ---
+      contact_data = {
+          "name": name,
+          "email": email,
+          "message": message_text,
+          "created_at": datetime.utcnow()
+      }
+
+      try:
+          contact_collection.insert_one(contact_data)
+          messages.success(request, " Your message has been sent successfully! We'll contact you soon.")
+          return redirect('/ommecgdata/')
+      except Exception as e:
+          messages.error(request, f" Something went wrong while saving your message. Please try again later.")
+          print("MongoDB insertion error:", e)
+
+      return redirect('help')
+
+  # If method not POST, redirect safely
+  return redirect('/ommecgdata/')

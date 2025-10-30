@@ -65,7 +65,7 @@ body.light-mode .btn-close {
 .form-control:focus, .form-select:focus {
     border-color: var(--action-primary-bg);
     box-shadow: 0 0 8px var(--glow-color);
-    color:black;
+    color:var(--text-secondary);
     background: var(--card-bg);
 }
 
@@ -302,7 +302,7 @@ body.light-mode .btn-close {
     height: 100%;
 }
 
-.ecg-line {
+.ecg-line{
     fill: none;
     stroke: currentColor;
     stroke-width: 1.5;
@@ -534,3 +534,23 @@ body.light-mode .btn-close {
         grid-template-columns: 1fr;
     }
 }
+.beta-badge {
+  background: linear-gradient(135deg, #ff6b6b, #f06595);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Optional subtle animation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 107, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+}
+
