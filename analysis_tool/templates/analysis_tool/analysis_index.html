@@ -1,0 +1,362 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %} 
+{% block title %} Analysis Tool{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static "CSS/analysis.css" %}">
+{% endblock %}
+
+{% block content %}
+<div class="content">
+        <div class="page-header">
+            <h2 class="page-title">Upload Medical Data</h2>
+            <p class="page-subtitle">Secure, fast, and intelligent analysis for your healthcare data</p>
+        </div><!--class="text-center mb-4"-->
+        <div class="grid-container">
+                    <!-- Upload Section -->
+                    <div class="upload-section">
+                        <div class="upload-box" id="uploadBox">
+                            <input type="file" id="fileInput" accept="image/*,.pdf,.csv" style="display: none;">
+                            {% csrf_token %} 
+                            <label for="fileInput" class="upload-label">
+                                <div class="upload-icon-wrapper">
+                                    <div class="upload-icon-glow"></div>
+                                    <div class="upload-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <div class="upload-text">
+                                    <p class="upload-title" id="uploadTitle">Drop your file here</p>
+                                    <p class="upload-subtitle">or click to browse</p>
+                                </div>
+
+                                <div class="file-types">
+                                    <span class="file-type-badge">Images</span>
+                                    <span class="file-type-badge">PDF</span>
+                                    <span class="file-type-badge">CSV</span>
+                                </div>
+                            </label>
+
+                            <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                                <div class="loading-content">
+                                    <div class="spinner"></div>
+                                    <p class="loading-text">Analyzing file...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <div class="file-info-content">
+                                <div class="file-icon" id="fileIcon"></div>
+                                <div>
+                                    <p class="file-name" id="fileName"></p>
+                                    <p class="file-status">Ready for analysis</p>
+                                </div>
+                            </div>
+                            <button class="remove-btn" id="removeBtn">Remove</button>
+                        </div>
+                    </div>
+                    <!-- Analysis Section -->
+                    <div class="analysis-section">
+                        <!-- Default State -->
+                        <div id="defaultState" class="analysis-card">
+                            <h3 class="analysis-section-title">Supported Analysis Types</h3>
+
+                            <div class="analysis-type-card">
+                                <div class="analysis-type-content">
+                                    <div class="analysis-type-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                            <polyline points="21 15 16 10 5 21"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="analysis-type-title">ECG Image Analysis</h4>
+                                        <p class="analysis-type-desc">Upload ECG images for automated rhythm analysis and diagnostic insights</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analysis-type-card">
+                                <div class="analysis-type-content">
+                                    <div class="analysis-type-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                                            <polyline points="10 9 9 9 8 9"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="analysis-type-title">TMT Report Analysis</h4>
+                                        <p class="analysis-type-desc">Process treadmill test PDFs for comprehensive cardiac assessment</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analysis-type-card">
+                                <div class="analysis-type-content">
+                                    <div class="analysis-type-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2h10v20H2V2h10z"></path>
+                                            <line x1="12" y1="2" x2="12" y2="22"></line>
+                                            <line x1="7" y1="8" x2="7" y2="8"></line>
+                                            <line x1="17" y1="8" x2="17" y2="8"></line>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="analysis-type-title">CSV Data Analysis</h4>
+                                        <p class="analysis-type-desc">Import patient data sets for statistical analysis and trend visualization</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Analysis -->
+                        <div id="imageAnalysis" class="analysis-section-wrapper" style="display: none;">
+                            <div class="analysis-panel">
+                                <div class="analysis-header">
+                                    <div class="analysis-icon-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="analysis-title">ECG Analysis</h3>
+                                        <p class="analysis-subtitle">Automated rhythm detection</p>
+                                    </div>
+                                </div>
+
+                                <div class="analysis-content">
+                                    <div class="status-bar">
+                                        <div class="status-info">
+                                            <span class="status-label">Processing Status</span>
+                                            <span class="status-value">Ready</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="action-buttons">
+                                        <button class="primary-btn" onclick="uploadimage()">
+                                            Start Analysis
+                                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="9 18 15 12 9 6"></polyline>
+                                            </svg>
+                                        </button>
+                                        <button class="secondary-btn" id="viewImageBtn">
+                                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                            View
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+
+                            <div id="imageViewer" class="viewer-panel" style="display: none;">
+                                <div class="viewer-header">
+                                    <h4 class="viewer-title">Image Viewer</h4>
+                                    <button class="close-btn" id="closeImageBtn">Close</button>
+                                </div>
+
+                                <div class="image-grid">
+                                    <div class="image-container">
+                                        <div class="image-label">
+                                            <div class="label-dot"></div>
+                                            <span>Uploaded Image</span>
+                                        </div>
+                                        <div class="image-wrapper">
+                                            <img id="uploadedImage" src="" alt="Uploaded ECG">
+                                        </div>
+                                    </div>
+
+                                    <div class="image-container">
+    <div class="image-label">
+        <div class="label-dot pulse"></div>
+        <span>Analysis Output</span>
+    </div>
+
+    <div id="outputPlaceholder" class="image-wrapper output-placeholder">
+        <div class="placeholder-content">
+            <div class="placeholder-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+            </div>
+            <p>Run analysis to view output</p>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="outputLoader" class="output-loader" style="display:none;">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Output Image -->
+    <img id="outputImage" class="output-image" style="display:none; max-width:100%; border-radius:10px;">
+</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PDF Analysis -->
+                        <div id="pdfAnalysis" class="analysis-section-wrapper" style="display: none;">
+                            <div class="analysis-panel">
+                                <div class="analysis-header">
+                                    <div class="analysis-icon-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                            <polyline points="17 6 23 6 23 12"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="analysis-title">TMT Analysis</h3>
+                                        <p class="analysis-subtitle">Treadmill test evaluation</p>
+                                    </div>
+                                </div>
+
+                                <div class="analysis-content">
+                                    <div class="status-bar">
+                                        <div class="status-info">
+                                            <span class="status-label">Document Processing</span>
+                                            <span class="status-value">Ready</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="action-buttons">
+                                        <button class="primary-btn" onclick="uploadTMTFile()">
+                                            Process Report
+                                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="9 18 15 12 9 6"></polyline>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CSV Analysis -->
+                        <div id="csvAnalysis" class="analysis-section-wrapper" style="display: none;">
+                            <div class="analysis-panel">
+                                <div class="analysis-header">
+                                    <div class="analysis-icon-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2h10v20H2V2h10z"></path>
+                                            <line x1="12" y1="2" x2="12" y2="22"></line>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="analysis-title">CSV Analysis</h3>
+                                        <p class="analysis-subtitle">Data insights & visualization</p>
+                                    </div>
+                                </div>
+
+                                <div class="analysis-content">
+                                    <div class="status-bar">
+                                        <div class="status-info">
+                                            <span class="status-label">Data Validation</span>
+                                            <span class="status-value">Complete</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="metrics-grid">
+                                        <div class="metric-card">
+                                            <p class="metric-label">Total Records</p>
+                                            <p class="metric-value" id="TOtalRecords">Counting...</p>
+                                        </div>
+                                        <div class="metric-card">
+                                            <p class="metric-label">Lead Type</p>
+                                            <p class="metric-value" id="leadvalue">Counting...</p>
+                                        </div>
+                                        
+                                        <div>
+                                            <label for="arrhythmiaSelect" class="form-label">Arrhythmia:</label>
+                                            <select id="arrhythmiaSelect" name="arrhythmia" class="form-select" required>
+                                                <option value="">Select Arrhythmia</option>
+                                                <option value="mi">Myocardial Infarction</option>
+                                                <option value="afib_afl">Atrial Fibrillation & Atrial Flutter</option>
+                                                <option value="block">Heart Block</option>
+                                                <option value="pac_jn">Junctional Rhythm</option>
+                                                <option value="pac">Premature Atrial Contraction</option>
+                                                <option value="pvc">Premature Ventricular Contraction</option>
+                                                <option value="vifib_vfl">Ventricular Fibrillation and Asystole</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label for="versionSelect" class="form-label">Version:</label>
+                                            <select id="versionSelect" name="version" class="form-select" required>
+                                                <option value="">Select Version</option>
+                                                <option value="Version1">Version 1</option>
+                                                <option value="Version2">Version 2</option>
+                                                <option value="Version3">Version 3</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="action-buttons">
+                                        <button class="primary-btn" onclick="uploadCSVFile()">
+                                            Analyze Data
+                                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="9 18 15 12 9 6"></polyline>
+                                            </svg>
+                                        </button>
+                                        <button class="secondary-btn" id="viewPlotBtn" onclick="uploadAndPlot()">
+                                            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                                            </svg>
+                                            View Plot
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <div id="plotModal" class="modal">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 id="chartTitle"><i class="fas fa-heartbeat" style="color: var(--danger);"></i> ECG Signal</h4>
+                                        <span class="close-btn" id="closePlotBtn">&times;</span>
+                                    </div>
+                                    <div class="modal-body" id="plotContainer">
+                                        <div id="plot" style="width:100%;height:400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var uploadFileUrl = "{% url 'upload_file' %}";
+    var processImageUrl = "/analysis/process_image/FILENAME_PLACEHOLDER/";
+    var fetchFilesUrl = "/analysis/files/CATEGORY_PLACEHOLDER/";
+    var processArrhythmiaUrl = "/analysis/process_arrhythmia/CATEGORY_PLACEHOLDER/FILENAME_PLACEHOLDER/?image_name=IMAGE_NAME_PLACEHOLDER&is_lead=LEAD_TYPE_PLACEHOLDER";
+</script>
+<script src="{% static 'js/analysis_index.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

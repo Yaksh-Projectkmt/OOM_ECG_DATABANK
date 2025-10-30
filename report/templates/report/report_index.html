@@ -1,0 +1,516 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}ECG Analytics Dashboard{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'CSS/report.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="app">
+        <!-- Animated Background -->
+        <div class="animated-bg">
+            <div class="floating-particles"></div>
+        </div>
+        <main class="main-content">
+            <!-- Enhanced Stats Grid -->
+            <div class="stats-grid">
+                <div class="stats-card blue" data-aos="fade-up" data-aos-delay="100">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Patients</p>
+                            <p class="stats-value" id="totalPatient">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                            </div>
+                        </div>
+                        <div class="stats-icon blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar blue"></div>
+                </div>
+
+                <div class="stats-card green" data-aos="fade-up" data-aos-delay="200">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Records</p>
+                            <p class="stats-value" id="totalRecords">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                            </div>
+                        </div>
+                        <div class="stats-icon green">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar green"></div>
+                </div>
+
+                <div class="stats-card purple" data-aos="fade-up" data-aos-delay="300">
+                    <div class="stats-background"></div>
+                    <div class="stats-content">
+                        <div class="stats-text">
+                            <p class="stats-title">Total Time (mins)</p>
+                            <p class="stats-value" id="TotalTimes">
+                                <span class="skeleton"></span>
+                            </p>
+                            <div class="stats-trend">
+                            </div>
+                        </div>
+                        <div class="stats-icon purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12,6 12,12 16,14"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="stats-bar purple"></div>
+                </div>
+            </div>
+
+
+            
+            <!-- Enhanced Content Grid -->
+            <div class="content-grid">
+                <!-- Revolutionary Chart Container -->
+                <div class="chart-container" data-aos="fade-right" data-aos-delay="400">
+                    <div class="chart-header">
+                        <div class="chart-title-group">
+                            <div class="chart-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+                                </svg>
+                                <div class="icon-glow"></div>
+                            </div>
+                            <div>
+                                <h2>Arrhythmia Distribution</h2>
+                                <p>Real-time patient condition analysis</p>
+                            </div>
+                        </div>
+                        <div class="chart-controls">
+                            <button class="chart-btn active" data-view="doughnut">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <circle cx="12" cy="12" r="4"/>
+                                </svg>
+                            </button>
+                            <button class="chart-btn" data-view="pie">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                                    <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-content">
+                        <div id="chart-loader" class="chart-spinner">
+                            <div class="medical-spinner">
+                                <div class="heartbeat-line"></div>
+                                <div class="spinner-text">Analyzing Data...</div>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="patientChart"></canvas>
+                            <div class="chart-overlay">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Recent Records -->
+                <div class="table-container" data-aos="fade-left" data-aos-delay="500">
+                    <div class="table-header">
+                        <div class="table-title-group">
+                            <div class="table-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 3h18v18H3zM9 9h6v6H9z"/>
+                                    <path d="M9 1v6M15 1v6M9 15v6M15 15v6M1 9h6M1 15h6M15 9h6M15 15h6"/>
+                                </svg>
+                                <div class="icon-pulse"></div>
+                            </div>
+                            <div>
+                                <h3>Recent ECG Records</h3>
+                                <p>Latest 5 cardiac monitoring entries</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="records-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Sr. No.</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Patient ID</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Lead</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Arrhythmia</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                    <th>
+                                        <div class="th-content">
+                                            <span>Duration</span>
+                                            <div class="sort-indicator"></div>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-records">
+                                <!-- Loading skeleton rows -->
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                                <tr class="loading-row">
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                    <td><div class="skeleton"></div></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+   // ===================== ECG Dashboard =====================
+let ecgChartInstance = null;
+let currentChartType = 'doughnut'; // default doughnut
+const labelMap = {
+    'Premature Ventricular Contraction': 'PVC',
+    'Ventricular Fibrillation and Asystole': 'VFL',
+    'HeartBlock': 'HeartBlock',
+    'Atrial Fibrillation & Atrial Flutter': 'AFIB',
+    'Myocardial Infarction': 'MI',
+    'Premature Atrial Contraction': 'PAC',
+    'Junctional Rhythm': 'Junctional',
+    'LBBB': 'LBBB & RBBB',
+    'SINUS-ARR': 'SINUS-ARR',
+    'ShortPause': 'ShortPause',
+    'WIDE-QRS': 'WIDE-QRS',
+    'Artifacts': 'Artifacts',
+    'TC': 'TC',
+    'Noise': 'Noise',
+    'Normal': 'Normal',
+    'Abnormal': 'Abnormal',
+    'Others': 'Others',
+};
+
+// ========= Chart Update =========
+function updatePieChart(collectionDataCount) {
+    window.collectionDataCount = collectionDataCount;
+
+    document.getElementById("chart-loader").style.display = "none";
+    document.getElementById("patientChart").style.display = "block";
+
+    const ctx = document.getElementById('patientChart').getContext('2d');
+
+    const dbLabels = Object.keys(labelMap);
+    const shortLabels = dbLabels.map(full => labelMap[full]);
+    const values = dbLabels.map(label => collectionDataCount[label] || 0);
+    const total = values.reduce((a, b) => a + b, 0);
+
+    const isDarkMode = document.documentElement.getAttribute('dark-mode') === 'dark' ||
+                       localStorage.getItem("theme") === "dark";
+
+    const chartData = {
+        labels: shortLabels,
+        datasets: [{
+            data: values,
+            backgroundColor: [
+                '#00d4ff', '#ff4757', '#00ff88', '#ffa726',
+                '#8b5cf6', '#ff6b9d', '#26de81', '#fd79a8',
+                '#fdcb6e', '#6c5ce7', '#a29bfe', '#fd79a8',
+                '#00b894', '#e17055', '#74b9ff', '#0015ff',
+                '#520000'
+            ],
+            borderColor: isDarkMode ? '#1a1f2e' : '#ffffff',
+            borderWidth: 3,
+            hoverBorderWidth: 5,
+            hoverOffset: 15
+        }]
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: currentChartType === 'doughnut' ? '60%' : '0%',
+        plugins: {
+            legend: {
+                position: 'left',
+                labels: {
+                    color: () => {
+                        const themeNow = document.documentElement.getAttribute('dark-mode') === 'dark' ||
+                                         localStorage.getItem("theme") === "dark";
+                        return themeNow ? '#ffffff' : '#1e2a44';
+                    },
+                    font: { size: 12, weight: '600' },
+                    usePointStyle: true,
+                    pointStyle: 'circle',
+                    generateLabels: (chart) => {
+                        const data = chart.data;
+                        if (!data.labels.length) return [];
+
+                        return data.labels.map((label, i) => {
+                            const value = data.datasets[0].data[i];
+                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                            return {
+                                text: `${label} (${percentage}%)`,
+                                fillStyle: data.datasets[0].backgroundColor[i],
+                                hidden: !chart.getDataVisibility(i),
+                                index: i
+                            };
+                        });
+                    }
+                },
+                onClick: (e, legendItem, legend) => {
+                    const chart = legend.chart;
+                    chart.toggleDataVisibility(legendItem.index);
+                    chart.update();
+                }
+            },
+            tooltip: {
+                backgroundColor: () => {
+                    const dark = document.documentElement.getAttribute('dark-mode') === 'dark' ||
+                                 localStorage.getItem("theme") === "dark";
+                    return dark ? 'rgba(26, 31, 46, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+                },
+                titleColor: () => (isDarkMode ? '#ffffff' : '#1a202c'),
+                bodyColor: () => (isDarkMode ? '#a8b3cf' : '#4a5568'),
+                borderColor: () => (isDarkMode ? '#2d3748' : '#e2e8f0'),
+                borderWidth: 1,
+                cornerRadius: 12,
+                callbacks: {
+                    title: (ctx) => dbLabels[ctx[0].dataIndex],
+                    label: (ctx) => {
+                        const value = ctx.raw;
+                        const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
+                        return [`Percentage: ${percentage}%`, `Duration: ${value} mins`];
+                    }
+                }
+            }
+        },
+        animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 2000,
+            easing: 'easeOutQuart'
+        }
+    };
+
+    if (ecgChartInstance) ecgChartInstance.destroy();
+
+    ecgChartInstance = new Chart(ctx, {
+        type: currentChartType,
+        data: chartData,
+        options: chartOptions
+    });
+}
+
+// ========= Fetch APIs =========
+function fetchPieChart() {
+    fetch("{% url 'pie_chart_api' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => updatePieChart(data))
+    .catch(err => console.error("Error fetching pie chart data:", err));
+}
+
+function fetchRecentRecords() {
+    fetch("{% url 'recent_records_api' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById("recent-records");
+        tbody.innerHTML = "";
+        data.records.forEach((rec, i) => {
+            const row = document.createElement('tr');
+            row.style.opacity = "0";
+            row.style.transform = "translateX(-20px)";
+            row.style.transition = "all 0.4s ease";
+
+            row.innerHTML = `
+                <td><strong>${i + 1}</strong></td>
+                <td><div class="patient-id">${rec.PatientID}</div></td>
+                <td><span class="lead-badge">${rec.Lead}</span></td>
+                <td><span class="arrhythmia-badge">${rec.Arrhythmia}</span></td>
+                <td><div class="duration-info">${rec.Duration}</div></td>
+            `;
+            tbody.appendChild(row);
+            setTimeout(() => { row.style.opacity = "1"; row.style.transform = "translateX(0)"; }, i * 200);
+        });
+    })
+    .catch(err => console.error("Error fetching records:", err));
+}
+
+function fetchData() {
+    fetch("{% url 'total_data' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    .then(r => r.json())
+    .then(data => {
+        if (data.total_patients) animateNumber(document.getElementById("totalPatient"), data.total_patients);
+        if (data.total_records) animateNumber(document.getElementById("totalRecords"), data.total_records);
+        if (data.total_time) animateNumber(document.getElementById("TotalTimes"), data.total_time, true);
+        document.querySelectorAll(".skeleton").forEach(el => el.remove());
+    })
+    .catch(err => console.error("Error fetching data:", err));
+}
+
+// ========= Animations =========
+function animateNumber(element, finalValue, isTime = false) {
+    const numericValue = parseInt(finalValue.toString().replace(/,/g, ''));
+    const duration = 1500, steps = 60;
+    const increment = numericValue / steps;
+    let current = 0, step = 0;
+
+    const timer = setInterval(() => {
+        current += increment; step++;
+        if (step >= steps) { current = numericValue; clearInterval(timer); }
+        const display = Math.floor(current).toLocaleString("en-IN");
+        element.textContent = isTime ? `${display}` : display;
+    }, duration / steps);
+}
+
+// ========= Theme =========
+document.addEventListener("DOMContentLoaded", function () {
+    const initialPieData = {{ initial_pie_data|safe }};
+    updatePieChart(initialPieData);
+
+    fetchData();
+    fetchPieChart();
+    fetchRecentRecords();
+
+    // Chart type toggle
+    document.querySelectorAll('.chart-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+            e.target.closest('.chart-btn').classList.add('active');
+            currentChartType = e.target.closest('.chart-btn').dataset.view;
+            if (window.collectionDataCount) updatePieChart(window.collectionDataCount);
+        });
+    });
+});
+
+async function loadRecentRecords() {
+  try {
+    const response = await fetch("{% url 'recent_records_api' %}");
+    const data = await response.json();
+    const tbody = document.getElementById("recent-records");
+
+    tbody.innerHTML = ""; // clear skeleton rows
+
+    data.records.forEach((record, index) => {
+      const tr = document.createElement("tr");
+      tr.classList.add("clickable-row");
+
+      // point to waveform_by_id view
+      tr.dataset.url = `{% url 'waveform_by_id' 'COLLECTION' 'RECORD' %}`
+      
+        .replace("COLLECTION", record.collection)
+        .replace("RECORD", record._id);
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${record.PatientID}</td>
+        <td>${record.Lead}</td>
+        <td>${record.Arrhythmia}</td>
+        <td>${record.Duration}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    // attach click events
+    document.querySelectorAll(".clickable-row").forEach(row => {
+      row.addEventListener("click", function () {
+        const pageLoader = document.getElementById('page-loader');
+        if (pageLoader) pageLoader.style.display = 'flex'; // show loader
+        window.location.href = this.dataset.url; // redirect
+      });
+    });
+
+  } catch (error) {
+    console.error("Error loading records:", error);
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) pageLoader.style.display = 'none';
+  }
+}
+
+// On DOM ready
+document.addEventListener("DOMContentLoaded", loadRecentRecords);
+
+// On new page load -> hide loader
+window.addEventListener("load", function () {
+  const pageLoader = document.getElementById('page-loader');
+  if (pageLoader) pageLoader.style.display = 'none';
+});
+
+const observer = new MutationObserver(() => {
+    if (window.collectionDataCount) {
+        updatePieChart(window.collectionDataCount);
+    }
+});
+observer.observe(document.documentElement, { attributes: true, attributeFilter: ['dark-mode'] });
+</script>
+{% endblock %}

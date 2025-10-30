@@ -1,0 +1,258 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}Settings UI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'CSS/profile.css' %}">
+{% endblock %}
+{% block content %}
+   <div id="app">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-content">
+                    <button id="backBtn" class="back-btn hidden">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m12 19-7-7 7-7"/>
+                            <path d="m19 12H5"/>
+                        </svg>
+                    </button>
+                    <h1 id="pageTitle">Settings</h1>
+                </div>
+            </div>
+
+            <!-- Content Container -->
+            <div class="content-card">
+                <!-- Main Menu -->
+                <div id="mainMenu" class="section active">
+                    <div class="menu-items">
+                        <button class="menu-item" data-section="profile">
+                            <svg class="menu-icon text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            <span>User Profile</span>
+                            <div class="menu-arrow"></div>
+                        </button>
+
+                        <button class="menu-item" data-section="version">
+                            <svg class="menu-icon text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="m9 12 2 2 4-4"/>
+                            </svg>
+                            <span>Version</span>
+                            <div class="menu-arrow"></div>
+                        </button>
+
+                        <button class="menu-item" data-section="password">
+                            <svg class="menu-icon text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            <span>Change Password</span>
+                            <div class="menu-arrow"></div>
+                        </button>
+
+                        <button class="menu-item logout-item" data-section="logout">
+                            <svg class="menu-icon text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16,17 21,12 16,7"/>
+                                <line x1="21" x2="9" y1="12" y2="12"/>
+                            </svg>
+                            <span>Logout</span>
+                            <div class="menu-arrow"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Section -->
+                <div id="profileSection" class="section">
+                    <div class="section-content">
+                        <div class="profile-avatar">
+                            <div class="avatar">
+                                <span><i class="fa-regular fa-user"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="profile-details">
+                            <div class="detail-item">
+                                <label>Username</label>
+                                <p>{{ user_session.username }}</p>
+                            </div>
+                            <div class="detail-item">
+                                <label>Email Address</label>
+                                <p>{{ user_session.email }}</p>
+                            </div>
+                            <div class="detail-item">
+                                <label>Phone Number</label>
+                                <p>{{ user_session.phone }}</p>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="navigateToSection('profileEdit')">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            Edit Profile
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Profile Edit Section -->
+                <div id="profileEditSection" class="section">
+                    <div class="section-content">
+                        <div class="profile-avatar">
+                            <div class="avatar">
+                                <span><i class="fa-regular fa-user"></i></span>
+                            </div>
+                        </div>
+
+                        <form class="form" id="profileEditForm">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="editFullName" value="{{ user_session.username }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="editEmail" value="{{ user_session.email }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="editPhone" value="{{ user_session.phone }}" required>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="navigateToSection('profile')">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Version Section -->
+                <div id="versionSection" class="section">
+                    <div class="section-content">
+                        <div class="version-info">
+                            <div class="version-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="m9 12 2 2 4-4"/>
+                                </svg>
+                            </div>
+                            <h3 class="version-number">v3.1.2</h3>
+                            <p class="version-date">Released on September 02, 2025</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Password Section -->
+                <div id="passwordSection" class="section">
+                    <div class="section-content">
+                        <div class="password-info">
+                            <div class="password-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </div>
+                            <h3>Change Password</h3>
+                            <p>Update your password to keep your account secure</p>
+                        </div>
+
+                        <form id="passwordChangeForm" method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <div class="password-input">
+                                    <input type="password" id="currentPassword" name="currentPassword" class="form-control" required>
+                                    <button type="button" class="password-toggle" data-target="currentPassword">
+                                        <svg class="icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <svg class="icon eye-closed hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                            <path d="M1 1l22 22"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New Password</label>
+                                <div class="password-input">
+                                    <input type="password" id="newPassword" name="newPassword" class="form-control" required>
+                                    <button type="button" class="password-toggle" data-target="newPassword">
+                                        <svg class="icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <svg class="icon eye-closed hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                            <path d="M1 1l22 22"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm New Password</label>
+                                <div class="password-input">
+                                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
+                                    <button type="button" class="password-toggle" data-target="confirmPassword">
+                                        <svg class="icon eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <svg class="icon eye-closed hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                            <path d="M1 1l22 22"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <br>
+                            <button type="submit" class="btn btn-danger">Change Password</button>
+                        </form>
+                    </div>
+                </div>
+
+                 <!-- Logout Section -->
+                <div id="logoutSection" class="section">
+                    <div class="section-content">
+                        <div class="logout-info">
+                            <div class="logout-icon">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16,17 21,12 16,7"/>
+                                    <line x1="21" x2="9" y1="12" y2="12"/>
+                                </svg>
+                            </div>
+                            <h3>Logout</h3>
+                            <p>Are you sure you want to logout from your account?</p>
+                        </div>
+
+                        <div class="logout-details">
+                            <div class="current-user">
+                                <div class="user-avatar">
+                                    <span><i class="fa-regular fa-user"></i></span>
+                                </div>
+                                <div class="user-info">
+                                    <h4>{{ user_session.username }}</h4>
+                                    <p>{{ user_session.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="logout-actions">
+                            <button type="button" class="btn btn-secondary" onclick="navigateToSection('main')">Cancel</button>
+                            <button type="button" class="btn btn-danger" onclick="window.location.href='{% url 'logout' %}'">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/profile.js' %}"></script> 
+{% endblock %}

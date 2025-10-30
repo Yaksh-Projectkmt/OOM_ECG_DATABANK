@@ -1,0 +1,1559 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}ECG Waveform Analysis - Patient {{ patient_id }}{% endblock %}
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block extra_css %}
+    <style>
+/*Light theme (default) */
+:root {
+--bg-primary: #f8fafc;
+--bg-secondary: #ffffff;
+--bg-tertiary: #f1f5f9;
+--bg-gradient-start: #f8fafc;
+--bg-gradient-end: #e2e8f0;
+--text-primary: #1a202c;
+--text-secondary: #4a5568;
+--text-muted: #718096;
+--border-color: #e2e8f0;
+--glass-bg: rgba(255, 255, 255, 0.8);
+--glass-border: rgba(0, 0, 0, 0.1);
+--shadow-glow: 0 0 30px rgba(59, 130, 246, 0.2);
+--shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+--primary-blue: #2563eb;
+--primary-blue-light: #3b82f6;
+--primary-blue-dark: #1d4ed8;
+--color: #000000;
+
+/* Spacing */
+--spacing-xs: 0.25rem;
+--spacing-sm: 0.5rem;
+--spacing-md: 1rem;
+--spacing-lg: 1.5rem;
+--spacing-xl: 2rem;
+--spacing-2xl: 3rem;
+
+/* Border Radius */
+--radius-sm: 0.375rem;
+--radius-md: 0.5rem;
+--radius-lg: 0.75rem;
+--radius-xl: 1rem;
+
+/* Shadows */
+--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+--shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+--shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+/* Transitions */
+--transition-fast: 150ms ease-in-out;
+--transition-normal: 300ms ease-in-out;
+--transition-slow: 500ms ease-in-out;
+/* Common colors */
+--primary: #3b82f6;
+--primary-hover: #2563eb;
+--success: #10b981;
+--success-hover: #059669;
+--warning: #f59e0b;
+--warning-hover: #d97706;
+--danger: #ef4444;
+--danger-hover: #dc2626;
+--info: #06b6d4;
+--info-hover: #0891b2;
+    
+/* Alert system colors */
+--alert-success: #22c55e;
+--alert-success-bg: #ecfdf5;
+--alert-success-text: #065f46;
+--alert-error: #ef4444;
+--alert-error-bg: #fef2f2;
+--alert-error-text: #991b1b;
+--alert-warning: #f59e0b;
+--alert-warning-bg: #fffbeb;
+--alert-warning-text: #92400e;
+--alert-info: #3b82f6;
+--alert-info-bg: #eff6ff;
+--alert-info-text: #1e40af;
+--alert-primary: #3b82f6;
+--alert-primary-bg: #f5f3ff;
+--alert-primary-text: #2563eb;
+--alert-secondary: #6b7280;
+--alert-secondary-bg: #f9fafb;
+--alert-secondary-text: #374151;
+}
+
+/*Dark theme */
+[data-theme="dark"] {
+--bg-primary: #0a0f1c;
+--bg-secondary: #1a1f2e;
+--bg-tertiary: #242938;
+--bg-gradient-start: #0a0f1c;
+--bg-gradient-end: #1a1f2e;
+--text-primary: #ffffff;
+--text-secondary: #a8b3cf;
+--text-muted: #6b7280;
+--border-color: #2d3748;
+--accent-blue: #00d4ff;
+--accent-green: #00ff88;
+--accent-purple: #8b5cf6;
+--accent-red: #ff4757;
+--accent-orange: #ffa726;
+--glass-bg: rgba(26, 31, 46, 0.8);
+--glass-border: rgba(255, 255, 255, 0.1);
+--shadow-glow: 0 0 30px rgba(0, 212, 255, 0.3);
+--shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+--primary-blue: #2563eb;
+--primary-blue-light: #3b82f6;
+--primary-blue-dark: #1d4ed8;
+--color: #000000ff;
+
+/* Alert system colors for dark mode */
+    --alert-success: #34d399;
+    --alert-success-bg: #1a2e2a;
+    --alert-success-text: #a7f3d0;
+    --alert-error: #f87171;
+    --alert-error-bg: #3d1f1f;
+    --alert-error-text: #fecaca;
+    --alert-warning: #fbbf24;
+    --alert-warning-bg: #3d2e1a;
+    --alert-warning-text: #fcdf9c;
+    --alert-info: #60a5fa;
+    --alert-info-bg: #1e2a44;
+    --alert-info-text: #bfdbfe;
+    --alert-primary: #60a5fa;
+    --alert-primary-bg: #2b2a44;
+    --alert-primary-text: #bfdbfe;
+    --alert-secondary: #9ca3af;
+    --alert-secondary-bg: #2d3748;
+    --alert-secondary-text: #d1d5db;
+        }
+   /* Alert System Styles */
+.alert-system-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 420px;
+    width: 100%;
+    pointer-events: none;
+}
+
+.alert-item {
+    background: var(--background);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+    overflow: hidden;
+    pointer-events: auto;
+    position: relative;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.alert-item.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.alert-item.hide {
+    transform: translateX(100%);
+    opacity: 0;
+    margin-bottom: 0;
+    max-height: 0;
+}
+
+.alert-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--alert-color);
+}
+
+.alert-item.type-success {
+    --alert-color: var(--alert-success);
+    --alert-bg: var(--alert-success-bg);
+    --alert-text: var(--alert-success-text);
+}
+
+.alert-item.type-error {
+    --alert-color: var(--alert-error);
+    --alert-bg: var(--alert-error-bg);
+    --alert-text: var(--alert-error-text);
+}
+
+.alert-item.type-warning {
+    --alert-color: var(--alert-warning);
+    --alert-bg: var(--alert-warning-bg);
+    --alert-text: var(--alert-warning-text);
+}
+
+.alert-item.type-info {
+    --alert-color: var(--alert-info);
+    --alert-bg: var(--alert-info-bg);
+    --alert-text: var(--alert-info-text);
+}
+
+.alert-item.type-primary {
+    --alert-color: var(--alert-primary);
+    --alert-bg: var(--alert-primary-bg);
+    --alert-text: var(--alert-primary-text);
+}
+
+.alert-item.type-secondary {
+    --alert-color: var(--alert-secondary);
+    --alert-bg: var(--alert-secondary-bg);
+    --alert-text: var(--alert-secondary-text);
+}
+
+.alert-content {
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    background: var(--alert-bg);
+    color: var(--alert-text);
+}
+
+.alert-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    margin-top: 2px;
+    color: var(--alert-color);
+}
+
+.alert-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.alert-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.alert-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--alert-text);
+}
+
+.alert-message {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--alert-text);
+    opacity: 0.8;
+}
+
+.alert-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.alert-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--alert-color);
+    color: white;
+}
+
+.alert-action:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.alert-action.secondary {
+    background: transparent;
+    color: var(--alert-color);
+    border: 1px solid var(--alert-color);
+}
+
+.alert-close {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    margin-left: 8px;
+    color: var(--alert-text);
+}
+
+.alert-close:hover {
+    opacity: 1;
+}
+
+.alert-close svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.alert-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--alert-color);
+    transition: width 0.1s linear;
+    opacity: 0.7;
+}
+
+.container {
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+
+/* Patient Info Card */
+.patient-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition-normal);
+    color:var(--color);
+}
+
+.patient-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.patient-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.patient-details h2 {
+    color: var(--primary-blue);
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.patient-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--primary-blue);
+}
+
+.meta-item i {
+    color: var(--primary-blue);
+    width: 20px;
+    text-align: center;
+}
+
+.meta-content {
+    flex: 1;
+}
+
+.meta-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin-bottom: 2px;
+}
+
+.meta-value {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* Chart Container */
+.chart-container {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--gray-200);
+    margin-bottom: var(--spacing-xl);
+    height:auto;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.chart-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--color);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+#ecgPlot {
+    width: 100%;
+    height: 520px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* Loading Animation */
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--gray-200);
+    border-top: 4px solid var(--primary-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md);
+    }
+    
+    .header-content {
+        text-align: center;
+    }
+    
+    .header-title h1 {
+        font-size: 2rem;
+    }
+    
+    .patient-info {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+}
+    .form-control {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: all var(--transition-fast);
+    margin-right: var(--spacing-md);
+}
+
+    .modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+    .btn-warning {
+    background-color: var(--warning);
+    color: white;
+}
+.share-icon {
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.share-icon:hover {
+  color: #007bff;
+}
+
+.share-dropdown {
+  position: relative;
+  display: inline-block; /* keep icon inline with text */
+}
+
+.share-menu {
+  position: absolute;
+  top: 120%;  /* push dropdown below the share icon */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+
+  display: none; /* hidden by default */
+}
+
+.share-menu.active {
+  display: flex;          /* enable flex */
+  flex-direction: row;    /* horizontal layout */
+  gap: 12px;              /* spacing between icons */
+}
+
+.share-menu a {
+  display: inline-flex;   /* force anchors to shrink to icons */
+  align-items: center;
+  justify-content: center;
+}
+
+
+
+.share-option {
+  font-size: 18px;
+  color: #555;
+  transition: transform 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+.share-option:hover {
+  transform: scale(1.2);
+}
+
+.share-option.whatsapp { color: #25D366; }
+.share-option.instagram { color: #E1306C; }
+.share-option.facebook { color: #1877F2; }
+.share-option.teams { color: #6264A7; }
+.share-option.email { color: #D44638; }
+
+#page-loader {
+  display: none !important;
+}
+.plot-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+}
+.spinner {
+    border: 4px solid rgba(0,0,0,0.1);
+    border-top: 4px solid #f57979;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 0.8s linear infinite;
+    margin: auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.info-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.info-icon {
+  color: #007bff;
+  font-size: 16px;
+}
+
+.popup1 {
+  display: none;
+  position: absolute;
+  top: 20px;
+  left: 0;
+  background: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 10px 12px;
+  border-radius: 6px;
+  width: 1000px;
+  z-index: 10;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.info-container:hover .popup1 {
+  display: block;
+}
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <!-- Patient Information Card -->
+        <div class="patient-card">
+            <div class="patient-info">
+                <div class="patient-details">
+                    <h2>
+                        <i class="fas fa-user-md"></i>
+                        Patient Information
+                    </h2>
+                    <div class="patient-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-id-card"></i>
+                            <div class="meta-content">
+                                <div class="meta-label">Patient ID</div>
+                                <div class="meta-value">{{ patient_id }}</div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-stethoscope"></i>
+                            <div class="meta-content">
+                                <div class="meta-label">Lead Configuration</div>
+                                <div class="meta-value">Lead {{ lead }}</div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            <div class="meta-content">
+                                <div class="meta-label">Recording Duration</div>
+                                <div class="meta-value">{{ duration }} seconds</div>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="meta-content">
+                                <div class="meta-label">Arrhythmia Status</div>
+                                <div class="meta-value">
+                                    <span class="alert-badge">
+                                        <i class="fas fa-circle"></i>
+                                        {{ arrhythmia }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ECG Chart Container -->
+        <div class="chart-container">
+  <div class="chart-header">
+    <div class="chart-title">
+      <i class="fas fa-chart-line"></i>
+      ECG Waveform - Lead {{ lead }}
+
+      <!-- Share dropdown -->
+      <div class="share-dropdown">
+        <i class="fas fa-share share-icon"></i>
+        <div class="share-menu" id="shareMenu">
+          <a href="#" class="share-option whatsapp">
+            <i class="fab fa-whatsapp"></i>
+          </a>
+          <a href="#" class="share-option facebook">
+            <i class="fab fa-facebook"></i>
+          </a>
+          <a href="#" class="share-option teams">
+            <i class="fab fa-microsoft"></i>
+          </a>
+          <a href="#" class="share-option email">
+            <i class="fas fa-envelope"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Info icon with popup -->
+      <div class="info-container">
+  <i class="fas fa-info-circle info-icon"></i>
+  <div class="popup1" id="infoPopupHolter">
+    <strong>Information</strong>
+    <ul style="padding-left: 20px; margin-top: 8px; font-size: 14px; line-height: 1.4;">
+      <li> ECG waveform plotting with animation</li>
+      <li>Zoom, Pan, Select, Reset, and Export tools</li>
+      <li>PQRST detection available if ECG duration ≥ 3.5s</li>
+      <li>Interactive PQRST editing (drag points on waveform)</li>
+      <li>Download options: 
+        <ul>
+          <li>Raw ECG data (CSV)</li>
+          <li>Waveform image (PNG)</li>
+          <li>Selected visible data (CSV)</li>
+          <li>PQRST indices (CSV)</li>
+        </ul>
+      </li>
+      <li>Share options: WhatsApp, Facebook, Teams, Email</li>
+        <li>Edit and save arrhythmia type</li>
+    </ul>
+  </div>
+</div>
+    </div>
+  </div>
+
+        
+            <div id="ecgPlotContainer" style="position:relative;">
+                <div id="plotLoader" class="plot-loader">
+                    <div class="spinner"></div>
+                    <p>Loading ECG plot...</p>
+                </div>
+                <div id="ecgPlot"></div>
+            </div>
+
+            <div class="modal-footer">
+              <div class="arrhythmia-label" id="arrhythmiaContainer" >
+                <select class="form-control" id="Arrhythmia" name="ArrhythmiaType">
+                  <option value=" " selected>Select Arrhythmia Type</option>
+                  <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
+                  <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
+                  <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
+                  <option value="Junctional Rhythm">Junctional Rhythm</option>
+                  <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
+                  <option value="Myocardial Infarction">Myocardial Infarction</option>
+                  <option value="HeartBlock">HeartBlock</option>
+                  <option value="Noise">Noise</option>
+                  <option value="Others">Others</option>
+                  <option value="LBBB">LBBB & RBBB</option>
+                  <option value="Artifacts">Artifacts</option>
+                  <option value="SINUS-ARR">SINUS-ARR</option>
+                  <option value="ShortPause">ShortPause</option>
+                  <option value="TC">TC</option>
+                  <option value="WIDE-QRS">WIDE-QRS</option>
+                  <option value="Abnormal">Abnormal</option>
+                  <option value="Normal">Normal</option>
+                </select>
+              </div>
+              <div class="download-label" id="downloadContainer">
+                <select class="form-control" id="downloadType" name="downloadType">
+                  <option value="" disabled selected>Download Type</option>
+                  <option value="raw_data">Raw Data</option>
+                  <option value="plot_png">Plot PNG</option>
+                  {% comment %} <option value="pqrst_csv">PQRST CSV</option> {% endcomment %}
+                  <option value="selected_data" id="downloadBtn">Selected Data</option>
+                </select>
+              </div>
+              <div class="button-group">
+                <button class="btn btn-warning edit-btn" id="editEcgData" >Edit</button>
+                <button class="btn btn-success save-btn" id="saveData" >Save</button>
+                <button class="btn btn-primary confirm-edit-btn" id="confirmEditBtn"  style="display: none;">Confirm</button>
+                <button class="btn btn-secondary close-btn" id="closeBtn" style="display: none;">Close</button>              
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script> 
+    //Basic js 
+  // CSRF Token Utility
+  const getCSRFToken = () => {
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+    return cookie ? decodeURIComponent(cookie.split('=')[1]) : document.getElementById('csrfToken')?.value || '';
+  };
+    const safeFetch = async (url, options) => {
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) pageLoader.style.display = 'flex';
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error(`Fetch error at ${url}:`, error);
+      throw error;
+    } 
+    finally {
+      if (pageLoader) pageLoader.style.display = 'none';
+    }
+  };
+
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), wait);
+    };
+};
+
+const selectors = {
+    ecgTableBody: '#ecgTableBody',
+    editEcgData: '.edit-btn',
+    saveData: '.save-btn',
+    close: '.plot-close'
+};
+
+const record_id = "{{ record_id }}";
+const patient_id = "{{ patient_id }}";
+const collection = "{{ collection }}";
+const leadNumeric = "{{ lead }}" === "II" ? 2 : "{{ lead }}"; 
+
+  // ---- CSV helper ----
+function downloadCSV(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+//Data plotting logic
+window.ecgSignal = {{ ecg_signal|safe }};
+let currentPlot = null;
+
+// Min-Max scaling helper
+const minMaxScale = (arr, minVal = 0, maxVal = 4) => {
+    const min = Math.min(...arr);
+    const max = Math.max(...arr);
+    if (max === min) return arr.map(() => (maxVal + minVal) / 2);
+    return arr.map(v => ((v - min) / (max - min)) * (maxVal - minVal) + minVal);
+};
+
+// Scaled Y values
+const scaledY = minMaxScale(ecgSignal);
+
+// Create ECG plot
+// Fetch PQRST points from backend
+async function fetchPQRST(objectId, arrhythmia, leadConfig) {
+    console.log("Sending:", { object_id: objectId, arrhythmia, lead_config: leadConfig });
+
+    const response = await fetch("/report/get_pqrst_data/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            object_id: objectId,
+            arrhythmia: arrhythmia,
+            lead_config: leadConfig
+        })
+    });
+
+    return await response.json();
+}
+
+// Create ECG plot with animation + PQRST markers
+async function createECGPlot(objectId, arrhythmia, leadConfig) {
+    document.getElementById("plotLoader").style.display = "block";
+    document.getElementById("ecgPlot").style.visibility = "hidden";
+
+    try{
+    const pqrstData = await fetchPQRST(objectId, arrhythmia, leadConfig);
+    const timeAxis = ecgSignal.map((_, i) => i); // use sample index
+    const dataLength = timeAxis.length;
+    const windowSize = 2000;
+
+    const rawDtick = (dataLength < windowSize) ? Math.round(dataLength / 25) : 100;
+    const xDtick = Math.ceil(rawDtick / 5) * 5;
+    const xMinorDtick = xDtick / 5;
+
+    // Base ECG trace (animated)
+    const trace = {
+        x: [],
+        y: [],
+        mode: 'lines',
+        name: 'ECG Signal',
+        line: { color: 'black', width: 1 },
+        hovertemplate: '<b>Time:</b> %{x:.3f}<br><b>Amplitude:</b> %{y:.3f}mV<extra></extra>'
+    };
+
+    // Fetch PQRST indices from backend
+    const pqrst = await fetchPQRST(objectId, arrhythmia, leadConfig);
+    if (pqrst.status !== "success") {
+        console.error("Failed to fetch PQRST:", pqrst.message);
+    }
+
+    // Helper to make marker traces
+    function markerTrace(indices, label, color) {
+        if (!indices || indices.length === 0) return null;
+        return {
+            x: indices.map(i => timeAxis[i]),
+            y: indices.map(i => scaledY[i]),
+            mode: "markers",
+            name: label,
+            marker: { color, size: 6, symbol: "circle" },  // always small circles
+            hovertemplate: `<b>${label}:</b> %{x}<br>%{y}mV<extra></extra>`
+        };
+    }
+    
+    const traces = [
+        trace,
+        markerTrace(pqrst?.p_points, "P", "orange"),
+        markerTrace(pqrst?.q_points, "Q", "blue"),
+        markerTrace(pqrst?.r_peaks, "R", "red"),
+        markerTrace(pqrst?.s_points, "S", "green"),
+        markerTrace(pqrst?.t_points, "T", "purple")
+    ].filter(Boolean);
+
+    // Layout
+    const layout = {
+        xaxis: {
+            range: [0, Math.min(windowSize, dataLength)],
+            autorange: false,
+            fixedrange: false,
+            title: { text: 'Time Index', standoff: 20 },
+            showgrid: true,
+            gridcolor: 'rgba(245,121,121,0.93)',
+            zeroline: false,
+            dtick: xDtick,
+            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)', dtick: xMinorDtick, tick0: 0 },
+            rangeslider: {
+            visible: true,
+            thickness: 0.05,
+            bgcolor: 'rgba(245,121,121,0.1)',
+            bordercolor: 'rgba(245,121,121,0.4)'
+            }
+        },
+        yaxis: {
+            range: [0, 4.1],
+            title: { text: 'ECG (mV)' },
+            showgrid: true,
+            gridcolor: 'rgba(245,121,121,0.93)',
+            zeroline: false,
+            dtick: 0.5,
+            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)' }
+        },
+        plot_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+        paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+        showlegend: true,
+        legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255,255,255,0.5)' },
+        margin: { t: 60, b: 70, l: 40, r: 40 },
+        font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#000' }
+    };
+
+    const config = {
+        responsive: true,
+        displaylogo: false,
+        modeBarButtonsToAdd: ['pan2d', 'zoom2d', 'resetScale2d', 'zoomIn2d', 'zoomOut2d', 'toImage']
+    };
+
+    const plotElement = document.getElementById("ecgPlot");
+    currentPlot = await Plotly.newPlot(plotElement, traces, layout, config);
+
+    // hide loader, show plot
+    document.getElementById("plotLoader").style.display = "none";
+    plotElement.style.visibility = "visible";
+
+    // Animate ECG line (trace index 0 only)
+    let i = 0;
+    const frameStep = 95;
+
+    function animateWave() {
+        if (i < dataLength) {
+            const nextX = timeAxis.slice(i, i + frameStep);
+            const nextY = scaledY.slice(i, i + frameStep);
+            Plotly.extendTraces(plotElement, { x: [nextX], y: [nextY] }, [0]); // extend only ECG trace
+            i += frameStep;
+            requestAnimationFrame(animateWave);
+        }
+    }
+    requestAnimationFrame(animateWave);
+     } catch (err) {
+        console.error("Plot failed:", err);
+        document.getElementById("plotLoader").innerHTML = "<p style='color:red;'>Failed to load ECG plot.</p>";
+    }
+    // Ensure global container exists
+if (!window.ecgData) window.ecgData = {};
+if (!window.ecgData[objectId]) window.ecgData[objectId] = {};
+
+// Store PQRST so download/export can use it
+window.ecgData[objectId].pqrst = pqrst;
+} 
+
+
+{% comment %} // Fetch PQRST points from backend
+async function fetchPQRST(objectId, arrhythmia, leadConfig) {
+    const response = await fetch("/report/get_pqrst_data/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ object_id: objectId, arrhythmia, lead_config: leadConfig })
+    });
+    return await response.json();
+}
+
+// Create ECG plot with animation + PQRST markers (excluded from rangeslider)
+async function createECGPlot(objectId, arrhythmia, leadConfig) {
+    const pqrstData = await fetchPQRST(objectId, arrhythmia, leadConfig);
+    const timeAxis = ecgSignal.map((_, i) => i); // use sample index
+    const dataLength = timeAxis.length;
+    const windowSize = 2000;
+
+    const rawDtick = (dataLength < windowSize) ? Math.round(dataLength / 25) : 100;
+    const xDtick = Math.ceil(rawDtick / 5) * 5;
+    const xMinorDtick = xDtick / 5;
+
+    // Base ECG trace (animated later)
+    const ecgTrace = {
+        x: [],
+        y: [],
+        mode: 'lines',
+        name: 'ECG Signal',
+        line: { color: 'black', width: 1 },
+        hovertemplate: '<b>Time:</b> %{x:.3f}<br><b>Amplitude:</b> %{y:.3f}mV<extra></extra>'
+    };
+
+    // Helper to make PQRST marker traces (use x2/y2 so NOT included in rangeslider)
+    function markerTrace(indices, label, color) {
+        if (!indices || indices.length === 0) return null;
+        return {
+            x: indices.map(i => timeAxis[i]),
+            y: indices.map(i => ecgSignal[i]),  // ✅ use the exact same array as ECG trace
+            mode: "markers",
+            name: label,
+            marker: { color, size: 6, symbol: "circle" },
+            hovertemplate: `<b>${label}:</b> %{x}<br>%{y}mV<extra></extra>`,
+            xaxis: "x2",  // exclude from rangeslider
+            yaxis: "y2"
+        };
+    }
+
+    const traces = [
+        ecgTrace,
+        markerTrace(pqrstData?.p_points, "P", "orange"),
+        markerTrace(pqrstData?.q_points, "Q", "blue"),
+        markerTrace(pqrstData?.r_peaks, "R", "red"),
+        markerTrace(pqrstData?.s_points, "S", "green"),
+        markerTrace(pqrstData?.t_points, "T", "purple")
+    ].filter(Boolean);
+
+    // Layout
+    const layout = {
+        xaxis: {
+            range: [0, Math.min(windowSize, dataLength)],
+            autorange: false,
+            fixedrange: false,
+            title: { text: 'Time Index', standoff: 20 },
+            showgrid: true,
+            gridcolor: 'rgba(245,121,121,0.93)',
+            zeroline: false,
+            dtick: xDtick,
+            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)', dtick: xMinorDtick, tick0: 0 },
+            rangeslider: {
+                visible: true,
+                thickness: 0.05,
+                bgcolor: 'rgba(245,121,121,0.1)',
+                bordercolor: 'rgba(245,121,121,0.4)'
+            }
+        },
+        yaxis: {
+            range: [0, 4.1],
+            title: { text: 'ECG (mV)' },
+            showgrid: true,
+            gridcolor: 'rgba(245,121,121,0.93)',
+            zeroline: false,
+            dtick: 0.5,
+            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)' }
+        },
+        // dummy secondary axes for PQRST markers
+        xaxis2: { overlaying: 'x', visible: false },
+        yaxis2: { overlaying: 'y', visible: false },
+
+        plot_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+        paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+        showlegend: true,
+        legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255,255,255,0.5)' },
+        margin: { t: 60, b: 70, l: 40, r: 40 },
+        font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#000' }
+    };
+
+    const config = {
+        responsive: true,
+        displaylogo: false,
+        modeBarButtonsToAdd: ['pan2d', 'zoom2d', 'resetScale2d', 'zoomIn2d', 'zoomOut2d', 'toImage']
+    };
+
+    const plotElement = document.getElementById("ecgPlot");
+    currentPlot = await Plotly.newPlot(plotElement, traces, layout, config);
+
+    // Animate ECG line (trace index 0 only)
+    let i = 0;
+    const frameStep = 95;
+
+    function animateWave() {
+        if (i < dataLength) {
+            const nextX = timeAxis.slice(i, i + frameStep);
+            const nextY = scaledY.slice(i, i + frameStep);
+            Plotly.extendTraces(plotElement, { x: [nextX], y: [nextY] }, [0]);
+            i += frameStep;
+            requestAnimationFrame(animateWave);
+        }
+    }
+    requestAnimationFrame(animateWave);
+} {% endcomment %}
+
+    // Initialize the plot when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        if (ecgSignal && ecgSignal.length > 0) {
+            let leadConfigStr = "";
+            if (leadNumeric == 2) leadConfigStr = "2_lead";
+            else if (leadNumeric == 7) leadConfigStr = "7_lead";
+            else if (leadNumeric == 12) leadConfigStr = "12_lead";
+            createECGPlot(record_id, collection, leadConfigStr);
+        } else {
+            document.getElementById('ecgPlot').innerHTML = `
+                    <div class="loading">
+                    
+                        <div class="spinner"></div>
+                        <p>Loading ECG data...</p>
+                    </div>
+                `;
+            }
+    });
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (currentPlot) {
+        Plotly.Plots.resize('ecgPlot');
+    }
+});
+
+//functionality logics 
+function resetEditState(container, editBtn, saveBtn, confirmBtn, select, downloadSelect,closeBtn=null) {
+    if (container) container.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'inline-block';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    if (confirmBtn) confirmBtn.style.display = 'none';
+    if (select) select.value = '';
+    if (downloadSelect) downloadSelect.style.display = 'inline-block';
+    if (closeBtn) closeBtn.style.display = 'none';
+}
+
+// Initialize button references
+let editButton = document.getElementById(`editEcgData`);
+let saveButton = document.getElementById(`saveData`);
+let confirmEditBtn = document.getElementById(`confirmEditBtn`);
+let closeBtn = document.getElementById(`closeBtn`); // Query close button
+let arrhythmiaContainer = document.getElementById(`arrhythmiaContainer`);
+let arrhythmiaSelect = document.getElementById(`Arrhythmia`);
+let downloadTypeSelect = document.getElementById(`downloadType`);
+
+if (!closeBtn) {
+    console.warn(`Close button closeBtn not found in DOM.`);
+}
+// Reset button states when opening the plot
+resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect,closeBtn);
+
+//Edit data logic
+if (editButton) {
+  // Remove existing listeners to prevent duplication
+  const newEditButton = editButton.cloneNode(true);
+  editButton.parentNode.replaceChild(newEditButton, editButton);
+  editButton = newEditButton;
+
+  editButton.addEventListener('click', debounce(async () => {
+    if (!arrhythmiaContainer || !editButton || !saveButton || !confirmEditBtn || !arrhythmiaSelect || !downloadTypeSelect) {
+      alertSystem.info('Info','Required elements not found.');
+      return;
+    }
+
+    closeBtn = document.getElementById(`closeBtn`);
+    if (!closeBtn) {
+      console.error('Error',`Close button closeBtn not found.`);
+      alertSystem.error('Error','Close button not found. Edit functionality may be limited.');
+      return;
+    }
+
+    // Hide normal buttons, show edit controls
+    downloadTypeSelect.style.display = 'none';
+    editButton.style.display = 'none';
+    saveButton.style.display = 'none';
+    arrhythmiaContainer.style.display = 'flex';
+    confirmEditBtn.style.display = 'inline-block';
+    closeBtn.style.display = 'inline-block';
+
+    // Set default to current arrhythmia
+    const currentArrhythmia = sessionStorage.getItem('selectedArrhythmia') || '{{ arrhythmia }}';
+    arrhythmiaSelect.value = currentArrhythmia;
+    arrhythmiaSelect.setAttribute('data-original', currentArrhythmia);
+
+    // Reset old listeners
+    const newConfirmEditBtn = confirmEditBtn.cloneNode(true);
+    confirmEditBtn.parentNode.replaceChild(newConfirmEditBtn, confirmEditBtn);
+    confirmEditBtn = newConfirmEditBtn;
+
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    closeBtn = newCloseBtn;
+
+    // Confirm button
+    confirmEditBtn.addEventListener('click', debounce(async () => {
+    const newArrhythmia = arrhythmiaSelect.value.trim();
+    const originalArrhythmia = (arrhythmiaSelect.getAttribute('data-original') || '').trim();
+    console.log(originalArrhythmia)
+    
+  if (!newArrhythmia) {
+    alertSystem.info('Info','Invalid arrhythmia selection.');
+    resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+    return;
+  }
+
+  if (newArrhythmia === originalArrhythmia) {
+    alertSystem.info('Info','No changes made.');
+    resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+    return;
+  }
+
+  try {
+    const requestData = {
+        object_id: record_id,
+        old_collection: originalArrhythmia,
+        new_collection: newArrhythmia,
+        lead: leadNumeric,
+        PatientID: patient_id
+    };
+    console.log(requestData)
+    
+    const data = await safeFetch('/report/edit_data/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (data.status === 'success') {
+      alertSystem.success('Success','ECG data updated successfully!');
+
+      const arrhythmiaBadge = document.querySelector('.meta-item .meta-value .alert-badge');
+      if (arrhythmiaBadge) {
+        arrhythmiaBadge.innerHTML = `<i class="fas fa-circle"></i> ${newArrhythmia}`;
+      }
+
+      sessionStorage.setItem('selectedArrhythmia', newArrhythmia);
+      window.location.href = "/report/";
+    } else {
+      alertSystem.error('Error', data.message || 'Failed to update data.');
+    }
+  } catch (error) {
+    console.error('Request failed:', error);
+    alertSystem.error('Error','Duplicate ECG data found.');
+  }
+}, 100));
+
+    // Close button
+    closeBtn.addEventListener('click', debounce(() => {
+      resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+    }, 100));
+
+  }, 100));
+}
+
+// Download logic
+
+// ---- Download logic ----
+if (saveButton && downloadTypeSelect) {
+
+    // Remove existing listeners by cloning once
+    const newSaveButton = saveButton.cloneNode(true);
+    saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+    saveButton = newSaveButton;
+
+    saveButton.addEventListener('click', async () => {
+        const downloadType = downloadTypeSelect.value;
+        if (!downloadType) {
+            alert('Please select a download type.');
+            return;
+        }
+
+        if (!ecgSignal || ecgSignal.length === 0) {
+            alert('ECG data not loaded.');
+            return;
+        }
+
+        if (!record_id) {
+            alert('No record selected.');
+            return;
+        }
+
+        try {
+            switch (downloadType) {
+                case 'raw_data':
+                    // For now only exporting current lead
+                    let csv = `Index,Lead_${leadNumeric}\n`;
+                    for (let i = 0; i < ecgSignal.length; i++) {
+                        csv += `${i},${ecgSignal[i]}\n`;
+                    }
+                    downloadCSV(csv, `raw_ecg_data_${patient_id}_lead${leadNumeric}.csv`);
+                    break;
+
+                case 'plot_png':
+                    const plotDiv = document.getElementById('ecgPlot'); // correct ID
+                    if (!plotDiv || plotDiv.children.length === 0) {
+                        alert("ECG plot not loaded yet.");
+                        return;
+                    }
+
+                    let width = 1600, height = 1500;
+                    if (leadNumeric == 2) { width = 1000; height = 400; }
+                    else if (leadNumeric == 7) { width = 1200; height = 1000; }
+
+                    Plotly.downloadImage(plotDiv, {
+                        format: 'png',
+                        filename: `ecg_plot_${patient_id}_lead${leadNumeric}`,
+                        width: width,
+                        height: height,
+                        scale: 2
+                    });
+                    break;
+                case 'pqrst_csv':
+                        // Use updated PQRST indices if available, otherwise fall back to server-provided data
+                        let updatedPqrstData = {};
+                        if (leadNumeric === '2') {
+                            updatedPqrstData = window.ecgData[objectId]?.updatedPQRST || window.ecgData[objectId]?.pqrst || {};
+                        }else if (leadNumeric === '7' || leadNumeric === '12') {
+                            updatedPqrstData = window.ecgData[objectId]?.allPeaks || window.ecgData[objectId]?.pqrst || {};
+                        }
+
+                        // Validate PQRST data
+                        const requiredKeys = leadNumeric === '2' 
+                            ? ['p_points', 'q_points', 'r_peaks', 's_points', 't_points']
+                            : ['p', 'q', 'r', 's', 't'];
+
+                        const isValid = leadNumeric === '2'
+                            ? requiredKeys.every(key => Array.isArray(updatedPqrstData[key]) && updatedPqrstData[key].length > 0)
+                            : Object.keys(updatedPqrstData).length > 0 && requiredKeys.every(key => 
+                                Array.isArray(updatedPqrstData[Object.keys(updatedPqrstData)[0]][key]) && 
+                                updatedPqrstData[Object.keys(updatedPqrstData)[0]][key].length > 0);
+
+                        if (!isValid || Object.keys(updatedPqrstData).length === 0) {
+                            console.error('Invalid PQRST data:', updatedPqrstData);
+                            alertSystem.error('Error', 'No valid PQRST data available for download. Please ensure ECG data is loaded correctly.');
+                            return;
+                        }
+
+                        // Generate CSV content client-side
+                        let csvContent = 'P_index,Q_index,R_index,S_index,T_index\n';
+                        if (leadNumeric === '2') {
+                            // For 2-lead ECG, generate column-based CSV
+                            const { p_points, q_points, r_peaks, s_points, t_points } = updatedPqrstData;
+                            
+                            // Find the minimum length of PQRST arrays to align rows
+                            const minLength = Math.min(
+                                p_points.length,
+                                q_points.length,
+                                r_peaks.length,
+                                s_points.length,
+                                t_points.length
+                            );
+
+                            // Generate rows, padding with empty strings for missing values
+                            for (let i = 0; i < minLength; i++) {
+                                const p = (typeof p_points[i] === 'number' && !isNaN(p_points[i])) ? p_points[i] : '';
+                                const q = (typeof q_points[i] === 'number' && !isNaN(q_points[i])) ? q_points[i] : '';
+                                const r = (typeof r_peaks[i] === 'number' && !isNaN(r_peaks[i])) ? r_peaks[i] : '';
+                                const s = (typeof s_points[i] === 'number' && !isNaN(s_points[i])) ? s_points[i] : '';
+                                const t = (typeof t_points[i] === 'number' && !isNaN(t_points[i])) ? t_points[i] : '';
+                                csvContent += `${p},${q},${r},${s},${t}\n`;
+                            }
+                        } else if (leadNumeric === '7' || leadNumeric === '12') {
+                            // For 7/12-lead ECG, generate column-based CSV like 2-lead
+                            const firstLead = Object.keys(updatedPqrstData)[0]; // Use first lead's data
+                            const { p, q, r, s, t } = updatedPqrstData[firstLead] || {};
+
+                            // Find the minimum length of PQRST arrays to align rows
+                            const minLength = Math.min(
+                                (p || []).length,
+                                (q || []).length,
+                                (r || []).length,
+                                (s || []).length,
+                                (t || []).length
+                            );
+
+                            // Generate rows, padding with empty strings for missing values
+                            for (let i = 0; i < minLength; i++) {
+                                const pVal = (typeof p[i] === 'number' && !isNaN(p[i])) ? p[i] : '';
+                                const qVal = (typeof q[i] === 'number' && !isNaN(q[i])) ? q[i] : '';
+                                const rVal = (typeof r[i] === 'number' && !isNaN(r[i])) ? r[i] : '';
+                                const sVal = (typeof s[i] === 'number' && !isNaN(s[i])) ? s[i] : '';
+                                const tVal = (typeof t[i] === 'number' && !isNaN(t[i])) ? t[i] : '';
+                                csvContent += `${pVal},${qVal},${rVal},${sVal},${tVal}\n`;
+                            }
+                        }
+
+                        // Download CSV
+                        downloadCSV(csvContent, `pqrst_${patientId}.csv`);
+                        return;
+
+                case 'selected_data':
+                    const plotDivSel = document.getElementById('ecgPlot');
+                    if (!plotDivSel || !plotDivSel.data || !plotDivSel.data[0]) {
+                        alert("ECG plot not loaded yet.");
+                        return;
+                    }
+
+                    // Get current x-axis range
+                    const xRange = plotDivSel.layout?.xaxis?.range || [0, ecgSignal.length];
+                    const x0 = xRange[0];
+                    const x1 = xRange[1];
+
+                    // Build the visible data from scaled plot
+                    const visibleData = ecgSignal
+                        .map((val, idx) => ({ x: idx, y: scaledY[idx] }))
+                        .filter(p => p.x >= x0 && p.x <= x1);
+
+                    if (visibleData.length === 0) {
+                        alert("No data in the current view range.");
+                        return;
+                    }
+                
+                    downloadCSV(csvContent, `selected_data_${patient_id}_lead${leadNumeric}.csv`);
+                    break;
+                default:
+                    alert('Invalid download type.');
+            }
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Error downloading: ' + err.message);
+        }
+    });
+}
+let shareClickLock = false;
+
+document.addEventListener("click", async function (e) {
+    // Toggle share menu
+    if (e.target.classList.contains("share-icon")) {
+        const menu = document.getElementById("shareMenu");
+        if (menu) menu.classList.toggle("active");
+        e.stopPropagation();
+        return;
+    }
+
+    // Handle share option click
+    if (e.target.closest(".share-option")) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (shareClickLock) return;
+        shareClickLock = true;
+        setTimeout(() => { shareClickLock = false; }, 500);
+
+        const link = e.target.closest(".share-option");
+        const platform = [...link.classList].find(cls =>
+            ["whatsapp", "facebook", "teams", "email"].includes(cls)
+        );
+        if (!platform) return;
+
+        const patientId = "{{ patient_id }}";   // passed from Django
+        const record_id = "{{ record_id }}";
+        const downloadType = downloadTypeSelect.value;
+
+        if (!downloadType) {
+            alertSystem.warning("Warning", "Please select a download type first.");
+            return;
+        }
+
+        let fileContent = "";
+
+        if (downloadType === "raw_data") {
+            if (!ecgSignal || ecgSignal.length === 0) {
+                alertSystem.error("Error", "No raw ECG data available to share.");
+                return;
+            }
+            fileContent = `Index,Lead_${leadNumeric}\n` +
+                ecgSignal.map((y, i) => `${i},${y}`).join("\n");
+
+        } else if (downloadType === "plot_png") {
+            const plotDiv = document.getElementById("ecgPlot");
+            if (!plotDiv) {
+                alertSystem.error("Error", "ECG Plot not found!");
+                return;
+            }
+            let width = 1000, height = 400;
+            if (leadNumeric == 7) { width = 1200; height = 1000; }
+            else if (leadNumeric == 12) { width = 1600; height = 1500; }
+            fileContent = await Plotly.toImage(plotDiv, { format: "png", width, height });
+
+        } else if (downloadType === "selected_data") {
+            const plotDivSel = document.getElementById("ecgPlot");
+            if (!plotDivSel || !plotDivSel.data || !plotDivSel.data[0]) {
+                alertSystem.warning("Warning", "No ECG data selected.");
+                return;
+            }
+            const xRange = plotDivSel.layout?.xaxis?.range || [0, ecgSignal.length];
+            const visibleData = ecgSignal
+                .map((val, idx) => ({ x: idx, y: val }))
+                .filter(p => p.x >= xRange[0] && p.x <= xRange[1]);
+
+            if (!visibleData.length) {
+                alertSystem.warning("Warning", "No data in selected range.");
+                return;
+            }
+
+            fileContent = "Index,Value\n" +
+                visibleData.map(row => `${row.x},${row.y}`).join("\n");
+        }
+
+        try {
+            const response = await safeFetch("/report/upload_plot/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCSRFToken()
+                },
+                body: JSON.stringify({
+                    type: downloadType,
+                    content: fileContent,
+                    patientId
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === "success") {
+                const cleanUrl = result.url.replace(/\\/g, "/").replace(/%5C/g, "/");
+             
+                let shareUrl = "";
+                const msg = `Patient ID: ${patientId}\n\nClick the link below:\n${cleanUrl}`;
+             
+                switch (platform) {
+                    case "whatsapp":
+                        shareUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+                        break;
+                    case "facebook":
+                        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(cleanUrl)}&quote=${encodeURIComponent(msg)}`;
+                        break;
+                    case "teams":
+                        shareUrl = `https://teams.microsoft.com/share?href=${encodeURIComponent(cleanUrl)}&text=${encodeURIComponent(msg)}`;
+                        break;
+                    case "email":
+                        shareUrl = `mailto:?subject=ECG Report - ${patientId}&body=${encodeURIComponent(msg)}`;
+                        break;
+                }
+
+                if (shareUrl) window.open(shareUrl, "_blank");
+            } else {
+                alertSystem.error("Error", "Failed to upload file: " + (result.message || ""));
+            }
+        } catch (err) {
+            console.error(err);
+            alertSystem.error("Error", "Uploading file failed.");
+        }
+    }
+});
+</script>
+ {% endblock %}

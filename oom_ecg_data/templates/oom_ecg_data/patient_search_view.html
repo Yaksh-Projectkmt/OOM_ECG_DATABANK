@@ -1,0 +1,747 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}Patient ECG Viewer{% endblock %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+{% block extra_css %}
+<style>
+/* === HEADER === */
+.header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: var(--shadow-xl);
+  transition: all var(--transition-speed);
+}
+
+.header-content {
+  max-width: 1400px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  background: rgba(59, 130, 246, 0.15);
+  padding: 10px;
+  border-radius: 8px;
+  margin-left: 8px;
+}
+
+.header-icon i {
+  color: #3b82f6;
+  font-size: 24px;
+}
+
+.header-title h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.header-title p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.header-badges {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+
+.badge i {
+  font-size: 14px;
+  color: #3b82f6;
+}
+
+/* === CONTAINER === */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 30px;
+}
+
+/* === CONTROLS === */
+.controls-card {
+  bottom: 0;
+  left:0;
+  z-index: 200;
+  width: 100%;
+  position: fixed;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 20px;
+  box-shadow: var(--shadow-xl);
+  transition: all var(--transition-speed);
+
+}
+
+.controls-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.lead-select-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-left: 300px;
+}
+/* When sidebar is closed */
+.sidebar:not(.sidebar-open) ~ .main-content .lead-select-group label {
+  margin-left: 0; /* when sidebar is collapsed */
+  transition: margin-left 300ms ease;
+}
+select {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+select:hover {
+  border-color: #3b82f6;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.duration-display {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 0 12px;
+}
+
+.btn {
+  background: var(--action-tertiary-bg);
+  color: var(--action-tertiary-text);
+  border: 1px solid var(--action-tertiary-border);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--action-tertiary-hover);
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* === STATS GRID === */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card1 {
+  background: var(--stat-bg);
+  border: 1px solid var(--stat-border);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all var(--transition-speed);
+}
+
+.stat-icon1 {
+  background: rgba(59, 130, 246, 0.15);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.stat-icon1 i {
+  color: #3b82f6;
+  font-size: 20px;
+}
+
+.stat-info p:first-child {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stat-info p:last-child {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* === ECG GRID === */
+.ecg-grid {
+  gap: 12px;
+}
+.ecg-grid.leads-2 { grid-template-columns: 1fr; }
+.ecg-grid.leads-7 { grid-template-columns: repeat(2, 1fr); }
+.ecg-grid.leads-12 { grid-template-columns: repeat(3, 1fr); }
+
+.lead-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: var(--shadow-xl);
+  transition: all 0.3s ease;
+}
+.lead-card:hover {
+  border-color: var(--card-hover-border);
+  transform: translateY(-3px);
+}
+
+.lead-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lead-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+.lead-status { display: flex; align-items: center; gap: 8px; }
+.lead-status span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.plot-container {
+  width: 100%;
+  height: 243px;
+  background-color: var(--plot-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lead-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* === LOADING === */
+.plot-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 180px;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid #22c55e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 768px) {
+  .ecg-grid { grid-template-columns: 1fr; }
+  .header-content { flex-direction: column; align-items: flex-start; }
+  .controls-content { flex-direction: column; align-items: stretch; }
+}
+         #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(249, 250, 251, 0.66); /* Light background */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .ecg-loader {
+            width: 150px; /* Increased width */
+            height: 60px;
+            position: relative;
+        }
+
+        .ecg-loader svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ecg-line {
+            fill: none;
+            stroke:rgb(227, 6, 6);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 50 50;
+                stroke-dashoffset: -25;
+            }
+            100% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: -50;
+            }
+        }
+        body.dark-mode select,
+body.dark-mode select option {
+  color: #fff8f8ff !important;
+  background-color: #100f0fff !important;
+  border: 1px solid var(--border-color);
+}
+
+body.dark-mode select:hover {
+  background-color: #f3f4f6 !important;
+}
+
+body.dark-mode label[for="leadSelect"] {
+  color: var(--text-primary);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <div>
+                    <h1 class="sidebar-title">Patient ECG Viewer</h1>
+                    <p class="sidebar-subtitle">Real-time Electrocardiogram Analysis</p>
+                </div>
+            </div>
+            {% comment %} <div class="header-badges">
+                <div class="badge">
+                    <i class="fas fa-clock"></i>
+                    <span>Raw Data</span>
+                </div>
+                <div class="badge">
+                    <i class="fas fa-wave-square"></i>
+                    <span>Arrhthmia</span>
+                </div>
+            </div> {% endcomment %}
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls-card">
+            <div class="controls-content">
+                <div class="lead-select-group">
+                    <label for="leadSelect">Lead Configuration:</label>
+                    <select id="leadSelect">
+                      {% for v in all_versions_data %}
+                        <option value="{{ v.version }}">
+                          {{ v.version }} Leads
+                        </option>
+                      {% empty %}
+                        <option disabled>No ECG data found</option>
+                      {% endfor %}
+                    </select>
+                </div>
+                <div class="navigation">
+                    <span class="duration-display" id="durationDisplay">Duration: 0-10s</span>
+                    <button class="btn" id="prevBtn">
+                        <i class="fas fa-chevron-left"></i>
+                        Previous
+                    </button>
+                    <button class="btn" id="nextBtn">
+                        Next
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card1">
+                <div class="stat-icon1">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="stat-info">
+                    <p>PatientId</p>
+                    <p>{{ patient_id }}</p>
+                </div>
+            </div>
+            {% comment %} <div class="stat-card1">
+                <div class="stat-icon1">
+                    <i class="fas fa-database"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Data Points/Plot</p>
+                    <p id="Datapoints">--</p>
+                </div>
+            </div>
+            <div class="stat-card1">
+                <div class="stat-icon1">
+                   <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Duration</p>
+                    <p id="totalDuration">--</p>
+                </div>
+            </div> {% endcomment %}
+            <div class="stat-card1">
+                <div class="stat-icon1">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <div class="stat-info">
+                    <p>Sampling Rate</p>
+                    <p>200 Hz</p>
+                </div>
+            </div>
+        </div>
+        <div id="ecgContainer"></div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script>
+const patientId = "{{ patient_id }}";
+const allVersions =  {{ all_versions_data|safe }};
+let currentVersion = 2;
+if (allVersions && allVersions.length > 0) {
+  const availableVersions = allVersions.map(v => v.version || v);
+  if (availableVersions.includes(2)) {
+    currentVersion = 2;
+  } else if (availableVersions.includes(7)) {
+    currentVersion = 7;
+  } else if (availableVersions.includes(12)) {
+    currentVersion = 12;
+  } else {
+    currentVersion = availableVersions[0];
+  }
+}
+let selectedLeadCount = currentVersion;
+let currentSkip = 0;
+let currentSegment = 0;
+const limit = 2000;
+const segmentDuration = 10;
+
+// Cache for decoded ECG data (avoid re-decoding)
+const ECG_CACHE = {}; // { version: { skip: { ecg_data, lead_summary } } }
+
+const LEAD_MAPPING = {
+  2: ["II"],
+  7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
+  12: ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+};
+
+// === Loader ===
+function showLoader() {
+  isLoading = true;
+  const pageLoader = document.getElementById("page-loader");
+  if (pageLoader) pageLoader.style.display = "flex";
+  updateButtons();
+}
+
+function hideLoader() {
+  isLoading = false;
+  const pageLoader = document.getElementById("page-loader");
+  if (pageLoader) pageLoader.style.display = "none";
+  updateButtons();
+}
+
+// === Helpers ===
+function getTimeRange(segment) {
+  const start = segment * segmentDuration;
+  const end = start + segmentDuration;
+  return `${start}-${end}s`;
+}
+
+function updateDurationDisplay() {
+  document.getElementById("durationDisplay").textContent = 
+    `Duration: ${getTimeRange(currentSegment)}`;
+}
+
+function updateButtons() {
+  document.getElementById("prevBtn").disabled = currentSegment === 0;
+  document.getElementById("nextBtn").disabled = false;
+}
+
+// === Render Leads ===
+function renderLeads() {
+  const leads = LEAD_MAPPING[selectedLeadCount];
+  const grid = document.getElementById("ecgContainer");
+  grid.innerHTML = "";
+  grid.className = `ecg-grid leads-${selectedLeadCount}`;
+
+  leads.forEach(lead => {
+    const card = document.createElement("div");
+    card.className = "lead-card";
+    card.innerHTML = `
+      <div class="lead-header">
+        <h3>Lead ${lead}</h3>
+        <div class="lead-status" id="status_${lead}">
+          <span>-- samples</span><div class="pulse-dot"></div>
+        </div>
+      </div>
+      <div class="plot-container" id="plot_${lead}">
+        <p style="color:#888;text-align:center;">Loading...</p>
+      </div>
+      <div class="lead-footer">
+        <span id="duration_${lead}">Duration: --s</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// === Fetch ECG Data (with caching) ===
+async function fetchECGBlock(skip, version) {
+  // Use cached data if available
+  if (ECG_CACHE[version]?.[skip]) {
+    console.log(`Cache hit for version ${version}, skip ${skip}`);
+    return ECG_CACHE[version][skip];
+  }
+
+  console.log(`Fetching new block: version=${version}, skip=${skip}`);
+  const url = `/ommecgdata/get_patient_hex_data?patientId=${patientId}&skip=${skip}&limit=${limit}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status !== "ok") {
+      console.error("Backend error:", data.message);
+      return {};
+    }
+
+    const versionKey = `version_${version}`;
+    const block = data.all_data[versionKey] || {};
+    // Store in cache
+    if (!ECG_CACHE[version]) ECG_CACHE[version] = {};
+    ECG_CACHE[version][skip] = block;
+
+    return block;
+  } catch (err) {
+    console.error("Fetch error:", err);
+    return {};
+  }
+}
+
+// === Scaler ===
+const minMaxScale = (data, minVal = -1, maxVal = 1) => {
+  if (!Array.isArray(data)) return [];
+  if (data.length > 5000) data = data.slice(0, 5000); // prevent overload
+  const validData = data.filter(v => typeof v === "number" && !isNaN(v));
+  if (validData.length === 0) return data.map(() => (maxVal + minVal) / 2);
+  const min = Math.min(...validData);
+  const max = Math.max(...validData);
+  if (max === min) return data.map(() => (maxVal + minVal) / 2);
+  return data.map(value => ((value - min) / (max - min)) * (maxVal - minVal) + minVal);
+};
+
+
+// === Plot ECG ===
+function plotECG(lead, values) {
+  const container = document.getElementById(`plot_${lead}`);
+
+  if (!Array.isArray(values) || values.length === 0) {
+    container.innerHTML = `<p style="color:red; text-align:center;">No Data Available</p>`;
+    return;
+  }
+
+  // Always slice to 2000 samples per segment
+  const startIdx = currentSegment * limit;
+  const endIdx = startIdx + limit;
+  const segmentData = values.slice(startIdx, endIdx);
+
+  // Apply Min-Max Scaling safely
+  const scaledValues = minMaxScale(segmentData, -1, 1);
+
+  const x = scaledValues.map((_, i) => i);
+  const trace = { 
+    x, 
+    y: scaledValues, 
+    mode: "lines", 
+    line: { color: "#000000ff", width: 1.3 } 
+  };
+
+  const rawDtick = 50;
+  const xDtick = Math.ceil(rawDtick / 5) * 5;
+  const xMinorDtick = xDtick / 5;
+
+  const layout = {
+    paper_bgcolor: "#fff",
+    plot_bgcolor: "#fff",
+    xaxis: { 
+      range: [0, limit],
+      gridwidth: 0.8,
+      showgrid: true,
+      zeroline: false,
+      gridcolor: "red",
+      dtick: xDtick,
+      minor: {
+        showgrid: true,
+        gridcolor: "pink",
+        gridwidth: 0.5,
+        dtick: xMinorDtick,
+        tick0: 0
+      },
+      showticklabels: true,
+      title: "Samples",
+      titlefont: { size: 12 },
+      tickfont: { size: 10, color: "#555" }
+      
+    },
+    yaxis: {
+      range: [-2, 2],
+      gridcolor: "red",
+      gridwidth: 0.8,
+      showgrid: true,
+      zeroline: false,
+      dtick: 0.5,
+      minor: { 
+        showgrid: true,
+        gridcolor: "pink",
+        gridwidth: 0.5,
+      },
+      showticklabels: true,
+      title: "mV",
+      titlefont: { size: 12 },
+      tickfont: { size: 10, color: "#555" }
+    },
+    margin: { l: 50, r: 20, t: 20, b: 40 },
+    height: 240,
+  };
+
+  Plotly.newPlot(`plot_${lead}`, [trace], layout, { displayModeBar: false });
+}
+
+
+// === Load and Render Segment ===
+async function loadSegment() {
+  showLoader();
+  renderLeads();
+
+  try {
+    const data = await fetchECGBlock(currentSkip, currentVersion);
+    if (!data || !data.ecg_data) return;
+
+    const leads = LEAD_MAPPING[selectedLeadCount];
+    const summary = data.lead_summary || {};
+    let totalPoints = 0, totalDuration = 0;
+
+    leads.forEach(lead => {
+      const values = data.ecg_data[lead] || [];
+      plotECG(lead, values);
+      if (summary[lead]) {
+        const { total_points, total_duration_sec } = summary[lead];
+        document.getElementById(`status_${lead}`).innerHTML = `
+          <span>${total_points} samples</span><div class="pulse-dot"></div>`;
+        document.getElementById(`duration_${lead}`).textContent = `Duration: ${segmentDuration}s`;
+        totalPoints += total_points;
+        totalDuration = Math.max(totalDuration, total_duration_sec);
+      }
+    });
+
+    updateDurationDisplay();
+    updateButtons();
+  } finally {
+    hideLoader();
+  }
+}
+// === Lead / Version Change ===
+document.getElementById("leadSelect").addEventListener("change", async e => {
+  const newLeadCount = parseInt(e.target.value);
+  if (selectedLeadCount === newLeadCount) return; // ✅ Skip redundant reload
+
+  selectedLeadCount = newLeadCount;
+  currentVersion = selectedLeadCount;
+  currentSkip = 0;
+  currentSegment = 0;
+  await loadSegment();
+});
+
+// === Navigation Buttons ===
+document.getElementById("prevBtn").addEventListener("click", async () => {
+  if (currentSegment > 0) {
+    currentSegment--;
+    await loadSegment();
+  }
+});
+
+document.getElementById("nextBtn").addEventListener("click", async () => {
+  currentSegment++;
+  await loadSegment();
+});
+
+// === Initial Load ===
+loadSegment();
+
+</script>
+{% endblock %} 

@@ -1,0 +1,1093 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ECG Dashboard{% endblock %}</title>
+    <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/x-icon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'CSS/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar sidebar-open">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="sidebar-header-content">
+                <div class="logo-section">
+                    <div class="logo-container">
+                        <div class="logo-glow"></div>
+
+                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" alt="Logo" style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 20px;">
+                    </div>
+                    <div>
+                        <h1 class="sidebar-title"> OOM ECG DataBank</h1>
+                        <p class="sidebar-subtitle">Healthcare Platform</p>
+                        
+                    </div>
+                      
+                </div>
+            </div>
+        </div>
+        {% if user_session %}
+        <!-- Navigation -->
+        <div class="sidebar-content">
+            <div class="nav-section">
+                <p class="nav-section-title">MAIN MENU</p>
+                <nav class="nav-menu">
+
+                    <a href="{% url 'oom_ecg_index' %}" class="nav-link active">
+                        <button class="nav-item active" data-page="ecg-data">
+                            <div class="active-indicator"></div>
+                            <div class="nav-shimmer"></div>
+                            
+                            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                            <span class="nav-label">ECG Data</span>
+
+                        </button>
+                    </a>
+
+                    <a href="{% url 'morphology_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="morphology">
+                            <div class="nav-shimmer"></div>
+                            
+                            <i class="fa-solid fa-file-signature" class="nav-icon" width="20" height="20"></i>
+                            <span class="nav-label">Morphology Draw</span>
+
+                        </button>
+                    </a>
+
+                    <a href="{% url 'analysis_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="analysis">
+                            <div class="nav-shimmer"></div>
+                            
+                            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                            </svg>
+                            <span class="nav-label">Analysis Tool</span>
+
+                        </button>
+                    </a>  
+
+                    <a href="{% url 'report_index' %}" class="nav-link">
+                        <button class="nav-item" data-page="Dashboard">
+                            <div class="nav-shimmer"></div>
+                                <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                <span class="nav-label">Dashboard</span>
+                            
+                        </button>
+                    </a>
+
+                    <!-- Notification Button -->
+                    <button class="nav-item" id="taskBarToggle">
+                        <div class="nav-shimmer"></div>
+                        <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="nav-label">Task Notifications</span>
+                        <span class="nav-badge new" id="taskBadge" style="display: none;">0</span>
+                    </button>
+
+                    <!-- Floating Task Bar (Outside the button, right side of sidebar) -->
+                    <div class="task-tooltip" id="taskTooltip">
+                        <div class="task-bar-header">
+                            <div class="task-bar-title">Active Tasks</div>
+                            <button class="task-clear-all" id="taskClearAll">Clear All</button>
+                        </div>
+
+                        <div class="task-list" id="taskList">
+                            <div class="empty-tasks" id="emptyTasks">
+                            <i class="fas fa-clipboard-list"></i>
+                            <div>No active tasks</div>
+                            <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'profile' %}" class="nav-link">
+
+                        <button class="nav-item" data-page="settings">
+                            <div class="nav-shimmer"></div>
+                            <i class="fa fa-cog" aria-hidden="true" ></i>
+                            <span class="nav-label">Settings</span>
+                        </button>
+                    </a>
+                </nav>
+            </div>
+        {% else %}
+            <p><a href="{% url 'login' %}">Login</a></p>
+        {% endif %}
+            <!-- Stats Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-glow"></div>
+                    <div class="stat-header">
+                        <p class="stat-label">Total Patients</p>
+                        <svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-value secondary" id="totalPatients">Loading...</div>
+                    <div class="stat-progress"></div>
+                </div>
+                <div class="stat-card" id="timeCard">
+                    <div class="stat-header">
+                        <p class="stat-label">Total Time</p>
+                        <svg class="stat-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+
+                    <div class="stat-value-container">
+                        <div id="convertedTime"></div>
+                        <div class="stat-value secondary" id="totalTime" style="font-size:20px;">Loading...</div>
+                        
+                    </div>
+                    <div class="stat-progress"></div>
+                </div>
+            </div>  
+        </div>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <button class="footer-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/>
+                </svg>
+                <span>About</span>
+            </button>
+            <button class="footer-btn" onclick="window.location.href='{% url 'help' %}'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Help & Support</span>
+            </button>
+            <button class="footer-btn logout-btn" onclick="confirmLogout()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content main-content-shifted">
+        <!-- Header -->
+         <div id="page-loader">
+            <div class="ecg-loader">
+                <svg viewBox="0 0 100 60">
+                    <path class="ecg-line" d="M0 30 H20 L30 10 L40 50 L50 20 L60 40 L70 10 L80 30 H100"/>
+                </svg>
+            </div>
+        </div>
+
+        <header class="main-header">
+            <div class="header-left">
+                    <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <div>
+                    <h2 class="page-title">Arrhythmia & MI</h2>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn theme-toggle" onclick="toggleTheme()">
+                    <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+          
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+    <script>
+    function confirmLogout() {
+    const confirmAction =  confirm("Are you sure you want to sign out?");
+    if (confirmAction) {
+        window.location.href = "{% url 'logout' %}";
+    }
+}
+        // Advanced Alert System - Pure JavaScript
+        class AlertSystem {
+            constructor(options = {}) {
+                this.config = {
+                    autoClose: true,
+                    autoCloseDelay: 2000,
+                    maxAlerts: 5,
+                    position: 'top-right',
+                    animations: true,
+                    ...options
+                };
+                
+                this.alertCounter = 0;
+                this.alerts = new Map();
+                this.container = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.createContainer();
+                this.bindKeyboardShortcuts();
+            }
+            
+            createContainer() {
+                if (document.getElementById('alert-system-container')) return;
+                
+                this.container = document.createElement('div');
+                this.container.id = 'alert-system-container';
+                this.container.className = `alert-system-container position-${this.config.position}`;
+                document.body.appendChild(this.container);
+            }
+            
+            show(type, title, message, options = {}) {
+                const alertId = `alert-${++this.alertCounter}`;
+                const config = { ...this.config, ...options };
+                
+                // Limit max alerts
+                if (this.alerts.size >= this.config.maxAlerts) {
+                    const oldestAlert = this.alerts.keys().next().value;
+                    this.remove(oldestAlert);
+                }
+                
+                const alertElement = this.createAlertElement(alertId, type, title, message, config);
+                this.container.appendChild(alertElement);
+                
+                // Store alert reference
+                this.alerts.set(alertId, {
+                    element: alertElement,
+                    config: config,
+                    timer: null
+                });
+                
+                // Trigger show animation
+                requestAnimationFrame(() => {
+                    alertElement.classList.add('show');
+                });
+                
+                // Auto close if enabled
+                if (config.autoClose && !config.persistent) {
+                    this.setAutoClose(alertId, config.autoCloseDelay || this.config.autoCloseDelay);
+                }
+                
+                // Add progress bar animation
+                if (config.progress && config.autoClose) {
+                    this.animateProgress(alertId, config.autoCloseDelay || this.config.autoCloseDelay);
+                }
+                
+                return alertId;
+            }
+            
+            createAlertElement(id, type, title, message, config) {
+                const alert = document.createElement('div');
+                alert.className = `alert-item type-${type}`;
+                alert.id = id;
+                
+                const icons = {
+                    success: '<svg viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>',
+                    error: '<svg viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg>',
+                    warning: '<svg viewBox="0 0 20 20"><path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/></svg>',
+                    info: '<svg viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>',
+                    primary: '<svg viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    secondary: '<svg viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM8 13a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>'
+                };
+                
+                let html = `
+                    <div class="alert-content">
+                        <div class="alert-icon">
+                            ${icons[type] || icons.info}
+                        </div>
+                        <div class="alert-body">
+                            <div class="alert-title">${title}</div>
+                            <div class="alert-message">${message}</div>
+                `;
+                
+                // Add actions
+                if (config.actions && config.actions.length > 0) {
+                    html += '<div class="alert-actions">';
+                    config.actions.forEach((action, index) => {
+                        html += `
+                            <button class="alert-action ${action.type || 'primary'}" 
+                                    onclick="window.alertSystem.handleAction('${id}', ${index})">
+                                ${action.text}
+                            </button>
+                        `;
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                
+                // Add close button
+                if (!config.persistent) {
+                    html += `
+                        <button class="alert-close" onclick="window.alertSystem.remove('${id}')">
+                            <svg viewBox="0 0 20 20">
+                                <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                            </svg>
+                        </button>
+                    `;
+                }
+                
+                html += '</div>';
+                
+                // Add progress bar
+                if (config.progress) {
+                    html += '<div class="alert-progress" style="width: 100%"></div>';
+                }
+                
+                alert.innerHTML = html;
+                
+                // Store action handlers
+                if (config.actions) {
+                    alert._actionHandlers = config.actions.map(action => action.handler);
+                }
+                
+                return alert;
+            }
+            
+            setAutoClose(alertId, delay) {
+                const alert = this.alerts.get(alertId);
+                if (!alert) return;
+                
+                alert.timer = setTimeout(() => {
+                    this.remove(alertId);
+                }, delay);
+            }
+            
+            animateProgress(alertId, duration) {
+                const alert = this.alerts.get(alertId);
+                if (!alert) return;
+                
+                const progressBar = alert.element.querySelector('.alert-progress');
+                if (!progressBar) return;
+                
+                let width = 100;
+                const interval = setInterval(() => {
+                    width -= (100 / (duration / 100));
+                    progressBar.style.width = Math.max(0, width) + '%';
+                    
+                    if (width <= 0) {
+                        clearInterval(interval);
+                    }
+                }, 100);
+            }
+            
+            remove(alertId) {
+                const alert = this.alerts.get(alertId);
+                if (!alert) return;
+                
+                // Clear timer
+                if (alert.timer) {
+                    clearTimeout(alert.timer);
+                }
+                
+                // Animate out
+                alert.element.classList.add('hide');
+                
+                setTimeout(() => {
+                    if (alert.element.parentNode) {
+                        alert.element.parentNode.removeChild(alert.element);
+                    }
+                    this.alerts.delete(alertId);
+                }, 300);
+            }
+            
+            removeAll() {
+                const alertIds = Array.from(this.alerts.keys());
+                alertIds.forEach((id, index) => {
+                    setTimeout(() => {
+                        this.remove(id);
+                    }, index * 100);
+                });
+            }
+            
+            handleAction(alertId, actionIndex) {
+                const alert = this.alerts.get(alertId);
+                if (!alert || !alert.element._actionHandlers) return;
+                
+                const handler = alert.element._actionHandlers[actionIndex];
+                if (typeof handler === 'function') {
+                    handler(alertId);
+                } else if (typeof handler === 'string') {
+                    try {
+                        eval(handler);
+                    } catch (e) {
+                        console.error('Error executing action handler:', e);
+                    }
+                }
+            }
+            
+            bindKeyboardShortcuts() {
+                document.addEventListener('keydown', (e) => {
+                    // Escape to clear all
+                    if (e.key === 'Escape') {
+                        this.removeAll();
+                    }
+                    
+                    // Ctrl/Cmd + number for quick alerts
+                    if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '6') {
+                        e.preventDefault();
+                        const types = ['success', 'error', 'warning', 'info', 'primary', 'secondary'];
+                        const type = types[parseInt(e.key) - 1];
+                        this.show(type, `${type.charAt(0).toUpperCase() + type.slice(1)}`, `Quick ${type} alert!`);
+                    }
+                });
+            }
+            
+            // Utility methods
+            success(title, message, options = {}) {
+                return this.show('success', title, message, options);
+            }
+            
+            error(title, message, options = {}) {
+                return this.show('error', title, message, options);
+            }
+            
+            warning(title, message, options = {}) {
+                return this.show('warning', title, message, options);
+            }
+            
+            info(title, message, options = {}) {
+                return this.show('info', title, message, options);
+            }
+            
+            primary(title, message, options = {}) {
+                return this.show('primary', title, message, options);
+            }
+            
+            secondary(title, message, options = {}) {
+                return this.show('secondary', title, message, options);
+            }
+        }
+
+        // Task Management System
+        class TaskManager {
+            constructor() {
+                this.tasks = new Map();
+                this.taskCounter = 0;
+                 this.timerIntervals = new Map(); 
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadTasks();
+                setInterval(() => this.updateTaskTimes(), 1000);
+            }
+
+            bindEvents() {
+                const taskBarToggle = document.getElementById('taskBarToggle');
+                const taskBar = document.getElementById('taskTooltip');
+                const taskClearAll = document.getElementById('taskClearAll');
+
+                if (!taskBarToggle || !taskBar) return; // safety check
+
+                // Toggle task bar
+                taskBarToggle.addEventListener('click', () => {
+                    taskBar.classList.toggle('open');
+                });
+
+                // Clear all tasks
+                if (taskClearAll) {
+                    taskClearAll.addEventListener('click', () => {
+                        this.clearAllTasks();
+                    });
+                }
+
+                // Close task bar when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (
+                        taskBar && taskBarToggle && 
+                        !taskBar.contains(e.target) && 
+                        !taskBarToggle.contains(e.target)
+                    ) {
+                        taskBar.classList.remove('open');
+                    }
+                });
+            }
+
+            createTask(type, title, description, data = {}) {
+                const taskId = `task_${++this.taskCounter}_${Date.now()}`;
+                const task = {
+                    id: taskId,
+                    type: type, // 'single_search', 'multiple_search'
+                    title: title,
+                    description: description,
+                    status: 'processing', // 'processing', 'completed', 'error'
+                    progress: 0,
+                    createdAt: new Date(),
+                    data: data,
+                    result: null
+                };
+
+                this.tasks.set(taskId, task);
+                this.saveTasks();
+                this.renderTask(task);
+                this.updateTaskCounter();
+                return taskId;
+            }
+            startTaskTimer(taskId) {
+                if (this.timerIntervals.has(taskId)) return;
+                const interval = setInterval(() => {
+                    const task = this.tasks.get(taskId);
+                    if (!task || task.status !== 'processing') {
+                        clearInterval(interval);
+                        this.timerIntervals.delete(taskId);
+                    } else {
+                        this.renderTask(task); // Update time display
+                    }
+                }, 1000);
+                this.timerIntervals.set(taskId, interval);
+            }
+            updateTask(taskId, updates) {
+                const task = this.tasks.get(taskId);
+                if (!task) return;
+
+                Object.assign(task, updates);
+                this.tasks.set(taskId, task);
+                this.saveTasks();
+                this.renderTask(task);
+                this.updateTaskCounter();
+            }
+
+            completeTask(taskId, result) {
+                this.updateTask(taskId, {
+                    status: 'completed',
+                    progress: 100,
+                    result: result
+                });
+            }
+
+            errorTask(taskId, error) {
+                this.updateTask(taskId, {
+                    status: 'error',
+                    progress: 0,
+                    error: error
+                });
+            }
+
+            removeTask(taskId) {
+            const task = this.tasks.get(taskId);
+            if (!task) return; // Task doesn't exist
+
+            // Only show confirmation for pending tasks
+            if (task.status === 'processing') {
+                const alertId = alertSystem.show(
+                    'warning',
+                    'Confirm Deletion',
+                    'This task is still pending. Are you sure you want to delete it?',
+                    {
+                        actions: [
+                            {
+                                text: 'Delete',
+                                type: 'primary',
+                                handler: () => {
+                                    document.getElementById(alertId)?.remove();
+                                    this._deleteTask(taskId);
+                                    alertSystem.success('Success', 'Task deleted successfully!');
+                                }
+                            },
+                            {
+                                text: 'Cancel',
+                                type: 'secondary',
+                                handler: () => {
+                                    document.getElementById(alertId)?.remove();
+                                    alertSystem.info('Cancelled', 'Delete action cancelled.');
+                                }
+                            }
+                        ],
+                        persistent: true
+                    }
+                );
+            } else {
+                // Directly delete non-pending tasks
+                this._deleteTask(taskId);
+            }
+            }
+
+            // Separate function for actual deletion logic
+            _deleteTask(taskId) {
+                this.tasks.delete(taskId);
+                this.saveTasks();
+
+                const taskElement = document.getElementById(taskId);
+                if (taskElement) taskElement.remove();
+
+                this.updateTaskCounter();
+                this.showEmptyState();
+            }
+
+            clearAllTasks() {
+                // Get all tasks that can be cleared (completed and error tasks only)
+                const clearableTasks = Array.from(this.tasks.values()).filter(task => 
+                    task.status === 'completed' || task.status === 'error'
+                );
+                
+                const pendingTasks = Array.from(this.tasks.values()).filter(task => 
+                    task.status === 'processing'
+                );
+                
+                if (clearableTasks.length === 0) {
+                    if (pendingTasks.length > 0) {
+                        alertSystem.warning('Cannot Clear', 'Pending tasks cannot be cleared until completed.');
+                    } else {
+                        alertSystem.info('No Tasks', 'No tasks to clear.');
+                    }
+                    return;
+                }
+                
+                // Remove clearable tasks
+                clearableTasks.forEach(task => {
+                    this.removeTask(task.id);
+                });
+                
+                // Show alert about pending tasks if any exist
+                if (pendingTasks.length > 0) {
+                    alertSystem.info('Partial Clear', `Cleared ${clearableTasks.length} completed/error tasks. ${pendingTasks.length} pending tasks remain.`);
+                } else {
+                    alertSystem.success('Tasks Cleared', `Cleared ${clearableTasks.length} tasks successfully.`);
+                }
+            }
+
+            renderTask(task) {
+                const taskList = document.getElementById('taskList');
+                const emptyTasks = document.getElementById('emptyTasks');
+                
+                if (emptyTasks) {
+                    emptyTasks.style.display = 'none';
+                }
+
+                let existingElement = document.getElementById(task.id);
+                if (existingElement) {
+                    existingElement.remove();
+                }
+
+                const taskElement = this.createTaskElement(task);
+                taskList.appendChild(taskElement);
+            }
+
+            createTaskElement(task) {
+                const taskElement = document.createElement('div');
+                taskElement.className = `task-item ${task.status}`;
+                taskElement.id = task.id;
+
+                const statusText = {
+                    processing: 'Processing',
+                    completed: 'Completed',
+                    error: 'Error'
+                };
+
+                const statusIcon = {
+                    processing: '<div class="task-spinner"></div>',
+                    completed: '<i class="fas fa-check-circle"></i>',
+                    error: '<i class="fas fa-exclamation-circle"></i>'
+                };
+
+                taskElement.innerHTML = `
+                    <div class="task-header">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-status ${task.status}">
+                            ${statusIcon[task.status]} ${statusText[task.status]}
+                        </div>
+                    </div>
+                    <div class="task-description">${task.description}</div>
+                    <div class="task-progress">
+                        <div class="task-progress-bar ${task.status}" style="width: ${task.progress}%"></div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-time">${this.formatTime(task.createdAt)}</div>
+                        <button class="task-remove" onclick="taskManager.removeTask('${task.id}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                if (task.status === 'error' && task.error) {
+                    const statusEl = taskElement.querySelector(".task-status.error");
+                    if (statusEl) {
+                        let autoRemoveTimer;
+
+                        statusEl.addEventListener("mouseenter", () => {
+                            if (!taskElement._errorAlertId) {
+                                taskElement._errorAlertId = alertSystem.error(
+                                    "Task Error",
+                                    task.error,
+                                    { persistent: true } // stays until we remove
+                                );
+
+                                // Auto-remove after 2100ms if still visible
+                                autoRemoveTimer = setTimeout(() => {
+                                    if (taskElement._errorAlertId) {
+                                        alertSystem.remove(taskElement._errorAlertId);
+                                        delete taskElement._errorAlertId;
+                                    }
+                                }, 2100);
+                            }
+                        });
+
+                            statusEl.addEventListener("mouseleave", () => {
+                                if (autoRemoveTimer) {
+                                    clearTimeout(autoRemoveTimer);
+                                    autoRemoveTimer = null;
+                                }
+                                if (taskElement._errorAlertId) {
+                                    alertSystem.remove(taskElement._errorAlertId);
+                                    delete taskElement._errorAlertId;
+                                }
+                            });
+                        }
+                    }
+
+
+                    // Add click handler for completed tasks
+                    if (task.status === 'completed' && task.result) {
+                        taskElement.style.cursor = 'pointer';
+                        taskElement.addEventListener('click', (e) => {
+                            if (!e.target.closest('.task-remove')) {
+                                this.handleTaskClick(task);
+                            }
+                        });
+                    }
+
+                    return taskElement;
+                }
+
+                handleTaskClick(task) {
+                    if (task.status !== 'completed' || !task.result) return;
+
+                    // Close task bar
+                    document.getElementById('taskTooltip')?.classList.remove('active');
+                    // Remove the completed task after successful click
+                    this.removeTask(task.id);
+
+                    // Navigate based on task type
+                    switch (task.type) {
+                        case 'single_search':
+                            this.handleSingleSearchResult(task);
+                            break;
+                        case 'multiple_search':
+                            this.handleMultipleSearchResult(task);
+                            break;
+                    }
+                }
+
+                handleSingleSearchResult(task) {
+                    const result = task.result;
+                    if (result && result.data && result.data.length > 0) {
+                        // Store result in session storage
+                        sessionStorage.setItem('searchResults', JSON.stringify(result.data));
+                        sessionStorage.setItem('totalPages', result.total_pages || 1);
+                        sessionStorage.setItem('selectedArrhythmia', result.arrhythmia);
+                        sessionStorage.setItem('dataSource', 'search');
+                        
+                        // Navigate to ECG details page
+                        window.location.href = `/ommecgdata/ecg_details/${result.arrhythmia}/`;
+                    } else {
+                        alertSystem.info('No Data', 'No ECG data found for this search.');
+                    }
+                }
+
+                handleMultipleSearchResult(task) {
+                    const result = task.result;
+                    if (result && result.data && result.data.length > 0) {
+                        // Store result in session storage
+                        sessionStorage.setItem('searchResults', JSON.stringify(result.data));
+                        sessionStorage.setItem('totalPages', result.total_pages || 1);
+                        sessionStorage.setItem('selectedArrhythmia', result.arrhythmias.join(','));
+                        sessionStorage.setItem('dataSource', 'multiple_segments');
+                        
+                        // Navigate to first arrhythmia's detail page
+                        window.location.href = `/ommecgdata/ecg_details/${result.arrhythmias[0]}/`;
+                    } else {
+                        alertSystem.info('No Data', 'No ECG data found for this search.');
+                    }
+                }
+
+                updateTaskCounter() {
+                    const taskBadge = document.getElementById('taskBadge');
+                    const taskBarToggle = document.getElementById('taskBarToggle');
+                    const taskClearAll = document.getElementById('taskClearAll');
+                    
+                    const activeTasks = Array.from(this.tasks.values()).filter(task => 
+                        task.status === 'processing' || task.status === 'completed'
+                    ).length;
+
+                    if (activeTasks > 0) {
+                        taskBadge.textContent = activeTasks;
+                        taskBadge.style.display = 'flex';
+                        taskBarToggle.classList.add('has-tasks');
+                        taskClearAll.style.display = 'inline';
+                    } else {
+                        taskBadge.style.display = 'none';
+                        taskBarToggle.classList.remove('has-tasks');
+                        taskClearAll.style.display = 'none'; 
+                    }
+                }
+
+                showEmptyState() {
+                    const taskList = document.getElementById('taskList');
+                    const emptyTasks = document.getElementById('emptyTasks');
+                    
+                    if (this.tasks.size === 0) {
+                        if (!emptyTasks) {
+                            taskList.innerHTML = `
+                                <div class="empty-tasks" id="emptyTasks">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <div>No active tasks</div>
+                                    <div style="font-size: 12px; margin-top: 5px;">Tasks will appear here when you start searches</div>
+                                </div>
+                            `;
+                        } else {
+                            emptyTasks.style.display = 'block';
+                        }
+                    }
+                }
+                updateTaskTimes() {
+                    this.tasks.forEach(task => {
+                        if (task.status === 'processing') {
+                            this.renderTask(task);
+                        }
+                    });
+                }
+                formatTime(date) {
+                    const now = new Date();
+                    const diff = now - date;
+                    const seconds = Math.floor(diff / 1000);
+                    const minutes = Math.floor(seconds / 60);
+                    const hours = Math.floor(minutes / 60);
+
+                    if (hours > 0) {
+                        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+                    } else if (minutes > 0) {
+                        return `${minutes}m ${seconds % 60}s`;
+                    } else {
+                        return `${seconds}s`;
+                    }
+                }
+
+                saveTasks() {
+                    const tasksArray = Array.from(this.tasks.entries()).map(([id, task]) => ({
+                        ...task,
+                        createdAt: task.createdAt.getTime()
+                    }));
+                    localStorage.setItem('ecg_tasks', JSON.stringify(tasksArray));
+                }
+
+                loadTasks() {
+                    const saved = localStorage.getItem('ecg_tasks');
+                    if (saved) {
+                        try {
+                            const tasksArray = JSON.parse(saved);
+                            tasksArray.forEach(taskData => {
+                                taskData.createdAt = new Date(taskData.createdAt);
+                                this.tasks.set(taskData.id, taskData);
+                                this.renderTask(taskData);
+                            });
+                            this.updateTaskCounter();
+                            if (this.tasks.size === 0) {
+                                this.showEmptyState();
+                            }
+                        } catch (error) {
+                            console.error('Error loading tasks:', error);
+                            localStorage.removeItem('ecg_tasks');
+                        }
+                    } else {
+                        this.showEmptyState();
+                    }
+                }
+            }
+
+            // Initialize global systems
+            window.alertSystem = new AlertSystem({
+                autoCloseDelay: 2000,
+                progress: true
+            });
+
+            window.taskManager = new TaskManager(); 
+        
+        let totalMinutes = 0;
+        let units = ["years", "months", "days", "hours", "minutes"];
+        let currentIndex = 0;
+
+        // Fetch total time from backend
+        function fetchData() {
+        fetch("{% url 'total_data' %}", {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(response => response.ok ? response.json() : Promise.reject(response.status))
+        .then(data => {
+            if (data.total_time !== undefined) {
+            totalMinutes = parseInt(data.total_time, 10);
+            updateDisplay(units[currentIndex]);
+            }
+        })
+        .catch(err => console.error("Error fetching data:", err));
+        }
+
+        // Update the displayed time
+        function updateDisplay(unit) {
+        const totalTimeEl = document.getElementById("totalTime");
+        let value = "";
+
+        switch (unit) {
+            case "years":
+            value = (totalMinutes / (60 * 24 * 365)).toFixed(2) + " Years";
+            break;
+            case "months":
+            value = (totalMinutes / (60 * 24 * 30)).toFixed(2) + " Months";
+            break;
+            case "days":
+            value = (totalMinutes / (60 * 24)).toFixed(2) + " Days";
+            break;
+            case "hours":
+            value = (totalMinutes / 60).toFixed(2) + " Hours";
+            break;
+            case "minutes":
+            value = totalMinutes.toLocaleString("en-IN") + " Minutes";
+            break;
+        }
+
+        totalTimeEl.textContent = value;
+        }
+
+        // Cycle through units on click
+        document.getElementById("timeCard").addEventListener("click", () => {
+        currentIndex = (currentIndex + 1) % units.length;
+        updateDisplay(units[currentIndex]);
+        });
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const storedPatients = localStorage.getItem("totalPatients");
+            const storedTime = localStorage.getItem("totalTime");
+
+            if (storedPatients) 
+                document.getElementById("totalPatients").textContent = 
+                    parseInt(storedPatients).toLocaleString("en-IN");
+            if (storedTime) 
+                document.getElementById("totalTime").textContent =
+                    parseInt(storedTime).toLocaleString("en-IN") + " mins";
+
+            fetchData();
+            setInterval(fetchData, 100000000);
+
+            const loader = document.getElementById("page-loader");
+            document.querySelectorAll("a").forEach(link => {
+                link.addEventListener("click", function () {
+                    if (link.href && !link.href.startsWith("javascript:") && !link.target) {
+                        loader.style.display = "flex";
+                    }
+                });
+            });
+
+            window.addEventListener("load", () => loader.style.display = "none");
+        });
+
+        // Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+
+            sidebar.classList.toggle('sidebar-open');
+            mainContent.classList.toggle('main-content-shifted');
+        }
+
+        // Toggle Theme
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-mode');
+
+            if (isDark) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+        const toggleBtn = document.getElementById("taskBarToggle");
+        const tooltip = document.getElementById("taskTooltip");
+
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            tooltip.classList.toggle("active");
+        });
+
+        // Close when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!tooltip.contains(e.target) && !toggleBtn.contains(e.target)) {
+            tooltip.classList.remove("active");
+            }
+        });
+        });
+      
+        document.addEventListener("DOMContentLoaded", function () {
+        // Check stored theme on load
+        const savedTheme = localStorage.getItem("theme");
+
+        if (savedTheme === "dark") {
+            document.body.classList.add("dark-mode");
+            document.body.classList.remove("light-mode");
+        } else {
+            // Default is light if not saved
+            document.body.classList.add("light-mode");
+            document.body.classList.remove("dark-mode");
+        }
+    });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
