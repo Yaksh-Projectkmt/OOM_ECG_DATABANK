@@ -147,16 +147,24 @@ def check_model_r(ecg_data):
     return r_peaks
 
 def check_r_index(all_leads_data, version, frequency, r_index_model):
-    if 'II' not in all_leads_data.keys():
-        raise ValueError("Lead II is required for R-peak detection")
-    ecg_signal = all_leads_data['II'].values
-    baseline_signal = baseline_construction_200(ecg_signal, 131)
-    lowpass_signal = lowpass(baseline_signal, cutoff=0.3) 
-    signal_normalized = find_normalize(lowpass_signal)
-    rpeaks = check_model_r(signal_normalized)
-    if len(rpeaks) <= 3:
-        rpeaks = detect_beats(signal_normalized, frequency).tolist()
-    return rpeaks
+    all_rpeaks = {}
+
+    for lead_name, lead_data in all_leads_data.items():
+        ecg_signal = lead_data.values
+        baseline_signal = baseline_construction_200(ecg_signal, 131)
+        lowpass_signal = lowpass(baseline_signal, cutoff=0.3)
+        signal_normalized = find_normalize(lowpass_signal)
+
+        # Run TFLite-based R detection
+        rpeaks = check_model_r(signal_normalized)
+
+        # If detection fails, use fallback method
+        if len(rpeaks) <= 3:
+            rpeaks = detect_beats(signal_normalized, frequency).tolist()
+
+        all_rpeaks[lead_name] = rpeaks
+
+    return all_rpeaks
 
 def find_s_indexs(ecg, R_index, d):
     d = int(d) + 1
@@ -192,16 +200,23 @@ def find_q_indexs(ecg, R_index, d):
         q.append(q_index)
     return q
 
-def check_qs_index(all_leads_data, r_index, version):
-    if 'II' not in all_leads_data.keys():
-        raise ValueError("Lead II is required for Q and S peak detection")
-    ecg_signal = all_leads_data['II'].values
+def check_qs_index(all_leads_data, r_indices_per_lead, version):
+  all_q, all_s = {}, {}
+
+  for lead_name, lead_data in all_leads_data.items():
+    ecg_signal = lead_data.values
     baseline_signal = baseline_construction_200(ecg_signal, 101)
     lowpass_signal = lowpass(baseline_signal)
     signal_normalized = find_normalize(lowpass_signal)
+    
+    r_index = r_indices_per_lead.get(lead_name, [])
     s_index_list = find_s_indexs(signal_normalized, r_index, 20)
     q_index_list = find_q_indexs(signal_normalized, r_index, 15)
-    return s_index_list, q_index_list
+    
+    all_q[lead_name] = q_index_list
+    all_s[lead_name] = s_index_list
+
+  return all_s, all_q
 
 def resample_ecg(ecg_signal, target_length=520):
     x_old = np.linspace(0, 1, len(ecg_signal))
@@ -400,15 +415,28 @@ def get_pt_peaks(ecg, r_indices):
         pt_peaks_all.append(pt_peaks)
     return t_peaks_all, p_peaks_all, pt_peaks_all, T_onset, P_offset
 
-def check_pt_index(all_lead_data, version, r_peaks):
-    if 'II' not in all_lead_data.keys():
-        raise ValueError("Lead II is required for P and T peak detection")
-    ecg_signal = all_lead_data['II'].values.flatten()
-    baseline_signal = baseline_construction_200(ecg_signal, kernel_size=131)
-    lowpass_signal = lowpass(baseline_signal, cutoff=0.3)
-    signal_normalized = find_normalize(lowpass_signal)
-    t_peaks, p_peaks, rr_invl_peaks, T_onset, P_offset = get_pt_peaks(signal_normalized, r_peaks)
-    return t_peaks, p_peaks, rr_invl_peaks, T_onset, P_offset
+def check_pt_index(all_leads_data,r_indices_per_lead,version):
+    all_t, all_p, all_pt, all_T_onset, all_P_offset = {}, {}, {}, {}, {}
+
+    for lead_name, lead_data in all_leads_data.items():
+        ecg_signal = lead_data.values.flatten()
+        baseline_signal = baseline_construction_200(ecg_signal, kernel_size=131)
+        lowpass_signal = lowpass(baseline_signal, cutoff=0.3)
+        signal_normalized = find_normalize(lowpass_signal)
+
+        r_peaks = r_indices_per_lead.get(lead_name, [])
+        if not r_peaks:
+            continue
+
+        t_peaks, p_peaks, rr_invl_peaks, T_onset, P_offset = get_pt_peaks(signal_normalized, r_peaks)
+
+        all_t[lead_name] = t_peaks
+        all_p[lead_name] = p_peaks
+        all_pt[lead_name] = rr_invl_peaks
+        all_T_onset[lead_name] = T_onset
+        all_P_offset[lead_name] = P_offset
+
+    return all_t, all_p, all_pt, all_T_onset, all_P_offset
 
 def save_results_to_csv(results, output_path):
     max_length = max(len(results['r_index']), len(results['s_index']), len(results['q_index']),
@@ -439,7 +467,6 @@ def process_ecg_data(patient_id, is_lead):
     all_results = []
     
     all_lead_data = pd.read_csv(input_path, header=None).fillna(0)
-    column_names = all_lead_data.columns.tolist()
     
     if any(str(col).isalpha() for col in all_lead_data.iloc[0, :].values):
         if is_lead == '2_lead':
@@ -457,56 +484,68 @@ def process_ecg_data(patient_id, is_lead):
         elif is_lead == '12_lead':
             all_lead_data = all_lead_data.rename(columns={0: 'I', 1: 'II', 2: 'III', 3: 'aVR', 4: 'aVL', 5: 'aVF', 6: 'v1', 7: 'v2', 8: 'v3', 9: 'v4', 10: 'v5', 11: 'v6'})
     
+        segment_size = min(round(frequency * 10), all_lead_data.shape[0])  # 10 seconds or full data
     i = 0
-    if all_lead_data.shape[0] <= 2500:
-        steps = all_lead_data.shape[0]
-    else:
-        steps = round(frequency * 10)
 
     while i < all_lead_data.shape[0]:
-        ecg_data = all_lead_data[i: i + steps]
-        if ecg_data.shape[0] < frequency * 2.5:
-            print("<<<<<<<<<<<<<<<<<<<<<<<<< Less data for analysis >>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        ecg_segment = all_lead_data[i: i + segment_size]
+        if ecg_segment.shape[0] < frequency * 2.5:
             break
+
         local_name = f"{patient_id}_{i}"
-        
-        r_index = check_r_index(ecg_data, is_lead, frequency, r_index_model)
-        s_index, q_index = check_qs_index(ecg_data, r_index, is_lead)
-        t_index, p_index, rr_invl_peaks, T_onset, P_offset = check_pt_index(ecg_data, is_lead, r_peaks=r_index)
-        
+
+        # Convert to dict: {lead_name: pd.Series}
+        all_leads_data = {col: ecg_segment[col] for col in ecg_segment.columns}
+
+        # -------------------- Peak Detection --------------------
+        # Multi-lead detection functions
+        r_indices_per_lead = check_r_index(all_leads_data, version="v1", frequency=frequency, r_index_model=r_index_model)
+        s_indices, q_indices = check_qs_index(all_leads_data, r_indices_per_lead, version="v1")
+        t_indices, p_indices, _, T_onset, P_offset = check_pt_index(all_leads_data,r_indices_per_lead ,version="v1")
+
+        # -------------------- Save Segment Results --------------------
         all_results.append({
             'slice': local_name,
-            'r_index': r_index,
-            's_index': s_index,
-            'q_index': q_index,
-            't_index': t_index,
-            'p_index': p_index,
+            'r_index': r_indices_per_lead,
+            's_index': s_indices,
+            'q_index': q_indices,
+            't_index': t_indices,
+            'p_index': p_indices,
             'T_onset': T_onset,
             'P_offset': P_offset
         })
-        
-        i += steps
 
-    if all_results:
-        combined_results = {
-            'r_index': [],
-            's_index': [],
-            'q_index': [],
-            't_index': [],
-            'p_index': [],
-            'T_onset': [],
-            'P_offset': []
-        }
-        for result in all_results:
-            combined_results['r_index'].extend(result['r_index'])
-            combined_results['s_index'].extend(result['s_index'])
-            combined_results['q_index'].extend(result['q_index'])
-            combined_results['t_index'].extend(result['t_index'])
-            combined_results['p_index'].extend(result['p_index'])
-            combined_results['T_onset'].extend(result['T_onset'])
-            combined_results['P_offset'].extend(result['P_offset'])
-        
-        save_results_to_csv(combined_results, output_path)
-        return output_path
-    else:
+        i += segment_size
+
+    # -------------------- Combine & Save --------------------
+    if not all_results:
         raise ValueError("No valid ECG data processed.")
+
+    # Flatten multi-lead results into combined dictionary
+    combined_results = {
+        'Lead': [],
+        'R_peaks': [],
+        'Q_peaks': [],
+        'S_peaks': [],
+        'P_peaks': [],
+        'T_peaks': [],
+        'T_onset': [],
+        'P_offset': []
+    }
+
+    for result in all_results:
+        for lead_name in result['r_index'].keys():
+            combined_results['Lead'].append(lead_name)
+            combined_results['R_peaks'].append(result['r_index'][lead_name])
+            combined_results['Q_peaks'].append(result['q_index'].get(lead_name, []))
+            combined_results['S_peaks'].append(result['s_index'].get(lead_name, []))
+            combined_results['P_peaks'].append(result['p_index'].get(lead_name, []))
+            combined_results['T_peaks'].append(result['t_index'].get(lead_name, []))
+            combined_results['T_onset'].append(result['T_onset'].get(lead_name, []))
+            combined_results['P_offset'].append(result['P_offset'].get(lead_name, []))
+   
+    # Save to CSV
+    df_out = pd.DataFrame(combined_results)
+    df_out.to_csv(output_path, index=False)
+
+    return output_path

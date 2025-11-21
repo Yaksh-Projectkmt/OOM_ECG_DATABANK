@@ -552,9 +552,6 @@
   transform: scale(1.2);
 }
 
-.share-option.whatsapp { color: #25D366; }
-.share-option.instagram { color: #E1306C; }
-.share-option.facebook { color: #1877F2; }
 .share-option.teams { color: #6264A7; }
 .share-option.email { color: #D44638; }
 
@@ -675,12 +672,6 @@
       <div class="share-dropdown">
         <i class="fas fa-share share-icon"></i>
         <div class="share-menu" id="shareMenu">
-          <a href="#" class="share-option whatsapp">
-            <i class="fab fa-whatsapp"></i>
-          </a>
-          <a href="#" class="share-option facebook">
-            <i class="fab fa-facebook"></i>
-          </a>
           <a href="#" class="share-option teams">
             <i class="fab fa-microsoft"></i>
           </a>
@@ -707,7 +698,7 @@
           <li>Selected visible data (CSV)</li>
         </ul>
       </li>
-      <li>Share options: WhatsApp, Facebook, Teams, Email</li>
+      <li>Share options:Teams, Email</li>
         <li>Edit and save arrhythmia type</li>
     </ul>
   </div>
@@ -838,145 +829,164 @@ const minMaxScale = (arr, minVal = 0, maxVal = 4) => {
 // Scaled Y values
 const scaledY = minMaxScale(ecgSignal);
 
-// Create ECG plot
-// Fetch PQRST points from backend
 async function fetchPQRST(objectId, arrhythmia, leadConfig) {
-    console.log("Sending:", { object_id: objectId, arrhythmia, lead_config: leadConfig });
-
-    const response = await fetch("/report/get_pqrst_data/", {
+    return await fetch("/report/get_pqrst_data/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             object_id: objectId,
-            arrhythmia: arrhythmia,
+            arrhythmia,
             lead_config: leadConfig
         })
-    });
-
-    return await response.json();
+    }).then(res => res.json());
 }
 
 // Create ECG plot with animation + PQRST markers
-async function createECGPlot(objectId, arrhythmia, leadConfig) {
+async function createECGPlot(objectId, arrhythmia, leadConfig, ecgSignal, scaledY) {
+
     document.getElementById("plotLoader").style.display = "block";
     document.getElementById("ecgPlot").style.visibility = "hidden";
 
-    try{
-    const pqrstData = await fetchPQRST(objectId, arrhythmia, leadConfig);
-    const timeAxis = ecgSignal.map((_, i) => i); // use sample index
-    const dataLength = timeAxis.length;
-    const windowSize = 2000;
+    let pqrst = null;
 
-    const rawDtick = (dataLength < windowSize) ? Math.round(dataLength / 25) : 50;
-    const xDtick = Math.ceil(rawDtick / 5) * 5;
-    const xMinorDtick = xDtick / 5;
+    try {
+        // Fetch PQRST only ONCE
+        pqrst = await fetchPQRST(objectId, arrhythmia, leadConfig);
 
-    // Base ECG trace (animated)
-    const trace = {
-        x: [],
-        y: [],
-        mode: 'lines',
-        name: 'ECG Signal',
-        line: { color: 'black', width: 1 },
-        hovertemplate: '<b>Time:</b> %{x:.3f}<br><b>Amplitude:</b> %{y:.3f}mV<extra></extra>'
-    };
-
-    // Fetch PQRST indices from backend
-    const pqrst = await fetchPQRST(objectId, arrhythmia, leadConfig);
-    if (pqrst.status !== "success") {
-        console.error("Failed to fetch PQRST:", pqrst.message);
-    }
-
-    // Helper to make marker traces
-    function markerTrace(indices, label, color) {
-        if (!indices || indices.length === 0) return null;
-        return {
-            x: indices.map(i => timeAxis[i]),
-            y: indices.map(i => scaledY[i]),
-            mode: "markers",
-            name: label,
-            marker: { color, size: 6, symbol: "circle" },  // always small circles
-            hovertemplate: `<b>${label}:</b> %{x}<br>%{y}mV<extra></extra>`
-        };
-    }
-    
-    const traces = [
-        trace,
-        markerTrace(pqrst?.p_points, "P", "orange"),
-        markerTrace(pqrst?.q_points, "Q", "blue"),
-        markerTrace(pqrst?.r_peaks, "R", "red"),
-        markerTrace(pqrst?.s_points, "S", "green"),
-        markerTrace(pqrst?.t_points, "T", "purple")
-    ].filter(Boolean);
-
-    // Layout
-    const layout = {
-        xaxis: {
-            range: [0, Math.min(windowSize, dataLength)],
-            autorange: false,
-            fixedrange: false,
-            title: { text: 'Time Index', standoff: 20 },
-            showgrid: true,
-            gridcolor: 'rgba(245,121,121,0.93)',
-            zeroline: false,
-            dtick: xDtick,
-            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)', dtick: xMinorDtick, tick0: 0 },
-        },
-        yaxis: {
-            range: [-0.1, 4.2],
-            title: { text: 'ECG (mV)' },
-            showgrid: true,
-            gridcolor: 'rgba(245,121,121,0.93)',
-            zeroline: false,
-            dtick: 0.5,
-            minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)' }
-        },
-        plot_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
-        paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
-        showlegend: true,
-        legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255,255,255,0.5)' },
-        margin: { t: 60, b: 70, l: 40, r: 40 },
-        font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#000' }
-    };
-
-    const config = {
-        responsive: true,
-        displaylogo: false,
-        modeBarButtonsToAdd: ['pan2d', 'zoom2d', 'resetScale2d', 'zoomIn2d', 'zoomOut2d', 'toImage']
-    };
-
-    const plotElement = document.getElementById("ecgPlot");
-    currentPlot = await Plotly.newPlot(plotElement, traces, layout, config);
-
-    // hide loader, show plot
-    document.getElementById("plotLoader").style.display = "none";
-    plotElement.style.visibility = "visible";
-
-    // Animate ECG line (trace index 0 only)
-    let i = 0;
-    const frameStep = 95;
-
-    function animateWave() {
-        if (i < dataLength) {
-            const nextX = timeAxis.slice(i, i + frameStep);
-            const nextY = scaledY.slice(i, i + frameStep);
-            Plotly.extendTraces(plotElement, { x: [nextX], y: [nextY] }, [0]); // extend only ECG trace
-            i += frameStep;
-            requestAnimationFrame(animateWave);
+        if (pqrst.status !== "success") {
+            console.error("PQRST Error:", pqrst.message);
+            throw new Error("Failed to load PQRST markers");
         }
-    }
-    requestAnimationFrame(animateWave);
-     } catch (err) {
-        console.error("Plot failed:", err);
-        document.getElementById("plotLoader").innerHTML = "<p style='color:red;'>Failed to load ECG plot.</p>";
-    }
-    // Ensure global container exists
-if (!window.ecgData) window.ecgData = {};
-if (!window.ecgData[objectId]) window.ecgData[objectId] = {};
 
-// Store PQRST so download/export can use it
-window.ecgData[objectId].pqrst = pqrst;
-} 
+        // Prepare axes
+        const timeAxis = ecgSignal.map((_, i) => i);
+        const dataLength = timeAxis.length;
+        const windowSize = 2000;
+
+        const rawDtick = (dataLength < windowSize) ? Math.round(dataLength / 25) : 100;
+        const xDtick = Math.ceil(rawDtick / 5) * 5;
+        const xMinorDtick = xDtick / 5;
+
+        // Base ECG trace
+        const trace = {
+            x: [],
+            y: [],
+            mode: "lines",
+            name: "ECG Signal",
+            line: { color: "black", width: 1 },
+            hovertemplate:
+                "<b>Time:</b> %{x}<br><b>Amplitude:</b> %{y}mV<extra></extra>"
+        };
+
+        // Helper to make marker traces
+        function markerTrace(indices, label, color) {
+            if (!indices) return null;
+            const idx = indices["II"] || indices[Object.keys(indices)[0]]; // auto-select lead
+
+            if (!idx || idx.length === 0) return null;
+
+            return {
+                x: idx.map(i => timeAxis[i]),
+                y: idx.map(i => scaledY[i]),
+                mode: "markers",
+                name: label,
+                marker: { color, size: 6, symbol: "circle" },
+                hovertemplate: `<b>${label}:</b> %{x}<extra></extra>`
+            };
+        }
+
+        const traces = [
+            trace,
+            markerTrace(pqrst.P, "P", "orange"),
+            markerTrace(pqrst.Q, "Q", "blue"),
+            markerTrace(pqrst.R, "R", "red"),
+            markerTrace(pqrst.S, "S", "green"),
+            markerTrace(pqrst.T, "T", "purple")
+        ].filter(Boolean);
+
+        // Layout
+        const layout = {
+            xaxis: {
+                range: [0, Math.min(windowSize, dataLength)],
+                autorange: false,
+                fixedrange: false,
+                title: { text: 'Time Index', standoff: 20 },
+                showgrid: true,
+                gridcolor: 'rgba(245,121,121,0.93)',
+                zeroline: false,
+                dtick: xDtick,
+                minor: { showgrid: true,gridcolor: 'rgba(244,210,216,0.92)', dtick: xMinorDtick, tick0: 0  },
+            },
+            yaxis: {
+                range: [0 , 4.2],
+                 title: { text: 'ECG (mV)' },
+                showgrid: true,
+                gridcolor: 'rgba(245,121,121,0.93)',
+                zeroline: false,
+                dtick: 0.5,
+                minor: { showgrid: true, gridcolor: 'rgba(244,210,216,0.92)' }
+            },
+            plot_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+            paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+            showlegend: true,
+            legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255,255,255,0.5)' },
+            margin: { t: 60, b: 70, l: 40, r: 40 },
+            font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#000' }
+        };
+
+        const config = {
+            displaylogo: false,
+            responsive: true,
+            modeBarButtonsToAdd: [
+                "pan2d",
+                "zoom2d",
+                "resetScale2d",
+                "zoomIn2d",
+                "zoomOut2d",
+                "toImage"
+            ]
+        };
+
+        const plotElement = document.getElementById("ecgPlot");
+
+        await Plotly.newPlot(plotElement, traces, layout, config);
+
+        // Hide loader
+        document.getElementById("plotLoader").style.display = "none";
+        plotElement.style.visibility = "visible";
+
+        // Animation for trace 0 only
+        let i = 0;
+        const frameStep = 95;
+
+        function animateWave() {
+            if (i < dataLength) {
+                Plotly.extendTraces(
+                    plotElement,
+                    {
+                        x: [timeAxis.slice(i, i + frameStep)],
+                        y: [scaledY.slice(i, i + frameStep)]
+                    },
+                    [0]
+                );
+                i += frameStep;
+                requestAnimationFrame(animateWave);
+            }
+        }
+        requestAnimationFrame(animateWave);
+
+    } catch (err) {
+        console.error("Plot failed:", err);
+        document.getElementById("plotLoader").innerHTML =
+            "<p style='color:red;'>Failed to load ECG plot.</p>";
+    }
+
+    // STORE PQRST GLOBALLY
+    if (!window.ecgData) window.ecgData = {};
+    if (!window.ecgData[objectId]) window.ecgData[objectId] = {};
+
+    window.ecgData[objectId].pqrst = pqrst;
+}
 
     // Initialize the plot when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -985,7 +995,7 @@ window.ecgData[objectId].pqrst = pqrst;
             if (leadNumeric == 2) leadConfigStr = "2_lead";
             else if (leadNumeric == 7) leadConfigStr = "7_lead";
             else if (leadNumeric == 12) leadConfigStr = "12_lead";
-            createECGPlot(record_id, collection, leadConfigStr);
+            createECGPlot(record_id, collection, leadConfigStr,ecgSignal, scaledY);
         } else {
             document.getElementById('ecgPlot').innerHTML = `
                     <div class="loading">
@@ -1327,7 +1337,7 @@ document.addEventListener("click", async function (e) {
 
         const link = e.target.closest(".share-option");
         const platform = [...link.classList].find(cls =>
-            ["whatsapp", "facebook", "teams", "email"].includes(cls)
+            ["teams", "email"].includes(cls)
         );
         if (!platform) return;
 
@@ -1403,12 +1413,6 @@ document.addEventListener("click", async function (e) {
                 const msg = `Patient ID: ${patientId}\n\nClick the link below:\n${cleanUrl}`;
              
                 switch (platform) {
-                    case "whatsapp":
-                        shareUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
-                        break;
-                    case "facebook":
-                        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(cleanUrl)}&quote=${encodeURIComponent(msg)}`;
-                        break;
                     case "teams":
                         shareUrl = `https://teams.microsoft.com/share?href=${encodeURIComponent(cleanUrl)}&text=${encodeURIComponent(msg)}`;
                         break;

@@ -31,8 +31,14 @@ import matplotlib
 import datetime
 from datetime import datetime, timezone
 from scipy.signal import butter, filtfilt
+import json, binascii, numpy as np
 matplotlib.use('Agg')
-
+import re
+from django.http import JsonResponse
+import binascii
+import numpy as np
+import zipfile
+from subscription.decorators import feature_required
 client = pymongo.MongoClient("mongodb://192.168.1.65:27017/")
 db = client["ecgarrhythmias"]
 patient_db=client['Patients']
@@ -167,6 +173,7 @@ def update_patient_on_delete(patient_id, arrhythmia, datalength, frequency, sour
         col.delete_one({"PatientID": patient_id})
 
 @csrf_exempt
+@feature_required('ecg_insert')
 def new_insert_data(request):
     if request.method == "POST":
         try:
@@ -179,7 +186,13 @@ def new_insert_data(request):
             frequency = int(request.POST.get("newfrequency"))
             lead_type = request.POST.get("lead")
             lead = int(lead_type.split(' ')[0])
+            sex = request.POST.get("sex", "").strip()
+            age = request.POST.get("age", "").strip()
 
+            # --- Optional Fields ---
+            weight = request.POST.get("weight") or 0
+            height = request.POST.get("height") or 0
+           
             if len(arrhythmia_mi) != len(sub_arrhythmia):
                 return JsonResponse({
                     "status": "error",
@@ -290,14 +303,18 @@ def new_insert_data(request):
 
                 for coll_name, sub_arr in collections_to_insert:
                     db_insert_data = {
-                        'PatientID': patient_id,
-                        'Arrhythmia': sub_arr,
-                        'Lead': lead,
-                        'Frequency': frequency,
-                        'datalength': datalength,
-                        "server":"Local",
+                        "PatientID": patient_id,
+                        "Arrhythmia": sub_arr,
+                        "Lead": lead,
+                        "Frequency": frequency,
+                        "Sex": sex,
+                        "Age": age,
+                        "Height": height,
+                        "Weight": weight,
+                        "datalength": len(chunk),
+                        "Server": "Local",
                         "created_at": datetime.now(timezone.utc),
-                        'Data': data_dict
+                        "Data": data_dict
                     }
                     db[coll_name].insert_one(db_insert_data)
                     # --- Update patient_db after insert ---
@@ -315,8 +332,7 @@ def new_insert_data(request):
 
     return JsonResponse({"status": "error", "message": "Invalid request!"})
 
- # API view for ECG data (Example)
-
+# API view for ECG data (Example)
 def api_ecg_data(request):
     data = {"message": "ECG data API response"}
     return JsonResponse(data)
@@ -562,6 +578,8 @@ def fetch_random_ecg_data(request, arrhythmia):
     })
 
 
+import math
+
 def get_object_id(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
@@ -574,7 +592,7 @@ def get_object_id(request):
         objectID = data.get("objectId")
         samples_taken = int(data.get("samplesTaken"))
 
-        # Support multiple arrhythmias
+        # Convert comma-separated arrhythmias to list
         arrhythmia_list = [a.strip() for a in arrhythmia_raw.split(",") if a.strip()]
 
         if not objectID or not arrhythmia_list:
@@ -582,21 +600,20 @@ def get_object_id(request):
 
         objid = ObjectId(objectID)
         result = None
-        found_collection = None
 
-        # List of DBs to search
+        # Databases to search
         db_candidates = [db, Morphology_data, Analysis_data]
 
-        # Try each arrhythmia across all DBs
+        # Search for data by arrhythmia
         for arrhythmia in arrhythmia_list:
             for candidate in db_candidates:
                 for col_name in candidate.list_collection_names():
-                    # Match ignoring case and underscores/spaces
+
+                    # Match name ignoring "_" and case
                     if col_name.lower().replace("_", " ") == arrhythmia.lower().replace("_", " "):
                         collection = candidate[col_name]
                         result = collection.find_one({"_id": objid})
                         if result:
-                            found_collection = f"{candidate.name}.{col_name}"
                             break
                 if result:
                     break
@@ -608,23 +625,32 @@ def get_object_id(request):
 
         ecg_data_dict = result["Data"]
 
-        # Normalize lead keys
+        # Standard lead names
         standard_leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF',
                           'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
         lead_mapping = {lead.lower(): lead for lead in standard_leads}
 
+        # Normalize lead keys
         normalized_ecg_data = {}
         for key, value in ecg_data_dict.items():
             norm_key = lead_mapping.get(str(key).lower().strip(), key)
             normalized_ecg_data[norm_key] = value
 
-        # Return lead data
+        # ---- FIX: Replace NaN with 0 ----
+        def clean_values(arr):
+            return [0 if (v is None or (isinstance(v, float) and math.isnan(v))) else v for v in arr]
+
+        # -----------------------------
+
+        # 2-lead ECG
         if lead_type == "2":
             if "II" not in normalized_ecg_data:
                 return JsonResponse({"error": "Lead II data not found"}, status=404)
-            ecg_data = normalized_ecg_data["II"][:samples_taken]
+
+            ecg_data = clean_values(normalized_ecg_data["II"][:samples_taken])
             return JsonResponse({"x": list(range(len(ecg_data))), "ecgData": ecg_data})
 
+        # 7 or 12 lead ECG
         elif lead_type in ["7", "12"]:
             lead_sets = {
                 "7": ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
@@ -632,14 +658,20 @@ def get_object_id(request):
                        "V1", "V2", "V3", "V4", "V5", "V6"]
             }
             selected_leads = lead_sets.get(lead_type, [])
-            extracted = {lead: normalized_ecg_data[lead][:samples_taken]
-                         for lead in selected_leads if lead in normalized_ecg_data}
+
+            extracted = {
+                lead: clean_values(normalized_ecg_data[lead][:samples_taken])
+                for lead in selected_leads if lead in normalized_ecg_data
+            }
+
             if not extracted:
                 return JsonResponse({"error": f"No valid leads found for {lead_type}-lead ECG"}, status=404)
+
             return JsonResponse({"ecgData": extracted})
 
+        # Single-lead request
         elif lead_type in normalized_ecg_data:
-            ecg_data = normalized_ecg_data[lead_type][:samples_taken]
+            ecg_data = clean_values(normalized_ecg_data[lead_type][:samples_taken])
             return JsonResponse({"x": list(range(len(ecg_data))), "ecgData": ecg_data})
 
         else:
@@ -647,6 +679,7 @@ def get_object_id(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
 
 @csrf_exempt
 def edit_datas(request):
@@ -827,10 +860,6 @@ def delete_data(request):
     
 @csrf_exempt
 def process_and_return_ecg(request):
-    """
-    Receives ECG data (x, y format), applies low-pass filtering and baseline correction,
-    scales the signal between 0 and 4, and returns the processed ECG data as JSON.
-    """
     try:
         # Ensure request is POST and contains JSON data
         if request.method != "POST":
@@ -871,7 +900,151 @@ def process_and_return_ecg(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
     
+#def get_pqrst_data(request):
+#    if request.method != 'POST':
+#        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+#
+#    try:
+#        data = json.loads(request.body)
+#        object_id = data.get("object_id")
+#        arrhythmia_raw = data.get("arrhythmia", "").strip()
+#        lead_config = data.get("lead_config")
+#        
+#        if not object_id or not arrhythmia_raw or not lead_config:
+#            return JsonResponse({
+#                "status": "error",
+#                "message": "Missing parameters: object_id, arrhythmia, or lead_config."
+#            }, status=400)
+#
+#        if lead_config not in ["2_lead", "7_lead", "12_lead"]:
+#            return JsonResponse({
+#                "status": "error",
+#                "message": "Invalid lead_config. Must be '2_lead', '7_lead', or '12_lead'."
+#            }, status=400)
+#        
+#        arrhythmia_list = [a.strip() for a in arrhythmia_raw.split(",") if a.strip()]
+#        record = None
+#        found_collection = None
+#
+#        # Search across all DB candidates
+#        db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
+#
+#        for arr in arrhythmia_list:
+#            for candidate in db_candidates:
+#                for col_name in candidate.list_collection_names():
+#                    # Normalize: ignore case and treat spaces/underscores as same
+#                    if col_name.lower().replace("_", " ") == arr.lower().replace("_", " "):
+#                        collection = candidate[col_name]
+#                        doc = collection.find_one({"_id": ObjectId(object_id)})
+#                        if doc and "Data" in doc:
+#                            record = doc
+#                            found_collection = f"{candidate.name}.{col_name}"
+#                            break
+#                if record:
+#                    break
+#            if record:
+#                break
+#
+#        if not record or "Data" not in record:
+#            return JsonResponse({"status": "error", "message": "Invalid or missing ECG data."}, status=404)
+#
+#        frequency = int(record.get("Frequency", 200))
+#
+#        # Normalize Data keys
+#        standard_leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF',
+#                          'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+#        lead_mapping = {lead.lower(): lead for lead in standard_leads}
+#
+#        normalized_data = {}
+#        for key, value in record["Data"].items():
+#            norm_key = lead_mapping.get(str(key).lower().strip(), key)
+#            normalized_data[norm_key] = value
+#
+#        # Expected leads by config
+#        if lead_config == "2_lead":
+#            expected_leads = ["II"]
+#        elif lead_config == "7_lead":
+#            expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V5"]
+#        else:
+#            expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF",
+#                              "V1", "V2", "V3", "V4", "V5", "V6"]
+#
+#        available_leads = [lead for lead in expected_leads if lead in normalized_data]
+#
+#        if not available_leads:
+#            return JsonResponse({
+#                "status": "error",
+#                "message": f"No valid leads found. Expected: {expected_leads}"
+#            }, status=404)
+#
+#        # Create DataFrame
+#        lead_data = {lead: normalized_data[lead] for lead in available_leads}
+#        df = pd.DataFrame(lead_data)
+#
+#        # Run detection models
+#        r_index_dic = check_r_index(df, lead_config, frequency, r_index_model)
+#        s_index, q_index = check_qs_index(df, r_index_dic, lead_config)
+#        t_index, p_index, _, _, _ = check_pt_index(df, r_index_dic, lead_config)
+#        r_index = r_index_dic['II'] if 'II' in r_index_dic else r_index_dic[available_leads[0]]
+#        # --- HRV Metrics Function ---
+#        def BPM(r_index):
+#
+#            rr_intervals = np.diff(r_index)
+#            hrv_diff = abs(np.diff(rr_intervals)).tolist()
+#            mean_rr = np.mean(rr_intervals)
+#            sdnn = np.std(rr_intervals)
+#
+#            return {
+#                "mean_rr": round(mean_rr, 2),
+#                "sdnn": round(sdnn, 2),
+#                "hrv_values": hrv_diff,
+#                "hrv_count": len(hrv_diff)
+#            }
+#        def hr_count(r_index, fs=200):
+#            if len(r_index) > 1:
+#                rr_intervals = np.diff(r_index)
+#                interval_ms = [(rr / fs) * 1000 for rr in rr_intervals]
+#                if sum(interval_ms) > 0:
+#                    hr = (len(interval_ms) * 60000) / sum(interval_ms)
+#                    return round(hr, 2)
+#            return 0
+# 
+#        # Compute HRV metrics
+#        hrv_info = BPM(r_index)
+#        hr_value = hr_count(r_index, frequency)
+#        response_data = {
+#            "status": "success",
+#            "R": {lead: [int(i) for i in r_index_dic[lead]] for lead in r_index_dic},
+#            "Q": {lead: [int(i) for i in q_index[lead]] for lead in q_index},
+#            "S": {lead: [int(i) for i in s_index[lead]] for lead in s_index},
+#            "P": {lead: [int(i) for i in p_index[lead]] for lead in p_index},
+#            "T": {lead: [int(i) for i in t_index[lead]] for lead in t_index},
+#            "HR": hr_value,
+#            "HRV": hrv_info["hrv_values"],
+#            "HRV_metrics": {
+#                "mean_rr": hrv_info["mean_rr"],
+#                "sdnn": hrv_info["sdnn"],
+#            }
+#        }
+#        return JsonResponse(response_data)
+#    except Exception as e:
+#        traceback.print_exc()
+#        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+import math
+from subscription.templatetags.subscription_tags import has_feature
+@csrf_exempt
 def get_pqrst_data(request):
+
+    # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "pqrst"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include PQRST detection."
+        }, status=403)
+    # ---------------------------
+
     if request.method != 'POST':
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
@@ -879,7 +1052,7 @@ def get_pqrst_data(request):
         data = json.loads(request.body)
         object_id = data.get("object_id")
         arrhythmia_raw = data.get("arrhythmia", "").strip()
-        lead_config = data.get("lead_config")  # "2_lead", "7_lead", "12_lead"
+        lead_config = data.get("lead_config")
 
         if not object_id or not arrhythmia_raw or not lead_config:
             return JsonResponse({
@@ -893,36 +1066,43 @@ def get_pqrst_data(request):
                 "message": "Invalid lead_config. Must be '2_lead', '7_lead', or '12_lead'."
             }, status=400)
 
+        # CLEAN ARRAY
+        def clean_array(arr):
+            cleaned = []
+            for v in arr:
+                if v is None:
+                    cleaned.append(0)
+                elif isinstance(v, float) and math.isnan(v):
+                    cleaned.append(0)
+                else:
+                    cleaned.append(v)
+            return cleaned
+
         arrhythmia_list = [a.strip() for a in arrhythmia_raw.split(",") if a.strip()]
         record = None
-        found_collection = None
 
-        # Search across all DB candidates
+        # SEARCH DBs
         db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
 
         for arr in arrhythmia_list:
             for candidate in db_candidates:
                 for col_name in candidate.list_collection_names():
-                    # Normalize: ignore case and treat spaces/underscores as same
                     if col_name.lower().replace("_", " ") == arr.lower().replace("_", " "):
-                        collection = candidate[col_name]
-                        doc = collection.find_one({"_id": ObjectId(object_id)})
+                        doc = candidate[col_name].find_one({"_id": ObjectId(object_id)})
                         if doc and "Data" in doc:
                             record = doc
-                            found_collection = f"{candidate.name}.{col_name}"
                             break
                 if record:
                     break
             if record:
                 break
 
-
         if not record or "Data" not in record:
             return JsonResponse({"status": "error", "message": "Invalid or missing ECG data."}, status=404)
 
         frequency = int(record.get("Frequency", 200))
 
-        # Normalize Data keys
+        # NORMALIZE LEADS
         standard_leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF',
                           'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
         lead_mapping = {lead.lower(): lead for lead in standard_leads}
@@ -930,40 +1110,83 @@ def get_pqrst_data(request):
         normalized_data = {}
         for key, value in record["Data"].items():
             norm_key = lead_mapping.get(str(key).lower().strip(), key)
-            normalized_data[norm_key] = value
+            normalized_data[norm_key] = clean_array(value)
 
-        # Expected leads by config
+        # EXPECTED LEADS
         if lead_config == "2_lead":
             expected_leads = ["II"]
         elif lead_config == "7_lead":
             expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V5"]
-        else:  # 12_lead
-            expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF",
-                              "V1", "V2", "V3", "V4", "V5", "V6"]
+        else:
+            expected_leads = standard_leads
 
         available_leads = [lead for lead in expected_leads if lead in normalized_data]
+
         if not available_leads:
-            return JsonResponse({
-                "status": "error",
-                "message": f"No valid leads found. Expected: {expected_leads}"
-            }, status=404)
+            return JsonResponse({"status": "error", "message": f"No valid leads found. Expected: {expected_leads}"}, status=404)
 
-        # Create DataFrame
-        lead_data = {lead: normalized_data[lead] for lead in available_leads}
-        df = pd.DataFrame(lead_data)
+        df = pd.DataFrame({lead: normalized_data[lead] for lead in available_leads})
 
-        # Run detection models
-        r_index = check_r_index(df, lead_config, frequency, r_index_model)
-        s_index, q_index = check_qs_index(df, r_index, lead_config)
-        t_index, p_index, _, _, _ = check_pt_index(df, lead_config, r_index)
+        # RUN MODELS
+        r_index_dic = check_r_index(df, lead_config, frequency, r_index_model)
+        s_index, q_index = check_qs_index(df, r_index_dic, lead_config)
+        t_index, p_index, _, _, _ = check_pt_index(df, r_index_dic, lead_config)
+
+        r_index = r_index_dic['II'] if 'II' in r_index_dic else r_index_dic[available_leads[0]]
+
+        # HRV & HR
+        def BPM(r_index):
+            r_index = [int(i) for i in r_index if not math.isnan(i)]
+            if len(r_index) < 2:
+                return {"mean_rr": 0, "sdnn": 0, "hrv_values": [], "hrv_count": 0}
+
+            rr = np.diff(r_index)
+            hrv_diff = abs(np.diff(rr)).tolist()
+
+            return {
+                "mean_rr": round(np.mean(rr), 2),
+                "sdnn": round(np.std(rr), 2),
+                "hrv_values": hrv_diff,
+                "hrv_count": len(hrv_diff)
+            }
+
+        def heart_rate(r_index, fs=200):
+            r_index = [int(i) for i in r_index if not math.isnan(i)]
+            if len(r_index) < 2:
+                return 0
+            rr = np.diff(r_index)
+            ms_total = sum([(i/fs)*1000 for i in rr])
+            return round((len(rr) * 60000) / ms_total, 2) if ms_total > 0 else 0
+
+        hrv_info = BPM(r_index)
+        hr_value = heart_rate(r_index, frequency)
+
+        # CLEAN INDEX
+        def clean_index_dict(idx_dict):
+            cleaned = {}
+            for lead, arr in idx_dict.items():
+                new_arr = []
+                for i in arr:
+                    if i is None or (isinstance(i, float) and math.isnan(i)):
+                        new_arr.append(0)
+                    else:
+                        new_arr.append(int(i))
+                cleaned[lead] = new_arr
+            return cleaned
 
         return JsonResponse({
             "status": "success",
-            "r_peaks": [int(i) for i in r_index],
-            "q_points": [int(i) for i in q_index],
-            "s_points": [int(i) for i in s_index],
-            "p_points": [int(i) for i in p_index],
-            "t_points": [int(i) for i in t_index],
+            "R": clean_index_dict(r_index_dic),
+            "Q": clean_index_dict(q_index),
+            "S": clean_index_dict(s_index),
+            "P": clean_index_dict(p_index),
+            "T": clean_index_dict(t_index),
+            "HR": hr_value,
+            "HRV": hrv_info["hrv_values"],
+            "HRV_metrics": {
+                "mean_rr": hrv_info["mean_rr"],
+                "sdnn": hrv_info["sdnn"]
+            }
         })
 
     except Exception as e:
@@ -1142,18 +1365,33 @@ def get_multiple_segments(request):
             )
             return JsonResponse({"status": "error", "message": "Invalid lead", "data": []})
 
-        for group in arrhythmia_data:
-            arrhythmia = group.get("arrhythmia")
-            duration = int(group.get("duration"))   # seconds
-            sample_count = frequency * duration     # total samples needed
+        # --- Step 1: Group by main arrhythmia and SUM durations ---
+        grouped_arrhythmias = {}
+        for item in arrhythmia_data:
+            arr_name = item.get("arrhythmia")
+            sub = item.get("subArrhythmia")
+            duration = int(item.get("duration", 0))
+
+            if arr_name not in grouped_arrhythmias:
+                grouped_arrhythmias[arr_name] = {"sub_list": [], "duration": 0}
+
+            grouped_arrhythmias[arr_name]["sub_list"].append(sub)
+            grouped_arrhythmias[arr_name]["duration"] += duration  # ? SUM instead of MAX
+
+        # --- Step 2: Query for each grouped arrhythmia ---
+        for arrhythmia, info in grouped_arrhythmias.items():
+            sub_list = info["sub_list"]
+            duration = info["duration"]
+            sample_count = frequency * duration
 
             selected_segments = []
             try:
                 collection = db[arrhythmia]
-
-                # Always combine smaller docs, ignore docs bigger than needed
-#                query = {"Lead": lead, "datalength": {"$gt": 0, "$lte": sample_count}}
-                query = {"Lead": lead, "datalength": {"$gt": 0}}
+                query = {
+                    "Lead": lead,
+                    "datalength": {"$gt": 0},
+                    "Arrhythmia": {"$in": sub_list}
+                }
                 projection = {
                     "PatientID": 1,
                     "Arrhythmia": 1,
@@ -1162,9 +1400,9 @@ def get_multiple_segments(request):
                     "Data": 1
                 }
 
-                cursor = collection.find(query, projection).limit(200)
-
+                cursor = collection.find(query, projection).limit(400)
                 total_collected = 0
+
                 for record in cursor:
                     if total_collected >= sample_count:
                         break
@@ -1182,7 +1420,7 @@ def get_multiple_segments(request):
                     seg = {
                         "object_id": str(record.get("_id")),
                         "PatientID": record.get("PatientID", "N/A"),
-                        "Arrhythmia": record.get("Arrhythmia", arrhythmia),
+                        "Arrhythmia": record.get("Arrhythmia"),
                         "Lead": "II" if lead == 2 else lead,
                         "LeadNumeric": lead,
                         "Frequency": frequency,
@@ -1198,18 +1436,19 @@ def get_multiple_segments(request):
 
             session_query_list.append({
                 "arrhythmia": arrhythmia,
+                "sub_arrhythmia_list": sub_list,
                 "lead": lead,
                 "frequency": frequency,
                 "duration": duration,
                 "segments": selected_segments
             })
 
-        # -------- Save in session --------
+        # --- Save session ---
         request.session["multi_ecg_query"] = session_query_list
         request.session["segment_mode"] = True
         request.session.modified = True
 
-        # -------- Flatten response --------
+        # --- Flatten response ---
         flattened_segments = []
         for group in session_query_list:
             for seg in group.get("segments", []):
@@ -1219,6 +1458,7 @@ def get_multiple_segments(request):
                 flattened_segments.append({
                     "patient_id": seg.get("PatientID"),
                     "arrhythmia": group.get("arrhythmia"),
+                    "sub_arrhythmia": seg.get("Arrhythmia"),
                     "lead": seg.get("Lead"),
                     "frequency": freq,
                     "samples_taken": samples_taken,
@@ -1226,7 +1466,7 @@ def get_multiple_segments(request):
                     "channels_used": seg.get("channels_used", [])
                 })
 
-        # --- Update log with final status ---
+        # --- Update log ---
         logs_collection.update_one(
             {"_id": log_id},
             {"$set": {
@@ -1242,8 +1482,7 @@ def get_multiple_segments(request):
             "message": "No matching records found" if not flattened_segments else "OK",
             "data": flattened_segments,
             "total_pages": 1 if flattened_segments else 0,
-            "total_records": len(flattened_segments),
-            "arrhythmia": session_query_list[0]['arrhythmia'] if session_query_list else ""
+            "total_records": len(flattened_segments)
         })
 
     except Exception as e:
@@ -1363,12 +1602,13 @@ def ecg_details(request, arrhythmia):
         "arrhythmia": arrhythmia,
         "card_name": card_name,
     })
-    
 # ========= UTILITIES =========
 def get_ecg_collection(patient_id):
-    MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"
+    # MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin" # test
+    MONGO_URI = "mongodb://readonly_user:9ikJ4Qn1YmG1l1EVF1OQ@192.168.2.131:27017/?authSource=admin" #live
     client = MongoClient(MONGO_URI)
-    DB_NAME = "oom-ecg"
+    # DB_NAME = "oom-ecg"
+    DB_NAME ="ecgs"
     db1 = client[DB_NAME]
     patients_collection = db1["patients"]
     """Get patient document and ECG collection handle."""
@@ -1378,38 +1618,13 @@ def get_ecg_collection(patient_id):
     ecg_collection = db1[f"{patient['_id']}_ecgs"]
     return patient, ecg_collection
 
-
-def decode_ecg_hex(hex_string):
-    try:
-        data_bytes = bytes.fromhex(hex_string)
-        val = np.frombuffer(data_bytes, dtype='<i2').astype(np.float32)
-        val = val * (4.6 / 4095) / 4
-        return val
-    except Exception:
-        return np.array([], dtype=np.float32)
-
-
-def lowpass_filter(signal, cutoff=0.3, fs=200):
-    try:
-        b, a = butter(2, cutoff / (fs / 2), btype="low")
-        return filtfilt(b, a, signal)
-    except Exception:
-        return signal
-
-
-def baseline_correction(signal, window_size=1000):
-    try:
-        baseline = np.convolve(signal, np.ones(window_size) / window_size, mode="same")
-        return signal - baseline
-    except Exception:
-        return signal
-
-
 # ========= API ENDPOINTS =========
 def check_patient(request):
-    MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"
+    # MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"# test
+    MONGO_URI = "mongodb://readonly_user:9ikJ4Qn1YmG1l1EVF1OQ@192.168.2.131:27017/?authSource=admin" #live
     client = MongoClient(MONGO_URI)
-    DB_NAME = "oom-ecg"
+    # DB_NAME = "oom-ecg"
+    DB_NAME ="ecgs"
     db1 = client[DB_NAME]
     patients_collection = db1["patients"]
     patient_id = request.GET.get("patientId")
@@ -1422,301 +1637,347 @@ def check_patient(request):
     else:
         return JsonResponse({"status": "not_found"})
 
-def patient_search_view(request):
-    patient_id = request.GET.get("patientId")
-    if not patient_id:
-        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Missing patientId"})
+def decode_version2_ecg(hex_data):
+    if not hex_data or not isinstance(hex_data, str):
+        return {"II": []}
+    voltages = []
+    for s in re.findall("....", hex_data):
+        try:
+            low = int(s[0:2], 16)
+            high = int(s[2:4], 16)
+            val = high * 256 + low
+            val = ((val + 32768) % 65536) - 32768
+            voltages.append((4.6 / 4095) * val)
+        except Exception:
+            voltages.append(0.0)
+    return {"II": voltages}
 
-    patient, ecg_collection = get_ecg_collection(patient_id)
-    if not ecg_collection:
-        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Patient not found"})
+def decode_version5_ecg(data, data1, data5):
+    def decode_one(hex_str):
+        vals = []
+        if not hex_str:
+            return vals
+        for s in re.findall("....", hex_str):
+            try:
+                low = int(s[0:2], 16)
+                high = int(s[2:4], 16)
+                val = high * 256 + low
+                val = ((val + 32768) % 65536) - 32768
+                vals.append((4.6 / 4095) * val)
+            except Exception:
+                vals.append(0.0)
+        return vals
 
-    try:
-        version_summary = list(ecg_collection.aggregate([
-            {"$group": {"_id": "$version", "count": {"$sum": 1}}},
-            {"$sort": {"_id": 1}}
-        ]))
-        available_versions = [v['_id'] for v in version_summary]
+    lead_II = decode_one(data)
+    lead_I = decode_one(data1)
+    lead_V5 = decode_one(data5)
 
-        lead_mapping = {
-            2: ["II"],
-            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
-            12: ["I", "II", "III", "aVR", "aVL", "aVF",
-                 "V1", "V2", "V3", "V4", "V5", "V6"]
-        }
+    # Derived leads
+    lead_III = [ii - i1 for ii, i1 in zip(lead_II, lead_I)]
+    lead_AVR = [-(i1 + ii) / 2 for ii, i1 in zip(lead_II, lead_I)]
+    lead_AVL = [i1 - ii / 2 for ii, i1 in zip(lead_II, lead_I)]
+    lead_AVF = [ii - i1 / 2 for ii, i1 in zip(lead_II, lead_I)]
 
-        all_versions_data = []
-        for vdoc in version_summary:
-            version = vdoc["_id"]
-            cursor = ecg_collection.find(
-                {"version": version}, {"_id": 0, "data": 1, "dateTime": 1}
-            ).sort("dateTime", 1)
+    return {
+        "I": lead_I,
+        "II": lead_II,
+        "III": lead_III,
+        "aVR": lead_AVR,
+        "aVL": lead_AVL,
+        "aVF": lead_AVF,
+        "V5": lead_V5,
+    }
 
-            ecg_wave, times = [], []
-            for doc in cursor:
-                ecg_wave.extend(decode_ecg_hex(doc["data"]))
-                times.append(doc["dateTime"])
+def decode_version8_ecg(doc):
 
-            if not ecg_wave:
-                continue
+    def decode_one(hex_str):
+        vals = []
+        if not hex_str or not isinstance(hex_str, str):
+            return vals
+        for s in re.findall("....", hex_str):
+            try:
+                low = int(s[0:2], 16)
+                high = int(s[2:4], 16)
+                val = high * 256 + low
+                val = ((val + 32768) % 65536) - 32768
+                vals.append((4.6 / 4095) * val)
+            except Exception:
+                vals.append(0.0)
+        return vals
 
-            # Keep signal raw (no filter / no baseline correction)
-            ecg_np = np.array(ecg_wave, dtype=np.float32)
-            leads = lead_mapping.get(version, ["II"])
+    # === Physical leads (8 available signals) ===
+    lead_I = decode_one(doc.get("data"))
+    lead_II = decode_one(doc.get("data1"))
+    lead_V1 = decode_one(doc.get("vOne"))
+    lead_V2 = decode_one(doc.get("vTwo"))
+    lead_V3 = decode_one(doc.get("vThree"))
+    lead_V4 = decode_one(doc.get("vFour"))
+    lead_V5 = decode_one(doc.get("data5"))
+    lead_V6 = decode_one(doc.get("vSix"))
 
-            all_versions_data.append({
-                "version": version,
-                "lead_count": len(leads),
-                "leads": leads,
-                "start_time": times[0].isoformat() if times else None,
-                "end_time": times[-1].isoformat() if times else None,
-                "data": np.round(ecg_np, 4).tolist(),
-            })
+    # === Derived leads (same logic as version 5) ===
+    min_len = min(len(lead_I), len(lead_II)) if lead_I and lead_II else 0
+    if min_len > 0:
+        lead_I = lead_I[:min_len]
+        lead_II = lead_II[:min_len]
 
-        context = {
-            "patient_id": patient_id,
-            "sampling_rate": 200,
-            "total_docs": ecg_collection.estimated_document_count(),
-            "all_versions_data": all_versions_data,
-            "available_versions": available_versions,
-        }
+        lead_III = [ii - i1 for ii, i1 in zip(lead_II, lead_I)]
+        lead_AVR = [-(i1 + ii) / 2 for ii, i1 in zip(lead_II, lead_I)]
+        lead_AVL = [i1 - ii / 2 for ii, i1 in zip(lead_II, lead_I)]
+        lead_AVF = [ii - i1 / 2 for ii, i1 in zip(lead_II, lead_I)]
+    else:
+        lead_III = lead_AVR = lead_AVL = lead_AVF = []
 
-        return render(request, "oom_ecg_data/patient_search_view.html", context)
-    except Exception as e:
-        return render(request, "oom_ecg_data/patient_search_view.html", {"error": str(e)})
-
-
-def fetch_more_ecg(request):
+    # === Return all 12 leads ===
+    return {
+        "I": lead_I,
+        "II": lead_II,
+        "III": lead_III,
+        "aVR": lead_AVR,
+        "aVL": lead_AVL,
+        "aVF": lead_AVF,
+        "V1": lead_V1,
+        "V2": lead_V2,
+        "V3": lead_V3,
+        "V4": lead_V4,
+        "V5": lead_V5,
+        "V6": lead_V6,
+    }
+def get_patient_hex_data(request):
     try:
         patient_id = request.GET.get("patientId")
-        version = int(request.GET.get("version", 2))
-        skip_samples = int(request.GET.get("skip", 0))
-        limit_samples = int(request.GET.get("limit", 2000))
-        sampling_rate = 200.0  # Hz
+        skip = int(request.GET.get("skip", 0))
+        limit = int(request.GET.get("limit"))
 
-        version_map = {7: 5, 12: 8}
-        actual_version = version_map.get(version, version)
+        if not patient_id:
+            return JsonResponse({"status": "error", "message": "Missing patientId"})
 
+        # ===== Get patient & ECG collection =====
         patient, ecg_collection = get_ecg_collection(patient_id)
         if not ecg_collection:
-            return JsonResponse({"error": "Patient not found"}, status=404)
+            return JsonResponse({"status": "error", "message": "Patient not found"})
 
-        lead_mapping = {
-            2: ["II"],
-            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
-            12: ["I", "II", "III", "aVR", "aVL", "aVF",
-                 "V1", "V2", "V3", "V4", "V5", "V6"]
-        }
-        leads = lead_mapping.get(version, ["II"])
-        lead_data = {lead: [] for lead in leads}
+        version_map = {2: 2, 5: 7, 8: 12}
+        available_versions = sorted(ecg_collection.distinct("version"))
 
-        cursor = ecg_collection.find(
-            {"version": actual_version},
-            {"_id": 0, "data": 1, "dateTime": 1}
-        ).sort("dateTime", 1)
+        all_data = {}
 
-        # Flatten all samples
-        for doc in cursor:
-            d = doc.get("data")
-            if isinstance(d, dict):
-                for lead in leads:
-                    if lead in d:
-                        lead_data[lead].extend(decode_ecg_hex(d[lead]))
-            elif isinstance(d, str):
-                decoded = decode_ecg_hex(d)
-                for lead in leads:
-                    lead_data[lead].extend(decoded)
+        for db_version in available_versions:
+            readable_version = version_map.get(db_version, db_version)
 
-        # --- Summary calculations ---
-        sliced_data = {}
-        lead_summary = {}
-        total_points_all = 0
-        max_total_len = 0
+            # ==== Step 1: Safe aggregation (no options) ====
+            pipeline = [
+                {"$match": {"version": db_version}},
+                {"$project": {
+                    "data_len": {"$strLenCP": {"$ifNull": ["$data", ""]}},
+                    "data1_len": {"$strLenCP": {"$ifNull": ["$data1", ""]}},
+                    "data5_len": {"$strLenCP": {"$ifNull": ["$data5", ""]}},
+                }},
+                {"$group": {
+                    "_id": None,
+                    "total_len": {
+                        "$sum": {"$add": ["$data_len", "$data1_len", "$data5_len"]}
+                    }
+                }}
+            ]
 
-        for lead in leads:
-            arr = np.array(lead_data[lead], dtype=np.float32)
-            total_len = len(arr)
-            max_total_len = max(max_total_len, total_len)
-            total_points_all += total_len
+            #  noCursorTimeout REMOVED completely (not supported in aggregation)
+            try:
+                agg_result = list(ecg_collection.aggregate(pipeline))
+                total_len = agg_result[0]["total_len"] if agg_result else 0
+            except Exception as agg_err:
+                print("Aggregation failed, falling back:", agg_err)
+                total_len = 0
+                cursor_fallback = ecg_collection.find(
+                    {"version": db_version},
+                    {"data": 1, "data1": 1, "data5": 1},
+                )
+                for doc in cursor_fallback:
+                    for key in ("data", "data1", "data5"):
+                        hex_str = doc.get(key)
+                        if isinstance(hex_str, str):
+                            total_len += len(hex_str)
 
-            # Just slice raw data (no filtering / no baseline)
-            sliced = arr[skip_samples:skip_samples + limit_samples]
-            sliced_data[lead] = np.round(sliced, 4).tolist()
+            total_samples = total_len // 4
+            total_segments = max(1, total_samples // limit)
+           
+            # ==== Step 2: Fetch only required segment ====
+            # Here we safely use no_cursor_timeout, supported in find()
+            cursor = ecg_collection.find(
+                {"version": db_version},
+                {
+                    "_id": 0,
+                    "data": 1,
+                    "data1": 1,
+                    "data5": 1,
+                    "vFour": 1,
+                    "vOne": 1,
+                    "vSix": 1,
+                    "vThree": 1,
+                    "vTwo": 1,
+                    "dateTime": 1,
+                }
+            ).skip(skip).limit(limit)
 
-            # Duration calculations
-            total_duration = round(total_len / sampling_rate, 2)
-            visible_duration = round(len(sliced) / sampling_rate, 2)
+            ecg_data = {}
 
-            lead_summary[lead] = {
-                "total_points": total_len,
-                "visible_points": len(sliced),
-                "visible_duration_sec": visible_duration,
-                "total_duration_sec": total_duration,
+            # ==== Step 3: Decode only current segment ====
+            for doc in cursor:
+                data = doc.get("data")
+                data1 = doc.get("data1")
+                data5 = doc.get("data5")
+
+                if db_version == 2 and isinstance(data, str):
+                    decoded = decode_version2_ecg(data)
+                elif db_version == 5 and data and data1 and data5:
+                    decoded = decode_version5_ecg(data, data1, data5)
+                elif db_version == 8:
+                    decoded = decode_version8_ecg(doc)
+                else:
+                    decoded = {}
+
+                for lead, vals in decoded.items():
+                    ecg_data.setdefault(lead, []).extend(vals)
+
+            # ==== Step 4: Build lead summary ====
+            lead_summary = {
+                lead: {
+                    "total_points": len(vals),
+                    "total_duration_sec": round(len(vals) / 200, 2),
+                }
+                for lead, vals in ecg_data.items()
             }
 
-        total_duration_sec = round(max_total_len / sampling_rate, 2)
+            all_data[f"version_{readable_version}"] = {
+                "lead_summary": lead_summary,
+                "ecg_data": ecg_data,
+                "total_samples": total_samples,
+                "total_segments": total_segments,
+            }
 
+        # ==== Step 5: Return identical JSON structure ====
         return JsonResponse({
-            "version": version,
-            "leads": leads,
-            "ecg_data": sliced_data,
-            "lead_summary": lead_summary,
-            "summary_total": {
-                "total_leads": len(leads),
-                "total_points_all_leads": total_points_all,
-                "total_duration_sec": total_duration_sec
-            }
+            "status": "ok",
+            "available_versions": available_versions,
+            "all_data": all_data,
         })
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        print("Backend Error:", e)
+        return JsonResponse({"status": "error", "message": str(e)})
 
-#def patient_search_view(request):
-#    patient_id = request.GET.get("patientId")
-#    if not patient_id:
-#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Missing patientId"})
-#
-#    patient, ecg_collection = get_ecg_collection(patient_id)
-#    if not ecg_collection:
-#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": "Patient not found"})
-#
-#    try:
-#        version_summary = list(ecg_collection.aggregate([
-#            {"$group": {"_id": "$version", "count": {"$sum": 1}}},
-#            {"$sort": {"_id": 1}}
-#        ]))
-#        available_versions = [v['_id'] for v in version_summary]
-#
-#        lead_mapping = {
-#            2: ["II"],
-#            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
-#            12: ["I", "II", "III", "aVR", "aVL", "aVF",
-#                 "V1", "V2", "V3", "V4", "V5", "V6"]
-#        }
-#
-#        all_versions_data = []
-#        for vdoc in version_summary:
-#            version = vdoc["_id"]
-#            cursor = ecg_collection.find(
-#                {"version": version}, {"_id": 0, "data": 1, "dateTime": 1}
-#            ).sort("dateTime", 1)
-#
-#            ecg_wave, times = [], []
-#            for doc in cursor:
-#                ecg_wave.extend(decode_ecg_hex(doc["data"]))
-#                times.append(doc["dateTime"])
-#
-#            if not ecg_wave:
-#                continue
-#
-#            ecg_np = baseline_correction(lowpass_filter(np.array(ecg_wave, dtype=np.float32)))
-#            leads = lead_mapping.get(version, ["II"])
-#
-#            all_versions_data.append({
-#                "version": version,
-#                "lead_count": len(leads),
-#                "leads": leads,
-#                "start_time": times[0].isoformat() if times else None,
-#                "end_time": times[-1].isoformat() if times else None,
-#                "data": np.round(ecg_np, 4).tolist(),
-#            })
-#
-#        context = {
-#            "patient_id": patient_id,
-#            "sampling_rate": 200,
-#            "total_docs": ecg_collection.estimated_document_count(),
-#            "all_versions_data": all_versions_data,
-#            "available_versions": available_versions,
-#        }
-#
-#        return render(request, "oom_ecg_data/patient_search_view.html", context)
-#    except Exception as e:
-#        return render(request, "oom_ecg_data/patient_search_view.html", {"error": str(e)})
-#
-#
-#def fetch_more_ecg(request):
-#    try:
-#        patient_id = request.GET.get("patientId")
-#        version = int(request.GET.get("version", 2))
-#        skip_samples = int(request.GET.get("skip", 0))
-#        limit_samples = int(request.GET.get("limit", 2000))
-#        sampling_rate = 200.0  # Hz
-#
-#        version_map = {7: 5, 12: 8}
-#        actual_version = version_map.get(version, version)
-#
-#        patient, ecg_collection = get_ecg_collection(patient_id)
-#        if not ecg_collection:
-#            return JsonResponse({"error": "Patient not found"}, status=404)
-#
-#        lead_mapping = {
-#            2: ["II"],
-#            7: ["I", "II", "III", "aVR", "aVL", "aVF", "V5"],
-#            12: ["I", "II", "III", "aVR", "aVL", "aVF",
-#                 "V1", "V2", "V3", "V4", "V5", "V6"]
-#        }
-#        leads = lead_mapping.get(version, ["II"])
-#        lead_data = {lead: [] for lead in leads}
-#
-#        cursor = ecg_collection.find(
-#            {"version": actual_version},
-#            {"_id": 0, "data": 1, "dateTime": 1}
-#        ).sort("dateTime", 1)
-#
-#        # Flatten all samples
-#        for doc in cursor:
-#            d = doc.get("data")
-#            if isinstance(d, dict):
-#                for lead in leads:
-#                    if lead in d:
-#                        lead_data[lead].extend(decode_ecg_hex(d[lead]))
-#            elif isinstance(d, str):
-#                decoded = decode_ecg_hex(d)
-#                for lead in leads:
-#                    lead_data[lead].extend(decoded)
-#
-#        # --- Summary calculations ---
-#        sliced_data = {}
-#        lead_summary = {}
-#        total_points_all = 0
-#        max_total_len = 0
-#
-#        for lead in leads:
-#            arr = np.array(lead_data[lead], dtype=np.float32)
-#            total_len = len(arr)
-#            max_total_len = max(max_total_len, total_len)
-#            total_points_all += total_len
-#
-#            # Pagination slicing
-#            sliced = arr[skip_samples:skip_samples + limit_samples]
-#            if len(sliced) > 0:
-#                sliced = baseline_correction(lowpass_filter(sliced))
-#            sliced_data[lead] = np.round(sliced, 4).tolist()
-#
-#            # Duration calculations
-#            total_duration = round(total_len / sampling_rate, 2)
-#            visible_duration = round(len(sliced) / sampling_rate, 2)
-#
-#            lead_summary[lead] = {
-#                "total_points": total_len,
-#                "visible_points": len(sliced),
-#                "visible_duration_sec": visible_duration,
-#                "total_duration_sec": total_duration,
-#            }
-#
-#        total_duration_sec = round(max_total_len / sampling_rate, 2)
-#
-#        return JsonResponse({
-#            "version": version,
-#            "leads": leads,
-#            "ecg_data": sliced_data,
-#            "lead_summary": lead_summary,
-#            "summary_total": {
-#                "total_leads": len(leads),
-#                "total_points_all_leads": total_points_all,
-#                "total_duration_sec": total_duration_sec
-#            }
-#        })
-#
-#    except Exception as e:
-#        return JsonResponse({"error": str(e)}, status=500)
+def patient_search_view(request):
+    patient_id = request.GET.get("patientId")
+
+    patient, ecg_collection = get_ecg_collection(patient_id)
+    if not ecg_collection:
+        return render(request, "oom_ecg_data/patient_search_view.html", {
+            "patient_id": patient_id,
+            "all_versions_data": [],
+        })
+
+    # Get available DB versions (2, 5, 8)
+    available_versions = sorted(ecg_collection.distinct("version"))
+
+    # Map DB version display version
+    version_map = {2: 2, 5: 7, 8: 12}
+    all_versions_data = [
+        {"db_version": v, "version": version_map.get(v, v)}
+        for v in available_versions
+    ]
+
+    return render(request, "oom_ecg_data/patient_search_view.html", {
+        "patient_id": patient_id,
+        "all_versions_data": all_versions_data,
+    })
+    
+@csrf_exempt
+def share_selected(request):
+    try:
+        data = json.loads(request.body)
+        items = data.get("items", [])
+
+        if not items:
+            return JsonResponse({"status": "error", "message": "No records provided."}, status=400)
+        
+        # Create unique shared folder
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        shared_dir = os.path.join(settings.MEDIA_ROOT, "shared_ecg", timestamp)
+        os.makedirs(shared_dir, exist_ok=True)
+
+        csv_files = []
+        valid_count = 0
+
+        for item in items:
+            collection_name = item.get("collection")
+            record_id = item.get("id")
+
+            if not collection_name or not record_id:
+                continue
+
+            collection = db[collection_name]
+            record = None
+
+            # Try ObjectId and string fallback
+            try:
+                record = collection.find_one({"_id": ObjectId(record_id)})
+            except Exception:
+                record = collection.find_one({"_id": record_id})
+
+            if not record:
+                continue
+
+            # Handle 2-lead ECG
+            if "x" in record and "y" in record:
+                df = pd.DataFrame({"TimeIndex": record["x"], "II": record["y"]})
+                df["LeadType"] = "2-lead"
+
+            elif "Data" in record:
+                data_dict = record["Data"]
+                leads = list(data_dict.keys())
+                df_data = {}
+
+                # Determine length of first lead to create TimeIndex
+                first_lead = leads[0]
+                num_points = len(data_dict[first_lead])
+                df_data["Index"] = list(range(num_points))
+
+                # Add each lead�s signal
+                for lead in leads:
+                    df_data[lead] = data_dict[lead]
+
+                # Create final DataFrame with only TimeIndex and leads
+                df = pd.DataFrame(df_data)
+            else:
+                continue
+
+            # Save each CSV file
+            csv_name = f"{collection_name}_{record_id}.csv".replace(" ", "_")
+            csv_path = os.path.join(shared_dir, csv_name)
+            df.to_csv(csv_path, index=False, encoding="utf-8")
+
+            csv_files.append(csv_path)
+            valid_count += 1
+
+
+        if not csv_files:
+            return JsonResponse({"status": "error", "message": "No valid ECG data found in selected records."}, status=400)
+
+        # Create a ZIP archive of all CSVs
+        zip_name = f"shared_ecg_{timestamp}.zip"
+        zip_path = os.path.join(shared_dir, zip_name)
+        with zipfile.ZipFile(zip_path, "w") as zipf:
+            for file_path in csv_files:
+                zipf.write(file_path, os.path.basename(file_path))
+
+        file_url = request.build_absolute_uri(
+            os.path.join(settings.MEDIA_URL, "shared_ecg", timestamp, zip_name)
+        )
+        return JsonResponse({
+            "status": "success",
+            "message": f"{valid_count} ECG files saved.",
+            "download_url": file_url
+        })
+
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)

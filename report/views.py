@@ -454,17 +454,17 @@ def get_pqrst_data(request):
         df = pd.DataFrame(lead_data)
 
         # Run detection models
-        r_index = check_r_index(df, lead_config, frequency, r_index_model)
-        s_index, q_index = check_qs_index(df, r_index, lead_config)
-        t_index, p_index, _, _, _ = check_pt_index(df, lead_config, r_index)
+        r_index_dic = check_r_index(df, lead_config, frequency, r_index_model)
+        s_index, q_index = check_qs_index(df, r_index_dic, lead_config)
+        t_index, p_index, _, _, _ = check_pt_index(df, r_index_dic, lead_config)
 
         return JsonResponse({
             "status": "success",
-            "r_peaks": [int(i) for i in r_index],
-            "q_points": [int(i) for i in q_index],
-            "s_points": [int(i) for i in s_index],
-            "p_points": [int(i) for i in p_index],
-            "t_points": [int(i) for i in t_index],
+            "R": {lead: [int(i) for i in r_index_dic[lead]] for lead in r_index_dic},
+            "Q": {lead: [int(i) for i in q_index[lead]] for lead in q_index},
+            "S": {lead: [int(i) for i in s_index[lead]] for lead in s_index},
+            "P": {lead: [int(i) for i in p_index[lead]] for lead in p_index},
+            "T": {lead: [int(i) for i in t_index[lead]] for lead in t_index},
         })
 
     except Exception as e:

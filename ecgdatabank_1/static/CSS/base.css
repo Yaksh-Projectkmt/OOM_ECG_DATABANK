@@ -106,7 +106,7 @@ body {
     background: var(--sidebar-bg);
     border-right: 1px solid var(--sidebar-border);
     transition: all 300ms ease;
-    z-index: 10000;
+    z-index: 1000;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
@@ -296,6 +296,8 @@ body {
     transition: all 300ms;
     position: relative;
     overflow: hidden;
+    margin-left: 15px;
+    margin-right: 15px;
 }
 
 .stat-card:hover {
@@ -340,6 +342,7 @@ body {
 }
 
 .stat-icon {
+
     color: var(--text-secondary);
     transition: transform 200ms;
 }
@@ -1154,4 +1157,220 @@ body.dark-mode {
 
 .sidebar-subtitle {
   margin-top: 0; /* removes space above p */
+}
+.stat-icon {
+  cursor: pointer;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.glow-icon {
+  stroke: #00e6e6; /* Cool cyan tone */
+  filter: drop-shadow(0 0 6px #00e6e6);
+  animation: pulseGlow 1.8s ease-in-out infinite;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Smooth hover interaction */
+.glow-icon:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px #00ffff);
+}
+
+/* Animated glowing effect */
+@keyframes pulseGlow {
+  0% {
+    filter: drop-shadow(0 0 3px #00e6e6);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #00ffff);
+  }
+  100% {
+    filter: drop-shadow(0 0 3px #00e6e6);
+  }
+}
+
+/* Modal Base */
+.modal1 {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+
+/* Modal Content */
+.modal-content1 {
+  background: #111;
+  color: #eee;
+  border-radius: 12px;
+  padding: 30px;
+  width: 90%;
+  max-width: 1000px;
+  position: relative;
+  box-shadow: 0 0 30px rgba(0,0,0,0.4);
+  animation: fadeIn 0.3s ease-in-out;
+  width: auto;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: scale(0.95);}
+  to {opacity: 1; transform: scale(1);}
+}
+
+/* Close Button */
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+/* Header Text */
+.modal-title1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.modal-subtext {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 25px;
+}
+
+/* Plans Container */
+.plans-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+/* Plan Card */
+.plan-card {
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 25px;
+  width: 280px;
+  transition: all 0.3s;
+}
+
+.plan-card:hover {
+  border-color: #5a5aff;
+  transform: translateY(-3px);
+}
+
+/* Highlighted (middle card) */
+.highlighted {
+  border-color: #5a5aff;
+  background: #151530;
+}
+
+/* Plan Title */
+.plan-card h3 {
+color:white;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+/* Price */
+.price {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.price span {
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* Description */
+.desc {
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 20px;
+}
+
+/* Button */
+.upgrade-btn {
+  background: #5a5aff;
+  border: none;
+  padding: 8px 20px;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.upgrade-btn:hover {
+  background: #7a7aff;
+}
+
+/* Features List */
+.features {
+  list-style: none;
+  padding: 0;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.features li {
+  margin: 5px 0;
+}
+.beta-badge {
+  background: linear-gradient(135deg, #ff6b6b, #f06595);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Optional subtle animation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 107, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+}
+.nav-item.disabled-feature {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: auto; /* still clickable for JS toast */
+    position: relative;
+}
+
+.nav-item.disabled-feature:hover {
+    opacity: 0.6;
+}
+
+.nav-item.disabled-feature .nav-shimmer {
+    display: none;
+}
+
+.nav-item.disabled-feature::after {
+    content: "🔒";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #ff4d4d;
 }

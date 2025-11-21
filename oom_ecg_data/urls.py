@@ -22,5 +22,6 @@ urlpatterns = [
     path("upload_plot/", views.upload_plot, name="upload_plot"),
     path("check_patient/",views.check_patient, name="check_patient"),
     path("patient_search_view",views.patient_search_view, name="patient_search_view"), 
-    path("fetch_more_ecg",views.fetch_more_ecg, name="fetch_more_ecg"),
+    path("get_patient_hex_data",views.get_patient_hex_data, name="get_patient_hex_data"),
+    path("share_selected/", views.share_selected, name="share_selected"),
 ]

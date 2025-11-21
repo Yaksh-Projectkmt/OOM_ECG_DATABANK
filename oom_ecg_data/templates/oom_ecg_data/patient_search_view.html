@@ -273,7 +273,7 @@ select:hover {
 
 .plot-container {
   width: 100%;
-  height: 233px;
+  height: 243px;
   background-color: var(--plot-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -347,6 +347,20 @@ select:hover {
             stroke-linejoin: round;
             animation: pulse 1.5s infinite;
         }
+        @keyframes pulse {
+            0% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 50 50;
+                stroke-dashoffset: -25;
+            }
+            100% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: -50;
+            }
+        }
         body.dark-mode select,
         body.dark-mode select option {
           color: #fff8f8ff !important;
@@ -395,9 +409,13 @@ select:hover {
                 <div class="lead-select-group">
                     <label for="leadSelect">Lead Configuration:</label>
                     <select id="leadSelect">
-                        <option value="2" select>2 Leads</option>
-                        <option value="7">7 Leads</option>
-                        <option value="12">12 Leads</option>
+                      {% for v in all_versions_data %}
+                        <option value="{{ v.version }}">
+                          {{ v.version }} Leads
+                        </option>
+                      {% empty %}
+                        <option disabled>No ECG data found</option>
+                      {% endfor %}
                     </select>
                 </div>
                 <div class="navigation">
@@ -424,7 +442,7 @@ select:hover {
                     <p>{{ patient_id }}</p>
                 </div>
             </div>
-            <div class="stat-card1">
+            {% comment %} <div class="stat-card1">
                 <div class="stat-icon1">
                     <i class="fas fa-database"></i>
                 </div>
@@ -441,7 +459,7 @@ select:hover {
                     <p>Duration</p>
                     <p id="totalDuration">--</p>
                 </div>
-            </div>
+            </div> {% endcomment %}
             <div class="stat-card1">
                 <div class="stat-icon1">
                     <i class="fas fa-heartbeat"></i>
@@ -460,10 +478,28 @@ select:hover {
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <script>
 const patientId = "{{ patient_id }}";
-const allVersions = {{ all_versions_data|safe }};
-let currentVersion = allVersions[0].version;
+const allVersions =  {{ all_versions_data|safe }};
+let currentVersion = 2;
+if (allVersions && allVersions.length > 0) {
+  const availableVersions = allVersions.map(v => v.version || v);
+  if (availableVersions.includes(2)) {
+    currentVersion = 2;
+  } else if (availableVersions.includes(7)) {
+    currentVersion = 7;
+  } else if (availableVersions.includes(12)) {
+    currentVersion = 12;
+  } else {
+    currentVersion = availableVersions[0];
+  }
+}
+let selectedLeadCount = currentVersion;
 let currentSkip = 0;
+let currentSegment = 0;
 const limit = 2000;
+const segmentDuration = 10;
+
+// Cache for decoded ECG data (avoid re-decoding)
+const ECG_CACHE = {}; // { version: { skip: { ecg_data, lead_summary } } }
 
 const LEAD_MAPPING = {
   2: ["II"],
@@ -471,98 +507,127 @@ const LEAD_MAPPING = {
   12: ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 };
 
-let selectedLeadCount = 2;
-let currentSegment = 0;
-const samplesPerSegment = 2000;
-const segmentDuration = 10;
-
-// Helpers
-function getVersionInfo(v) {
-  return allVersions.find(x => x.version === v);
+// === Loader ===
+function showLoader() {
+  isLoading = true;
+  const pageLoader = document.getElementById("page-loader");
+  if (pageLoader) pageLoader.style.display = "flex";
+  updateButtons();
 }
+
+function hideLoader() {
+  isLoading = false;
+  const pageLoader = document.getElementById("page-loader");
+  if (pageLoader) pageLoader.style.display = "none";
+  updateButtons();
+}
+
+// === Helpers ===
 function getTimeRange(segment) {
-  const startTime = segment * segmentDuration;
-  const endTime = startTime + segmentDuration;
-  return `${startTime}-${endTime}s`;
-}
-function updateDurationDisplay() {
-  document.getElementById('durationDisplay').textContent = `Duration: ${getTimeRange(currentSegment)}`;
-}
-function updateButtons() {
-  document.getElementById('prevBtn').disabled = currentSegment === 0;
-  document.getElementById('nextBtn').disabled = false;
+  const start = segment * segmentDuration;
+  const end = start + segmentDuration;
+  return `${start}-${end}s`;
 }
 
-// Render ECG lead containers dynamically
+function updateDurationDisplay() {
+  document.getElementById("durationDisplay").textContent = 
+    `Duration: ${getTimeRange(currentSegment)}`;
+}
+
+function updateButtons() {
+  document.getElementById("prevBtn").disabled = currentSegment === 0;
+  document.getElementById("nextBtn").disabled = false;
+}
+
+// === Render Leads ===
 function renderLeads() {
   const leads = LEAD_MAPPING[selectedLeadCount];
-  const grid = document.getElementById('ecgContainer');
-  grid.innerHTML = '';
+  const grid = document.getElementById("ecgContainer");
+  grid.innerHTML = "";
   grid.className = `ecg-grid leads-${selectedLeadCount}`;
 
   leads.forEach(lead => {
-    const card = document.createElement('div');
-    card.className = 'lead-card';
+    const card = document.createElement("div");
+    card.className = "lead-card";
     card.innerHTML = `
       <div class="lead-header">
         <h3>Lead ${lead}</h3>
         <div class="lead-status" id="status_${lead}">
-          <span>-- samples</span>
-          <div class="pulse-dot"></div>
+          <span>-- samples</span><div class="pulse-dot"></div>
         </div>
       </div>
       <div class="plot-container" id="plot_${lead}">
-        <p style="color:#888; text-align:center;">Loading...</p>
+        <p style="color:#888;text-align:center;">Loading...</p>
       </div>
       <div class="lead-footer">
         <span id="duration_${lead}">Duration: --s</span>
-      </div>
-    `;
+      </div>`;
     grid.appendChild(card);
   });
 }
 
-// Fetch ECG data block for all leads
-async function fetchECGBlock(skip, version, leadCount) {
+// === Fetch ECG Data (with caching) ===
+async function fetchECGBlock(skip, version) {
+  // Use cached data if available
+  if (ECG_CACHE[version]?.[skip]) {
+    console.log(`Cache hit for version ${version}, skip ${skip}`);
+    return ECG_CACHE[version][skip];
+  }
+
+  console.log(`Fetching new block: version=${version}, skip=${skip}`);
+  const url = `/ommecgdata/get_patient_hex_data?patientId=${patientId}&skip=${skip}&limit=${limit}`;
   try {
-    const selectedVersion = document.getElementById('leadSelect').value;
-    const url = `/ommecgdata/fetch_more_ecg?patientId=${patientId}&version=${selectedVersion}&skip=${skip}&limit=${limit}`;
     const res = await fetch(url);
     const data = await res.json();
-    if (data.error) {
-      console.error("Backend error:", data.error);
+
+    if (data.status !== "ok") {
+      console.error("Backend error:", data.message);
       return {};
     }
-    return data;
+
+    const versionKey = `version_${version}`;
+    const block = data.all_data[versionKey] || {};
+    // Store in cache
+    if (!ECG_CACHE[version]) ECG_CACHE[version] = {};
+    ECG_CACHE[version][skip] = block;
+
+    return block;
   } catch (err) {
     console.error("Fetch error:", err);
     return {};
   }
 }
 
-const minMaxScale = (data, minVal = 0, maxVal = 4) => {
-    const validData = data.filter(v => !isNaN(v));
-    if (validData.length === 0) {
-        console.error("No valid numeric values in Y array.");
-        return data.map(() => (maxVal + minVal) / 2);
-    }
-    const min = Math.min(...validData);
-    const max = Math.max(...validData);
-    if (max === min) {
-        console.warn('Flat data detected. All Y values are the same.');
-        return data.map(() => (maxVal + minVal) / 2);
-    }
-    return data.map(value => ((value - min) / (max - min)) * (maxVal - minVal) + minVal);
+// === Scaler ===
+const minMaxScale = (data, minVal = -1, maxVal = 1) => {
+  if (!Array.isArray(data)) return [];
+  if (data.length > 5000) data = data.slice(0, 5000); // prevent overload
+  const validData = data.filter(v => typeof v === "number" && !isNaN(v));
+  if (validData.length === 0) return data.map(() => (maxVal + minVal) / 2);
+  const min = Math.min(...validData);
+  const max = Math.max(...validData);
+  if (max === min) return data.map(() => (maxVal + minVal) / 2);
+  return data.map(value => ((value - min) / (max - min)) * (maxVal - minVal) + minVal);
 };
 
-// === ECG Plotting Function ===
+
+// === Plot ECG ===
 function plotECG(lead, values) {
   const container = document.getElementById(`plot_${lead}`);
+
   if (!Array.isArray(values) || values.length === 0) {
     container.innerHTML = `<p style="color:red; text-align:center;">No Data Available</p>`;
     return;
   }
-  const scaledValues = minMaxScale(values, 0, 4);
+
+  // Always slice to 2000 samples per segment
+  const startIdx = currentSegment * limit;
+  const endIdx = startIdx + limit;
+  const segmentData = values.slice(startIdx, endIdx);
+
+  // Apply Min-Max Scaling safely
+  const scaledValues = minMaxScale(segmentData, -1, 1);
+
   const x = scaledValues.map((_, i) => i);
   const trace = { 
     x, 
@@ -576,18 +641,18 @@ function plotECG(lead, values) {
   const xMinorDtick = xDtick / 5;
 
   const layout = {
-    paper_bgcolor: "#ffffffff",
-    plot_bgcolor: "#ffffffff",
+    paper_bgcolor: "#fff",
+    plot_bgcolor: "#fff",
     xaxis: { 
-      range: [0, 2000],
+      range: [0, limit],
       gridwidth: 0.8,
       showgrid: true,
       zeroline: false,
-      gridcolor: 'rgba(240, 140, 140, 0.93)',
+      gridcolor: "red",
       dtick: xDtick,
       minor: {
         showgrid: true,
-        gridcolor: 'rgba(244, 210, 216, 0.92)',
+        gridcolor: "pink",
         gridwidth: 0.5,
         dtick: xMinorDtick,
         tick0: 0
@@ -596,99 +661,92 @@ function plotECG(lead, values) {
       title: "Samples",
       titlefont: { size: 12 },
       tickfont: { size: 10, color: "#555" }
+      
     },
     yaxis: {
-      range: [-0.1, 4.1],
-      gridcolor: 'rgba(240, 140, 140, 0.93)',
+      range: [-2, 2],
+      gridcolor: "red",
       gridwidth: 0.8,
       showgrid: true,
       zeroline: false,
       dtick: 0.5,
       minor: { 
         showgrid: true,
-        gridcolor: 'rgba(244, 210, 216, 0.92)',
+        gridcolor: "pink",
         gridwidth: 0.5,
       },
       showticklabels: true,
-      title: "mV",
+      title: "ECG(mV)",
       titlefont: { size: 12 },
       tickfont: { size: 10, color: "#555" }
     },
-    margin: { l: 50, r: 20, t: 20, b: 40 },  //increased for axis visibility
-    height: 230,  //increased from 180 ? 230
+    margin: { l: 50, r: 20, t: 20, b: 40 },
+    height: 240,
   };
 
   Plotly.newPlot(`plot_${lead}`, [trace], layout, { displayModeBar: false });
 }
 
-// Load ECG segment
+
+// === Load and Render Segment ===
 async function loadSegment() {
+  showLoader();
   renderLeads();
-  const data = await fetchECGBlock(currentSkip, currentVersion, selectedLeadCount);
-  const leads = LEAD_MAPPING[selectedLeadCount];
 
-  if (!data.ecg_data) return;
+  try {
+    const data = await fetchECGBlock(currentSkip, currentVersion);
+    if (!data || !data.ecg_data) return;
 
-  // Update stats from lead_summary
-  const summary = data.lead_summary || {};
-  let totalPoints = 0;
-  let totalDuration = 0;
+    const leads = LEAD_MAPPING[selectedLeadCount];
+    const summary = data.lead_summary || {};
+    let totalPoints = 0, totalDuration = 0;
 
-  leads.forEach(lead => {
-    const values = data.ecg_data[lead] || [];
-    plotECG(lead, values);
+    leads.forEach(lead => {
+      const values = data.ecg_data[lead] || [];
+      plotECG(lead, values);
+      if (summary[lead]) {
+        const { total_points, total_duration_sec } = summary[lead];
+        document.getElementById(`status_${lead}`).innerHTML = `
+          <span>${total_points} samples</span><div class="pulse-dot"></div>`;
+        document.getElementById(`duration_${lead}`).textContent = `Duration: ${segmentDuration}s`;
+        totalPoints += total_points;
+        totalDuration = Math.max(totalDuration, total_duration_sec);
+      }
+    });
 
-    if (summary[lead]) {
-      const { total_points, total_duration_sec } = summary[lead];
-
-      // Update header stats (total data per lead)
-      document.getElementById(`status_${lead}`).innerHTML = `
-        <span>2000 samples</span>
-        <div class="pulse-dot"></div>
-      `;
-
-      // Footer: always shows current segment duration (10s)
-      document.getElementById(`duration_${lead}`).textContent =
-        `Duration: ${segmentDuration}s`;
-
-      totalPoints += total_points;
-      totalDuration = Math.max(totalDuration, total_duration_sec);
-    }
-  });
-
-  // Update global dashboard summary
-  document.getElementById('Datapoints').textContent = totalPoints.toLocaleString();
-  document.getElementById('totalDuration').textContent = `${totalDuration}s`;
-
-  updateDurationDisplay();
-  updateButtons();
+    updateDurationDisplay();
+    updateButtons();
+  } finally {
+    hideLoader();
+  }
 }
-
-// Lead selection handler
+// === Lead / Version Change ===
 document.getElementById("leadSelect").addEventListener("change", async e => {
-  selectedLeadCount = parseInt(e.target.value);
+  const newLeadCount = parseInt(e.target.value);
+  if (selectedLeadCount === newLeadCount) return; //Skip redundant reload
+
+  selectedLeadCount = newLeadCount;
   currentVersion = selectedLeadCount;
   currentSkip = 0;
   currentSegment = 0;
   await loadSegment();
 });
 
-// ? Previous / Next segment handlers
-document.getElementById('prevBtn').addEventListener('click', () => {
+// === Navigation Buttons ===
+document.getElementById("prevBtn").addEventListener("click", async () => {
   if (currentSegment > 0) {
     currentSegment--;
-    currentSkip = Math.max(currentSkip - limit, 0);
-    loadSegment();
+    await loadSegment();
   }
 });
 
-document.getElementById('nextBtn').addEventListener('click', () => {
+document.getElementById("nextBtn").addEventListener("click", async () => {
   currentSegment++;
-  currentSkip += limit;
-  loadSegment();
+  await loadSegment();
 });
 
-// Initial load
+// === Initial Load ===
 loadSegment();
+
 </script>
 {% endblock %} 

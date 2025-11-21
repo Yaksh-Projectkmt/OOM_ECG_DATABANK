@@ -83,6 +83,7 @@ def mongo_worker():
                 time.sleep(0.1)  # sleep briefly when idle
 
         except Exception as e:
+            
             print("Mongo Worker Error:", e)
             time.sleep(1)
 

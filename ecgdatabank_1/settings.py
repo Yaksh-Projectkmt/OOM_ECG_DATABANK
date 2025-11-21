@@ -19,27 +19,25 @@ connect(
     db="ecgarrhythmias",
     host="mongodb://192.168.1.65:27017/",
 )
-
+DATABASE_ROUTERS = ['ecgdatabank_1.db_router.ECGDBRouter']
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'mongodb': {
         'ENGINE': 'djongo',
-        'NAME': 'mydatabase',  # Replace with your MongoDB database name
-        'ENFORCE_SCHEMA': False,  # Set to False if you're using a flexible schema
+        'NAME': 'mydatabase',
+        'ENFORCE_SCHEMA': False,
         'CLIENT': {
-            'host': 'mongodb://192.168.1.65:27017/',  # Change the host/port if needed
-            'username': '',  # Optional, if authentication is enabled
-            'password': '',  # Optional, if authentication is enabled
-            'authSource': 'admin',  # Needed if MongoDB authentication is enabled
+            'host': 'mongodb://192.168.1.65:27017/',
         }
     }
 }
-
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -50,9 +48,9 @@ SECRET_KEY = 'django-insecure-vd(#wx^&i9u@q%op3md)-ose(q(cdjgya7p*=9@miw)3o1t+tr
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.2.96']
-MAINTENANCE_MODE = False
+AUTH_USER_MODEL = 'authuser.CustomUser'
+ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.2.96','usfda12c.projectkmt.com','45.114.64.12']
+MAINTENANCE_MODE = False  
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'subscription.apps.SubscriptionConfig',
     'authuser',
     'analysis_tool',
     'morphology_drow', 
@@ -157,6 +156,6 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-
+RAZORPAY_KEY_ID = "rzp_test_RdxIg7t7TByY4O"
+RAZORPAY_KEY_SECRET = "aDfN70ib4I6NkTDjHWwZjkc5"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

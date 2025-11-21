@@ -33,7 +33,6 @@
                             <span>User Profile</span>
                             <div class="menu-arrow"></div>
                         </button>
-
                         <button class="menu-item" data-section="version">
                             <svg class="menu-icon text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"/>
@@ -42,7 +41,15 @@
                             <span>Version</span>
                             <div class="menu-arrow"></div>
                         </button>
-
+                        <button class="menu-item" data-section="wallet">
+                            <svg class="menu-icon text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                                <path d="M16 3h4a2 2 0 0 1 2 2v4H16z"/>
+                                <circle cx="18" cy="12" r="1.5"/>
+                            </svg>
+                            <span>Wallet</span>
+                            <div class="menu-arrow"></div>
+                        </button>
                         <button class="menu-item" data-section="password">
                             <svg class="menu-icon text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -51,7 +58,13 @@
                             <span>Change Password</span>
                             <div class="menu-arrow"></div>
                         </button>
-
+                        <button class="menu-item" data-section="paymentHistory">
+                            <svg class="menu-icon text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                            </svg>
+                            <span>Payment History</span>
+                            <div class="menu-arrow"></div>
+                        </button>
                         <button class="menu-item logout-item" data-section="logout">
                             <svg class="menu-icon text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -140,8 +153,8 @@
                                     <path d="m9 12 2 2 4-4"/>
                                 </svg>
                             </div>
-                            <h3 class="version-number">v4.0.1</h3>
-                            <p class="version-date">Released on October 27, 2025</p>
+                            <h3 class="version-number">v4.1.0</h3>
+                            <p class="version-date">Released on November 20, 2025</p>
                         </div>
 
                     </div>
@@ -216,7 +229,166 @@
                         </form>
                     </div>
                 </div>
+                <!-- Wallet Section -->
+<div id="walletSection" class="section">
+    <div class="section-content">
+        <div class="wallet-header">
+            <h3 class="section-title">My Wallet</h3>
+            <p class="section-subtitle">Securely manage your balance & transactions</p>
+        </div>
 
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-header">
+                <div class="balance-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 8v4l3 3"/>
+                    </svg>
+                </div>
+                <div class="balance-info">
+                    <p class="balance-label">Available Balance</p>
+                    <h2 class="balance-amount" id="balanceAmount">
+                        &#8377;<span data-balance="{{ wallet.balance|default:'0.00' }}">{{ wallet.balance|default:"0.00" }}</span>
+                    </h2>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-add-money" id="topUpBtn">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="8" x2="12" y2="16"></line>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                Add Money
+            </button>
+        </div>
+
+        <!-- Transactions -->
+        <div class="transactions-container">
+            <h4 class="transactions-title">Recent Transactions</h4>
+
+            {% if wallet.transactions %}
+            <div class="transactions-list">
+                {% for txn in wallet.transactions %}
+                <div class="transaction-item">
+                    <div class="txn-icon {% if txn.type == 'credit' %}credit{% else %}debit{% endif %}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            {% if txn.type == 'credit' %}
+                            <path d="M12 2v20M2 12h20"/>
+                            {% else %}
+                            <path d="M2 12h20"/>
+                            {% endif %}
+                        </svg>
+                    </div>
+                    <div class="txn-details">
+                        <p class="txn-id">#{{ txn.txn_id|slice:":8" }}</p>
+                        <p class="txn-date">{{ txn.date|date:"M d, Y" }} &bull; {{ txn.date|date:"H:i" }}</p>
+
+                    </div>
+                    <div class="txn-amount {% if txn.type == 'credit' %}credit{% else %}debit{% endif %}">
+                        {% if txn.type == 'credit' %}+&#8377;{{ txn.amount }}{% else %}-&#8377;{{ txn.amount }}{% endif %}
+                    </div>
+                    <div class="txn-status">
+                        <span class="status-badge {% if txn.status|lower == 'success' %}paid{% else %}pending{% endif %}">
+                            {{ txn.status|capfirst }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                </div>
+                <p class="empty-text">No transactions yet</p>
+                <p class="empty-subtext">Add money to get started!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div id="addMoneyModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add Money to Wallet</h3>
+      <button class="close-modal" id="closeModalBtn">x</button>
+    </div>
+    <div class="modal-body">
+      <!-- Predefined Amounts -->
+      <div class="amount-grid">
+        <button class="amount-btn">100</button>
+        <button class="amount-btn">200</button>
+        <button class="amount-btn">500</button>
+        <button class="amount-btn">1000</button>
+      </div>
+
+      <!-- Custom Amount -->
+      <div class="custom-amount">
+        <label for="customAmount">Enter Custom Amount</label>
+        <div class="input-wrapper">
+          <span class="currency">&#8377;</span>
+          <input type="number" id="customAmount" placeholder="Enter amount" min="1" max="10000">
+        </div>
+        <p class="amount-hint">Minimum 10 required to add money.</p>
+      </div> 
+      <!-- Buttons -->
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="cancelAddMoney">Cancel</button>
+        <button class="btn btn-primary" id="confirmAddMoney">Add Money</button>
+      </div>
+    </div>
+  </div>
+</div>
+<input type="hidden" id="walletAddMoneyUrl" value="{% url 'wallet_add_money' %}">
+
+            <!-- Payment History Section -->
+            <div id="paymentHistorySection" class="section" style="width:auto;">
+                <div class="section-content payment-card">
+                    <h3 class="section-title">Payment History</h3>
+                    <p class="section-subtitle">Review your past subscription or purchase transactions.</p>
+
+                    {% if payment_history %}
+                    <div class="table-wrapper">
+                        <table class="payment-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Plan</th>
+                                    <th>Amount (INR)</th>
+                                    <th>Date</th>
+                                    <th>Expiry</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in payment_history %}
+                                <tr>
+                                    <td>{{ payment.order_id }}</td>
+                                    <td>{{ payment.plan_name }}</td>
+                                    <td>{{ payment.amount }}</td>
+                                    <td>{{ payment.date|date:"M d, Y H:i" }}</td>
+                                    <td>{{ payment.Expiry|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if payment.status|lower == 'paid' %}
+                                            <span class="status-badge paid">Paid</span>
+                                        {% else %}
+                                            <span class="status-badge Faild">{{ payment.status|capfirst }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="no-data">No payment records found.</p>
+                    {% endif %}
+                </div>
+            </div>
                  <!-- Logout Section -->
                 <div id="logoutSection" class="section">
                     <div class="section-content">
@@ -254,5 +426,9 @@
     </div>
 {% endblock %}
 {% block scripts %}
+<script>
+  const USER_NAME = "{{ user_session.username|escapejs }}";
+  const USER_EMAIL = "{{ user_session.email|escapejs }}";
+</script>
 <script src="{% static 'js/profile.js' %}"></script> 
 {% endblock %}
