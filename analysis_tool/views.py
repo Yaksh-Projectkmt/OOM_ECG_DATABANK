@@ -32,8 +32,8 @@ import json
 from django.utils import timezone
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
-mongo_client = MongoClient("mongodb://localhost:27017/")
+mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
+# mongo_client = MongoClient("mongodb://localhost:27017/")
 db=mongo_client['Analysis_data']
 analysis_csv_patient = mongo_client['Analysis_patients']
 

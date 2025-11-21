@@ -15,8 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from pymongo import MongoClient
 from django.utils import timezone
 from scipy import signal
-# mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
-mongo_client = MongoClient("mongodb://localhost:27017/")
+mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
 db = mongo_client['Morphology_data']
 morphology_db = mongo_client['Morphology_Patients']
 
@@ -154,6 +153,7 @@ def upload_ecg(request):
             
             # Dynamically Select the Correct MongoDB Collection
             collection = db[arrhythmia]# Collection name = Arrhythmia Type
+            
             # Check for Duplicate Entry
             exists = collection.count_documents(
                 {'PatientID': csv_name, 'Arrhythmia': sub_arrhythmia, 'leadtype': lead_type, 'Lead': 2, 'Frequency': 200}
@@ -231,6 +231,7 @@ def open_morphology_script(request):
             }
             # Save to MongoDB
             collection = db[arrhythmia]
+            
             # Check for duplicate data
             existing_document = collection.find_one({
                 "PatientID": pid,

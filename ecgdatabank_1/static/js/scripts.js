@@ -35,12 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Store ecgData per objectId to avoid overwriting
   window.ecgData = {};
 
-  // CSRF Token Utility
-  const getCSRFToken = () => {
-    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-    return cookie ? decodeURIComponent(cookie.split('=')[1]) : document.getElementById('csrfToken')?.value || '';
-  };
-
   const safeFetch = async (url, options) => {
     const pageLoader = document.getElementById('page-loader');
     if (pageLoader) pageLoader.style.display = 'flex';
@@ -271,13 +265,12 @@ const attachRowEventListeners = () => {
           alertSystem.error('Error','Close button not found. Edit functionality may be limited.');
           return;
         }
-
+        closeBtn.style.display = 'inline-block'; // Show the close button
         downloadTypeSelect.style.display = 'none';
         editButton.style.display = 'none';
         saveButton.style.display = 'none';
         arrhythmiaContainer.style.display = 'flex';
         confirmEditBtn.style.display = 'inline-block';
-        closeBtn.style.display = 'inline-block'; // Show the close button
         arrhythmiaSelect.value = tableArrhythmia || '';
 
         // Remove existing listeners from confirmEditBtn
@@ -286,9 +279,10 @@ const attachRowEventListeners = () => {
         confirmEditBtn = newConfirmEditBtn;
 
         // Remove existing listeners from closeBtn
-        const newCloseBtn = closeBtn.cloneNode(true);
-        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-        closeBtn = newCloseBtn;
+        closeBtn.replaceWith(closeBtn.cloneNode(true));
+        closeBtn = document.getElementById(`closeBtn-${objectId}`);
+        closeBtn.style.display = 'inline-block';
+
 
         confirmEditBtn.addEventListener('click', debounce(async (e) => {
           if (e.target.classList.contains('close-action')) {
@@ -355,6 +349,7 @@ const attachRowEventListeners = () => {
 
       saveButton.addEventListener('click', debounce(async () => {
         const downloadType = downloadTypeSelect.value;
+        console.log(downloadType)
         if (!downloadType) {
           alertSystem.warning('Warning','Please select a download type.');
           return;
@@ -418,7 +413,7 @@ const attachRowEventListeners = () => {
                   height = 1800;
                   break;
                 case 12: // 12-lead ECG (standard)
-                  width = 800;
+                  width = 1000;
                   height = 3000;
                   break;
                 default: // Fallback for other configurations
@@ -530,7 +525,7 @@ const attachRowEventListeners = () => {
                     dataToDownload = { leadDict: window.selectedData };
                   }
 
-                  const response = await fetch('/ommecgdata/selecteddownload/', {
+                  const response = await fetch(`/ommecgdata/selecteddownload/?file_type=${downloadType}`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -591,7 +586,7 @@ document.addEventListener("click", async function (e) {
 
         const link = e.target.closest(".share-option");
         const platform = [...link.classList].find(cls =>
-            ["whatsapp", "facebook", "teams", "email"].includes(cls)
+            ["teams", "email"].includes(cls)
         );
 
         if (!platform) return;
@@ -644,7 +639,7 @@ document.addEventListener("click", async function (e) {
             }
             let width = 1000, height = 400;
             if (leadNumeric == 7) { width = 700; height = 1800; }
-            else if (leadNumeric == 12) { width = 800; height = 2200; }
+            else if (leadNumeric == 12) { width = 1000; height = 3000; }
             fileContent = await Plotly.toImage(plotDiv, { format: "png", width, height });
         } else if (downloadType === "selected_data") {
             if (!window.selectedData) {
@@ -710,16 +705,6 @@ document.addEventListener("click", async function (e) {
     
     let shareUrl = "";
     switch (platform) {
-        case "whatsapp":
-            const whatsappBody = `Patient ID: ${patientId}\n\nClick the link below:\n${cleanUrl}`;
-            shareUrl = `https://web.whatsapp.com/send?text=${encodeURIComponent(whatsappBody)}`;
-            break;
-    
-        case "facebook":
-            const facebookBody = `Patient ID: ${patientId}\n\nClick the link below:\n${cleanUrl}`;
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(cleanUrl)}&quote=${encodeURIComponent(facebookBody)}`;
-            break;
-    
         case "teams":
             const teamsBody = `Patient ID: ${patientId}\n\nClick the link below:\n${cleanUrl}`;
             shareUrl = `https://teams.microsoft.com/share?href=${encodeURIComponent(cleanUrl)}&text=${encodeURIComponent(teamsBody)}`;
@@ -804,7 +789,7 @@ document.addEventListener("click", async function (e) {
     }, 100));
   };
 
-  document.querySelectorAll(selectors.cards).forEach(card => {
+    document.querySelectorAll(selectors.cards).forEach(card => {
     handleCardClick(card, card.classList.contains('card-tile')
       ? 'card-tile'
       : card.classList.contains('condition-card')
@@ -815,12 +800,16 @@ document.addEventListener("click", async function (e) {
 const updateTableWithData = async (data) => {
   const tableBody = document.getElementById('ecgTableBody');
   if (!tableBody) {
-  console.error('Table body not found! Cannot update table with data.');
   return;  // Prevent further execution
   }
 
   tableBody.innerHTML = '';  
   data.forEach((row, index) => {
+    const hr_value = row.HeartRate || "--";
+    const hrvInfo = {
+      mean_rr: "--",
+      sdnn: "--",
+    };
     const rowHtml = `
       <tr data-object-id="${row.object_id || ''}" data-lead-value="${row.LeadNumeric || row.Lead || ''}" data-samples-taken="${row.samples_taken || 0}">
         <td>${(currentPage - 1) * 10 + (index + 1)}</td>
@@ -830,29 +819,42 @@ const updateTableWithData = async (data) => {
         <td>${row.Frequency || ''}</td>
         <td>${row.duration}</td>
         <td>  
-               <button class="icon-btn delete"><i class="fas fa-trash delete-btn" data-id="${row.object_id || ''}" data-collection="${row.collection_name || ''}" title="Delete"></i></button>
+               <button class="icon-btn scatter-plot" title="Show scatter plot" data-patient="${row.PatientID || ''}" data-id="${row.object_id || ''}" data-arrhythmia="${row.ArrhythmiaType || ''}" data-lead="${row.LeadConfig || '2_lead'}"><i class="fas fa-chart-line hrv-icon"></i></button>
+               </td>
+        <td>
+          <button class="icon-btn delete action-delete" 
+              data-id="${row.object_id || ''}" 
+              data-collection="${row.collection_name || ''}"
+              data-locked="${hasShareFeature ? 'false' : 'true'}"
+              title="Delete">
+              <i class="fas fa-trash"></i>
+          </button>
         </td>
+
+        <td>
+          <input type="checkbox"
+              class="row-checkbox action-checkbox"
+              data-id="${row.object_id || ''}"
+              data-collection="${row.collection_name || ''}"
+              data-locked="${hasShareFeature ? 'false' : 'true'}"
+          />
+        </td>
+
       </tr>
       <tr class="plot-row" data-plot-id="${row.object_id || ''}" style="display: none;">
-        <td colspan="7">
+        <td colspan="9">
           <div id="plot-container-${row.object_id || ''}" class="plot-container">
             <div class="modal-header">
                  <h5 class="modal-title" style="display:flex; align-items:center; gap:8px;">
                   <i class="fas fa-heartbeat" style="color: var(--danger);"></i>
                             ECG Signal - ${row.PatientID || ''}
-                <!-- Share dropdown -->
+              <!-- Share dropdown -->
                 <div class="share-dropdown">
                   <i class="fas fa-share share-icon" 
                     data-id="${row.object_id || ''}" 
                     data-patient="${row.PatientID || ''}"></i>
 
                   <div class="share-menu" id="shareMenu-${row.object_id || ''}">
-                    <a href="#" class="share-option whatsapp" data-patient="${row.PatientID || ''}">
-                      <i class="fab fa-whatsapp"></i>
-                    </a>
-                    <a href="#" class="share-option facebook" data-patient="${row.PatientID || ''}">
-                      <i class="fab fa-facebook"></i>
-                    </a>
                     <a href="#" class="share-option teams" data-patient="${row.PatientID || ''}">
                       <i class="fab fa-microsoft"></i>
                     </a>
@@ -866,20 +868,36 @@ const updateTableWithData = async (data) => {
               <button type="button" class="btn-close plot-close" id="close-${row.object_id || ''}" data-id="${row.object_id || ''}" aria-label="Close"></button>
             </div>
             <div class="plot" id="plot-${row.object_id || ''}"></div>
-            <div class="modal-footer">
+            <div class="modal-footer d-flex justify-content-between align-items-start flex-wrap">
+
+              <!-- Left: HRV Info -->
+              <div class="hrv-info text-start small" id="hrvInfo-${row.object_id || ''}">
+                <div class="hrv-details">
+                  <span><strong>Mean RR:</strong> ${hrvInfo.mean_rr} ms</span>
+                  <span><strong>SDNN:</strong> ${hrvInfo.sdnn} ms</span>
+                  <span><strong>HR:</strong> ${hr_value} bpm</span>
+                </div>
+              </div>
+            <div class="controls d-flex flex-wrap gap-2 justify-content-end align-items-center">    
               <div class="arrhythmia-label" id="arrhythmiaContainer-${row.object_id || ''}" style="display: none;">
                 <select class="form-control" id="Arrhythmia-${row.object_id || ''}" name="ArrhythmiaType">
-                  <option value=" " selected>Select Arrhythmia Type</option>
-                  <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
-                  <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
-                  <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
-                  <option value="Junctional Rhythm">Junctional Rhythm</option>
-                  <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
-                  <option value="Myocardial Infarction">Myocardial Infarction</option>
-                  <option value="HeartBlock">HeartBlock</option>
-                  <option value="Noise">Noise</option>
-                  <option value="Others">Others</option>
-                  <option value="LBBB">LBBB & RBBB</option>
+                      <option value="Myocardial Infarction">Myocardial Infarction</option>
+                      <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
+                      <option value="HeartBlock">HeartBlock</option>
+                      <option value="Junctional Rhythm">Junctional Rhythm</option>
+                      <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
+                      <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
+                      <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
+                      <option value="Noise">Noise</option>
+                      <option value="Others">Others</option>
+                      <option value="LBBB & RBBB">LBBB & RBBB</option>
+                      <option value="Artifacts">Artifacts</option>
+                      <option value="SINUS-ARR">SINUS-ARR</option>
+                      <option value="ShortPause">ShortPause</option>
+                      <option value="TC">TC</option>
+                      <option value="WIDE-QRS">WIDE-QRS</option>
+                      <option value="Abnormal">Abnormal</option>
+                      <option value="Normal">Normal</option>
                 </select>
               </div>
               <div class="download-label" id="downloadContainer-${row.object_id || ''}">
@@ -893,9 +911,10 @@ const updateTableWithData = async (data) => {
               </div>
               <div class="button-group">
                 <button class="btn btn-warning edit-btn" id="editEcgData-${row.object_id || ''}" data-id="${row.object_id || ''}">Edit</button>
-                <button class="btn btn-success save-btn" id="saveData-${row.object_id || ''}" data-id="${row.object_id || ''}">Save</button>
+                <button class="btn btn-success save-btn" id="saveData-${row.object_id || ''}" data-id="${row.object_id || ''}">Download</button>
                 <button class="btn btn-primary confirm-edit-btn" id="confirmEditBtn-${row.object_id || ''}" data-id="${row.object_id || ''}" style="display: none;">Confirm</button>
-                <button class="btn btn-secondary close-btn" id="closeBtn-${row.object_id || ''}" style="display: none;">Close</button>              
+                <button class="btn btn-primary close-btn" id="closeBtn-${row.object_id || ''}">Close</button>     
+                </div>         
                 </div>
             </div>
           </div>
@@ -907,24 +926,122 @@ const updateTableWithData = async (data) => {
   attachRowEventListeners();
 };
 
-  const updatePaginationDisplay = () => {
+// =============================================================
+// PAGINATION LOCK CHECK
+// =============================================================
+function isPaginationLocked(btn) {
+    return btn && btn.dataset.locked === "true";
+}
+
+// =============================================================
+// UPDATE PAGINATION UI
+// =============================================================
+const updatePaginationDisplay = () => {
     const paginationDiv = document.getElementById('paginationControls');
     if (!paginationDiv) return;
 
     paginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+
     const span = paginationDiv.querySelector('.page-info') || document.createElement('span');
     span.className = 'page-info';
     span.textContent = `Page ${currentPage} of ${totalPages}`;
+
     if (!span.parentNode) {
-      const prevBtn = document.getElementById('prevBtn');
-      prevBtn?.insertAdjacentElement('afterend', span);
+        const prevBtn = document.getElementById('prevBtn');
+        prevBtn?.insertAdjacentElement('afterend', span);
     }
 
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+
     if (prevBtn) prevBtn.disabled = currentPage === 1;
     if (nextBtn) nextBtn.disabled = currentPage === totalPages;
-  };
+};
+  // =============================================================
+// LOAD PAGE DATA (AJAX)
+// =============================================================
+const loadPage = async (page) => {
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) pageLoader.style.display = 'flex';
+
+    try {
+        const dataSource = sessionStorage.getItem('dataSource') || '';
+        let url;
+
+        if (dataSource === 'random') {
+            const arr = sessionStorage.getItem('selectedArrhythmia') || '';
+            url = new URL(`/ommecgdata/fetch_random_ecg_data/${arr}/`, window.location.origin);
+        } else {
+            url = new URL('/ommecgdata/fetch_ecg_data/', window.location.origin);
+            if (searchContext) {
+                Object.entries(searchContext).forEach(([key, value]) => {
+                    if (value) url.searchParams.append(key, value);
+                });
+            }
+        }
+
+        url.searchParams.append('page', page);
+
+        const result = await safeFetch(url.toString(), {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (result.data && Array.isArray(result.data)) {
+            currentPage = page;
+            totalPages = result.total_pages || totalPages;
+
+            sessionStorage.setItem('totalPages', totalPages);
+            sessionStorage.setItem(
+                dataSource === 'random' ? 'randomData' : 'searchResults',
+                JSON.stringify(result.data)
+            );
+
+            updateTableWithData(result.data);
+            updatePaginationDisplay();
+        } else {
+            alertSystem.info('info', 'No data available for this page.');
+        }
+    } catch (error) {
+        alertSystem.error('Error', 'loading page data.');
+    } finally {
+        if (pageLoader) pageLoader.style.display = 'none';
+    }
+};
+
+// =============================================================
+// EVENT LISTENERS FOR NEXT / PREV BUTTONS
+// =============================================================
+const nextBtn = document.getElementById('nextBtn');
+const prevBtn = document.getElementById('prevBtn');
+
+// NEXT BUTTON
+if (nextBtn) {
+    nextBtn.addEventListener(
+        "click",
+        debounce(() => {
+            if (isPaginationLocked(nextBtn)) {
+                showUpgradeToast();
+                return;
+            }
+            if (currentPage < totalPages) loadPage(currentPage + 1);
+        }, 100)
+    );
+}
+
+// PREV BUTTON
+if (prevBtn) {
+    prevBtn.addEventListener(
+        "click",
+        debounce(() => {
+            if (isPaginationLocked(prevBtn)) {
+                showUpgradeToast();
+                return;
+            }
+            if (currentPage > 1) loadPage(currentPage - 1);
+        }, 100)
+    );
+}
 
   const loadSessionData = () => {
     const randomDataString = sessionStorage.getItem('randomData');
@@ -1046,60 +1163,6 @@ const updateTableWithData = async (data) => {
         taskManager.errorTask(taskId, error.message);
 // alertSystem.error('Search Failed', 'An error occurred while searching. Please try again.');
       }
-    }, 100));
-  }
-
-  const loadPage = async (page) => {
-    const pageLoader = document.getElementById('page-loader');
-    if (pageLoader) pageLoader.style.display = 'flex';
-
-    try {
-      const dataSource = sessionStorage.getItem('dataSource') || '';
-      let url;
-      if (dataSource === 'random') {
-        const arr = sessionStorage.getItem('selectedArrhythmia') || '';
-        url = new URL(`/ommecgdata/fetch_random_ecg_data/${arr}/`, window.location.origin);
-      } else {
-        url = new URL('/ommecgdata/fetch_ecg_data/', window.location.origin);
-        if (searchContext) {
-          Object.entries(searchContext).forEach(([key, value]) => {
-            if (value) url.searchParams.append(key, value);
-          });
-        }
-      }
-      url.searchParams.append('page', page);
-
-      const result = await safeFetch(url.toString(), {
-        method: 'GET',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
-
-      if (result.data && Array.isArray(result.data)) {
-        currentPage = page;
-        totalPages = result.total_pages || totalPages;
-        sessionStorage.setItem('totalPages', totalPages);
-        sessionStorage.setItem(dataSource === 'random' ? 'randomData' : 'searchResults', JSON.stringify(result.data));
-        updateTableWithData(result.data);
-        updatePaginationDisplay();
-      } else {
-        alertSystem.info('info','No data available for this page.');
-      }
-    } catch (error) {
-      alertSystem.error('Error','loading page data.');
-    } finally {
-      if (pageLoader) pageLoader.style.display = 'none';
-    }
-  };
-
-  if (document.getElementById('nextBtn')) {
-    document.getElementById('nextBtn').addEventListener('click', debounce(() => {
-      if (currentPage < totalPages) loadPage(currentPage + 1);
-    }, 100));
-  }
-
-  if (document.getElementById('prevBtn')) {
-    document.getElementById('prevBtn').addEventListener('click', debounce(() => {
-      if (currentPage > 1) loadPage(currentPage - 1);
     }, 100));
   }
 
@@ -1269,6 +1332,20 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
       }
       return peaks;
     };
+      function getHRBadge(hrValue) {
+    const hr = parseFloat(hrValue);
+    if (isNaN(hr)) {
+      return `<span class="hr-badge neutral">-- bpm</span>`;
+    }
+
+    if (hr < 60) {
+      return `<span class="hr-badge low">${hr} bpm (Low)</span>`;
+    } else if (hr > 100) {
+      return `<span class="hr-badge high">${hr} bpm (High)</span>`;
+    } else {
+      return `<span class="hr-badge normal">${hr} bpm (Normal)</span>`;
+    }
+  }
 
     // Fetch PQRST data with lead_config
     let pqrst = null;
@@ -1285,23 +1362,61 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
           lead_config: leadConfig
         })
       });
-      if (pqrstResponse.status === 'success') {
-        pqrst = {
-          p_points: pqrstResponse.p_points || [],
-          q_points: pqrstResponse.q_points || [],
-          r_peaks: pqrstResponse.r_peaks || [],
-          s_points: pqrstResponse.s_points || [],
-          t_points: pqrstResponse.t_points || [],
-          lead_peaks: pqrstResponse.lead_peaks || null
-        };
-        // Store PQRST data in window.ecgData
-        window.ecgData[objectId].pqrst = JSON.parse(JSON.stringify(pqrst));
+       // Normalize response status key
+  const status = pqrstResponse.status || pqrstResponse.success;
+  if (status === 'success') {
+    // Helper: safely extract first-lead array (for 2-lead fallback plotting)
+    const normalize = (obj) => {
+      if (!obj) return [];
+      if (Array.isArray(obj)) return obj;
+      const firstLead = Object.keys(obj)[0];
+      return firstLead ? obj[firstLead] : [];
+    };
+
+    // Build unified PQRST object (lead-wise + flattened)
+    pqrst = {
+      // flattened for compatibility with 2-lead plotting
+      p_points: normalize(pqrstResponse.P),
+      q_points: normalize(pqrstResponse.Q),
+      r_peaks: normalize(pqrstResponse.R),
+      s_points: normalize(pqrstResponse.S),
+      t_points: normalize(pqrstResponse.T),
+
+      // lead-wise structure for 7-lead / 12-lead plotting
+      lead_peaks: {
+        P: pqrstResponse.P || {},
+        Q: pqrstResponse.Q || {},
+        R: pqrstResponse.R || {},
+        S: pqrstResponse.S || {},
+        T: pqrstResponse.T || {}
+      },
+
+      // HR / HRV values
+      HR: pqrstResponse.HR ?? '--',
+      HRV: pqrstResponse.HRV || [],
+      HRV_metrics: pqrstResponse.HRV_metrics || {}
+    };
+    // Store in global ECG data
+    if (!window.ecgData) window.ecgData = {};
+    if (!window.ecgData[objectId]) window.ecgData[objectId] = {};
+    window.ecgData[objectId].pqrst = JSON.parse(JSON.stringify(pqrst));
+
+    // Update HR + HRV display panel (if available)
+    const hrvPanel = document.querySelector(`#hrvInfo-${objectId}`);
+    if (hrvPanel) {
+      const hrvMetrics = pqrst.HRV_metrics;
+        hrvPanel.innerHTML = `
+          <strong>Mean RR:</strong> ${hrvMetrics.mean_rr ?? '--'} ms<br>
+          <strong>SDNN:</strong> ${hrvMetrics.sdnn ?? '--'} ms<br>
+          <span><strong class="HR">HR:</strong> ${getHRBadge(pqrst.HR)}</span>
+        `;
+    }
+  } else {
+    alertSystem.warning('Notice', 'No valid PQRST data returned.');
       }
     } catch (error) {
       console.error('Error fetching PQRST data:', error);
-      alertSystem.error('Error', 'Failed to fetch PQRST data. Using fallback peak detection.');
     }
-
     function enableSynchronizedCursor(objectId) {
       const plotContainer = document.getElementById(`plot-${objectId}`);
       const plotDivs = plotContainer.querySelectorAll('.js-plotly-plot');
@@ -1364,7 +1479,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
     }
 
     if (leadNumber === 7 || leadNumber === 12) {
-      plotElement.style.height = 'auto';
+       plotElement.style.height = 'auto';
       const leadData = ecgData.leadDict;
       const leadNames = Object.keys(leadData);
       enableSynchronizedCursor(objectId);
@@ -1377,11 +1492,11 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
         // Use per-lead PQRST data if available
         leadNames.forEach(lead => {
           allPeaks[lead] = {
-            p: pqrst.lead_peaks[lead]?.p_points || [],
-            q: pqrst.lead_peaks[lead]?.q_points || [],
-            r: pqrst.lead_peaks[lead]?.r_peaks || [],
-            s: pqrst.lead_peaks[lead]?.s_points || [],
-            t: pqrst.lead_peaks[lead]?.t_points || []
+            p: pqrst.lead_peaks.P?.[lead] || [],
+            q: pqrst.lead_peaks.Q?.[lead] || [],
+            r: pqrst.lead_peaks.R?.[lead] || [],
+            s: pqrst.lead_peaks.S?.[lead] || [],
+            t: pqrst.lead_peaks.T?.[lead] || []
           };
           Object.keys(allPeaks[lead]).forEach(type => {
             allPeaks[lead][type] = allPeaks[lead][type].filter(i => i >= 0 && i < leadData[lead].length);
@@ -1461,15 +1576,13 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
 
       const windowSize = 2000;  // for future scroll/pan if needed
 
-      const rawDtick = (dataLength < windowSize)
-        ? Math.round(dataLength / 25)   // e.g., 500/25 = 20
-        : 50;
+      const rawDtick = dataLength/50;
 
       const xDtick = Math.ceil(rawDtick / 5) * 5;  // round to nearest 5
       const xMinorDtick = xDtick / 5;
       const layout = {
         grid: { rows: gridRows, columns: 1, pattern: 'independent' },
-        height: 300 * gridRows,
+        height: 250 * gridRows,
         showlegend: true,
         legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255, 255, 255, 0.5)' },
         margin: { t: 40, b: 40, l: 50, r: 40 },
@@ -1622,6 +1735,8 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
         });
       }).finally(() => {
         if (pageLoader) pageLoader.style.display = 'none';
+          activateHealthAnimations(objectId);
+
       });
 
 
@@ -1654,6 +1769,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
           console.error('Error processing ECG data:', error);
         } finally {
           if (pageLoader) pageLoader.style.display = 'none';
+          activateHealthAnimations(objectId);
         }
       };
 
@@ -1671,8 +1787,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
     }
   };
 
-
-const plotECG = (data, pqrst = null, objectId) => {
+ const plotECG = (data, pqrst = null, objectId) => {
   const pageLoader = document.getElementById('page-loader');
   if (pageLoader) pageLoader.style.display = 'flex';
 
@@ -1745,7 +1860,7 @@ const plotECG = (data, pqrst = null, objectId) => {
   // --- Grid calculations ---
   const dataLength = data.x.length;
   const windowSize = 2000;
-  const rawDtick = dataLength < windowSize ? Math.round(dataLength / 50) : 50;
+  const rawDtick = dataLength /50;
   const xDtick = Math.ceil(rawDtick / 5) * 5;
   const xMinorDtick = xDtick / 5;
 
@@ -1757,22 +1872,20 @@ const plotECG = (data, pqrst = null, objectId) => {
       autorange: false,
       title: { text: 'Time Index', standoff: 20 },
       showgrid: true,
-      // gridcolor: 'rgba(245, 121, 121, 0.93)',
-      gridcolor: "red",
+      gridcolor: 'rgba(240, 140, 140, 0.93)',
       gridwidth: 0.8,
       zeroline: false,
       dtick: xDtick,
       minor: {
         showgrid: true,
-        // gridcolor: 'rgba(244, 210, 216, 0.92)',
-        gridcolor: "pink",
+        gridcolor: 'rgba(244, 210, 216, 0.92)',
         gridwidth: 0.5,
         dtick: xMinorDtick,
         tick0: 0
       },
       rangeslider: {
         visible: true,
-        thickness: 0.07,
+        thickness: 1.02,
         bgcolor: 'rgba(245,121,121,0.1)',
         bordercolor: 'rgba(245,121,121,0.4)',
       }
@@ -1788,27 +1901,22 @@ const plotECG = (data, pqrst = null, objectId) => {
     },
 
     yaxis: {
-      range: [0, 4.1],
+      range: [-0.1, 4.1],
       title: { text: 'ECG (mV)' },
       showgrid: true,
-      // gridcolor: 'rgba(245, 121, 121, 0.93)',
-      gridcolor: "red",
+      gridcolor: 'rgba(240, 140, 140, 0.93)',
       gridwidth: 0.8,
       zeroline: false,
       dtick: 0.5,
-      minor: { showgrid: true, 
-        gridcolor: "pink",
-        gridwidth: 0.5,
-        // gridcolor: 'rgba(244, 210, 216, 0.92)'
-       }
+      minor: { showgrid: true, gridcolor: 'rgba(244, 210, 216, 0.92)',gridwidth: 0.5, }
     },
 
     margin: { t: 60, b: 70, l: 40, r: 40 },
     showlegend: true,
     legend: { x: 1, xanchor: 'right', y: 1, bgcolor: 'rgba(255,255,255,0.5)' },
     plot_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
-    paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : '#374151',
-    font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#f7f2f2ff' }
+    paper_bgcolor: document.body.dataset.theme === 'dark' ? '#1e1e2f' : 'white',
+    font: { color: document.body.dataset.theme === 'dark' ? '#fff' : '#000' }
   };
 
   const config = {
@@ -2428,7 +2536,6 @@ if (scrollToTopBtn) {
     }, 500); // Matches --transition-slow duration
   });
 }
-
 window.addArrhythmiaGroup = function () {
   const container = document.getElementById('arrhythmiaContainer');
   const firstGroup = container?.querySelector('.arrhythmia-group');
@@ -2453,7 +2560,6 @@ window.removeArrhythmiaGroup = function (button) {
   const group = button.closest('.arrhythmia-group');
   group.remove();
 };
-
 // Handle showing correct sub-arrhythmias
 document.addEventListener('change', function (e) {
     if (e.target.classList.contains('arrhythmia-select')) {
@@ -2477,7 +2583,6 @@ document.addEventListener('change', function (e) {
         subSelect.value = '';
     }
 });
-
 function handleArrhythmiaChange(select) {
     const group = select.closest('.arrhythmia-group');
     const subSelect = group.querySelector('.sub-arrhythmia-select');
@@ -2502,19 +2607,17 @@ document.addEventListener("DOMContentLoaded", () => {
         sel.addEventListener("change", () => handleArrhythmiaChange(sel));
     });
 });
-
 window.addArrhythmiaDurationGroup = function () {
-    const container = document.getElementById('arrhythmiaDurationContainer');
-    const firstGroup = container.querySelector('.arrhythmia-group');
+  const container = document.getElementById('arrhythmiaDurationContainer');
+  const firstGroup = container.querySelector('.arrhythmia-group');
+  if (!firstGroup) return;
 
-    if (!firstGroup) return;
+  const newGroup = firstGroup.cloneNode(true);
 
-    const newGroup = firstGroup.cloneNode(true);
-
-    // Reset values
+ // Reset values
     const arrhythmiaSelect = newGroup.querySelector('select[name="arrhythmia[]"]');
-    const subArrhythmiaSelect = newGroup.querySelector('.sub-arrhythmia-select');
-    const input = newGroup.querySelector('input');
+    const subArrhythmiaSelect = newGroup.querySelector('select[name="subArrhythmiaName[]"]');
+    const input = newGroup.querySelector('input[name="duration[]"]');
 
     if (arrhythmiaSelect) arrhythmiaSelect.value = '';
     if (subArrhythmiaSelect) {
@@ -2524,22 +2627,18 @@ window.addArrhythmiaDurationGroup = function () {
         });
     }
     if (input) input.value = '';
-
-    // Replace button
-    const buttonArea = newGroup.querySelector('.col-md-2.d-flex');
-    buttonArea.innerHTML = `
-        <button type="button" class="btn btn-outline-danger btn-sm remove-btn" onclick="removeArrhythmiaGroup(this)">-</button>
-    `;
-
-    // Attach new change event
+   // Replace buttons
+  const buttonArea = newGroup.querySelector('.col-md-2.d-flex');
+  buttonArea.innerHTML = `
+      <button type="button" class="btn btn-outline-danger btn-sm remove-btn" onclick="removeArrhythmiaGroup(this)">-</button>
+  `;
+      // Attach new change event
     arrhythmiaSelect.addEventListener("change", () => handleArrhythmiaChange(arrhythmiaSelect));
-
-    container.appendChild(newGroup);
+  container.appendChild(newGroup);
 };
-
 window.removeArrhythmiaGroup = function (button) {
-    const group = button.closest('.arrhythmia-group');
-    group.remove();
+  const group = button.closest('.arrhythmia-group');
+  group.remove();
 };
 // Enhanced multiple search with task management
 const attachGetPageFormListener = () => {
@@ -2582,6 +2681,7 @@ const attachGetPageFormListener = () => {
     const arrhythmiaData = Array.from(elements.arrhythmiaGroups)
       .map(group => ({
         arrhythmia: group.querySelector('select')?.value,
+        subArrhythmia : group.querySelector('select[name="subArrhythmiaName[]"]')?.value?.trim(),
         duration: parseInt(group.querySelector('input')?.value) || 0
       }))
       .filter(data => data.arrhythmia && data.duration);
@@ -2702,8 +2802,7 @@ document.querySelectorAll('.share-icon').forEach(icon => {
       }
     });
   }
-  
-  document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
   // Select all share dropdowns on the page
   const shareDropdowns = document.querySelectorAll('.share-dropdown');
 
@@ -2762,10 +2861,9 @@ async function patientSearch() {
     const data = await response.json();
 
     if (data.status === "found") {
+      // Show loader briefly before redirect
       if (pageLoader) pageLoader.style.display = 'flex';
-      await new Promise(r => setTimeout(r, 300));
-
-      // ✅ Redirect to patient_search_view WITH patientId
+      await new Promise(r => setTimeout(r, 300)); // give 300ms for loader to appear
       window.location.href = `/ommecgdata/patient_search_view?patientId=${encodeURIComponent(patientId)}`;
     } 
     else if (data.status === "not_found") {
@@ -2783,38 +2881,207 @@ async function patientSearch() {
   }
 }
 
-// async function patientSearch() {
-//   const patientId = document.getElementById("newpatientId1").value.trim();
+// CSRF Token Utility
+const getCSRFToken = () => {
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+    return cookie ? decodeURIComponent(cookie.split('=')[1]) : document.getElementById('csrfToken')?.value || '';
+  };
+//scatter plot for HRV
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.scatter-plot');
+  if (!btn) return;
 
-//   if (!patientId) {
-//     alertSystem.warning('Warning', 'Please enter a Patient ID.');
-//     return;
-//   }
+  const objectId = btn.dataset.id;
+  const leadConfig = btn.dataset.lead;
+  
+  try {
+    // Call your existing backend endpoint
+    const response = await fetch("/ommecgdata/get_pqrst_data/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest",'X-CSRFToken': getCSRFToken()},
+      body: JSON.stringify({
+        object_id: objectId,
+        arrhythmia: sessionStorage.getItem('selectedArrhythmia') || '',
+        lead_config: leadConfig
+      })
+    });
 
-//   const pageLoader = document.getElementById('page-loader');
-//   if (pageLoader) pageLoader.style.display = 'flex';
+    const data = await response.json();
+    if (data.status !== "success") {
+      console.error("Backend error:", data.message);
+       alertSystem.error("Error","Error fetching HRV data.");
+      return;
+    }
 
-//   try {
-//     const response = await fetch(`/ommecgdata/check_patient/?patientId=${encodeURIComponent(patientId)}`);
-//     const data = await response.json();
+    const hrvValues = data.HRV || [];
+    if (!hrvValues.length) {
+       alertSystem.error("Error","No HRV data available for this patient.");
+      return;
+    }
 
-//     if (data.status === "found") {
-//       // Show loader briefly before redirect
-//       if (pageLoader) pageLoader.style.display = 'flex';
-//       await new Promise(r => setTimeout(r, 300)); // give 300ms for loader to appear
-//       window.location.href = `/ommecgdata/get_patient_hex_data?patientId=${encodeURIComponent(patientId)}`;
-//     } 
-//     else if (data.status === "not_found") {
-//       if (pageLoader) pageLoader.style.display = 'none';
-//       alertSystem.error('Error', 'Patient not found. Please check the ID and try again.');
-//     } 
-//     else {
-//       if (pageLoader) pageLoader.style.display = 'none';
-//       alertSystem.error('Error', data.message || 'Unexpected error occurred.');
-//     }
-//   } catch (error) {
-//     console.error("Error checking patient:", error);
-//     if (pageLoader) pageLoader.style.display = 'none';
-//     alertSystem.error('Error', 'Unable to verify patient at the moment. Please try again later.');
-//   }
-// }
+    // === Build Scatter Chart ===
+    const trace = {
+      x: Array.from({ length: hrvValues.length }, (_, i) => i + 1),
+      y: hrvValues,
+      mode: 'markers+lines',
+      type: 'scatter',
+      marker: { size: 6, color: '#10b981', opacity: 0.9 },
+      line: { color: '#10b981', width: 1.5 },
+      name: 'HRV Values'
+    };
+
+    const layout = {
+      title: `HRV Scatter Chart`,
+      xaxis: { title: 'Index', showgrid: false, zeroline: false },
+      yaxis: { title: 'HRV Value (ms)', showgrid: false, zeroline: false },
+      margin: { t: 60, r: 30, b: 60, l: 60 },
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: 'var(--text-primary)', size: 12 }
+    };
+
+    Plotly.newPlot('scttreChart', [trace], layout, { responsive: false, displayModeBar: false });
+
+    // Show modal
+    $('#sctreeModal').modal('show');
+    document.addEventListener("click", (e) => {
+  if (e.target.closest(".plot-close")) {
+    $('#sctreeModal').modal('hide');
+  }
+});
+
+  } catch (error) {
+    console.error("Error fetching HRV:", error);
+     alertSystem.error("Error","loading HRV chart. See console for details.");
+  }
+});
+
+function activateHealthAnimations(objectId) {
+  // First, remove animations from all rows (so only one set animates)
+  document.querySelectorAll('.health-badge').forEach(b => b.classList.remove('active'));
+
+  // Then activate animation for the row corresponding to the opened plot
+  const row = document.querySelector(`tr[data-object-id="${objectId}"]`);
+  if (!row) return;
+
+  const badges = row.querySelectorAll('.health-badge');
+  badges.forEach(badge => {
+    badge.classList.add('active');
+  });
+}
+// Handle select all
+document.addEventListener('change', e => {
+  if (e.target.id === 'selectAll') {
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+      cb.checked = e.target.checked;
+    });
+  }
+});
+let shareMenuVisible = false;
+
+document.getElementById('shareSelectedBtn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+
+  // Remove existing menu if open
+  const existingMenu = document.querySelector('.share-platform-menu');
+  if (existingMenu) {
+    existingMenu.remove();
+    shareMenuVisible = false;
+    return;
+  }
+
+  // Get selected IDs
+  const selectedIds = [...document.querySelectorAll('.row-checkbox:checked')].map(cb => cb.dataset.id);
+  if (!selectedIds.length) {
+    alertSystem.warning('Warning', 'Please select at least one record to share.');
+    return;
+  }
+
+  // Create inline horizontal menu
+  const menu = document.createElement('div');
+  menu.className = 'share-platform-menu inline-menu';
+  menu.innerHTML = `
+    <button class="btn btn-teams"><i class="fab fa-microsoft"></i> Teams</button>
+    <button class="btn btn-email"><i class="fas fa-envelope"></i> Email</button>
+  `;
+
+  // Insert right after the button
+  const btn = e.target.closest('#shareSelectedBtn');
+  btn.insertAdjacentElement('afterend', menu);
+  shareMenuVisible = true;
+
+  // Close when clicking outside
+  const closeMenu = (ev) => {
+    if (!menu.contains(ev.target) && ev.target !== btn) {
+      menu.remove();
+      shareMenuVisible = false;
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 50);
+
+  // Handle clicks
+  menu.querySelector('.btn-teams').addEventListener('click', () => shareSelected(selectedIds, 'teams', menu));
+  menu.querySelector('.btn-email').addEventListener('click', () => shareSelected(selectedIds, 'email', menu));
+});
+
+
+// Main share logic
+async function shareSelected(selectedIds, platform, menu) {
+  menu.remove();
+  shareMenuVisible = false;
+
+  try {
+    // Step 1: Request Django to merge selected ECGs and create one CSV
+    const selectedItems = [...document.querySelectorAll('.row-checkbox:checked')].map(cb => ({
+      id: cb.dataset.id,
+      collection: cb.dataset.collection
+    }));
+
+    const response =await fetch('/ommecgdata/share_selected/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({ items: selectedItems})
+    });
+
+    const result = await response.json();
+    if (result.status !== 'success') throw new Error(result.message || 'Share failed');
+
+    const fileUrlRaw = result.download_url || result.url || '';
+    if (!fileUrlRaw) throw new Error('Download URL missing from server response.');
+
+    // Normalize slashes
+    const fileUrl = String(fileUrlRaw).replace(/\\/g, '/').replace(/%5C/g, '/');
+    
+    const message = `Multiple ECG reports have been shared.\n\nDownload link:\n${fileUrl}`;
+    // Step 3: Build share link
+    let shareUrl = '';
+    if (platform === 'teams') {
+      shareUrl = `https://teams.microsoft.com/share?href=${encodeURIComponent(fileUrl)}&text=${encodeURIComponent(message)}`;
+    } else {
+      shareUrl = `mailto:?subject=Shared ECG Data (Multiple Patients)&body=${encodeURIComponent(message)}`;
+    }
+
+    // Step 4: Open platform link
+    window.open(shareUrl, '_blank');
+    alertSystem.success('Success', `Shared selected ECG data via ${platform === 'teams' ? 'Microsoft Teams' : 'Email'}!`);
+  } catch (err) {
+    console.error('Error sharing selected:', err);
+    alertSystem.error('Error', 'Failed to share selected ECG data.');
+  }
+}
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".delete, .row-checkbox, .select-all-checkbox");
+
+    if (!btn) return;
+
+    if (btn.dataset.locked === "true") {
+        showUpgradeToast();
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+});

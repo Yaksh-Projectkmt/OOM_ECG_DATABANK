@@ -1,0 +1,437 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}Patient Arrhythmia Records{% endblock %}
+   <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+{% block extra_css %}
+<style>
+:root {
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --card-hover: #334155;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --primary: #2563eb;
+  --secondary: #3b82f6;
+  --border: #334155;
+  --radius: 10px;
+}
+
+body.light-mode {
+  --bg: #f9fafb;
+  --card-bg: #ffffff;
+  --card-hover: #f1f5f9;
+  --text: #1e293b;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --secondary: #3b82f6;
+  --border: #e2e8f0;
+}
+
+/* === Titles === */
+h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+/* === Search + Sort Controls === */
+.controls {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sort-buttons {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.sort-buttons button {
+  background: var(--card-hover);
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.sort-buttons button:hover {
+  background: var(--secondary);
+}
+
+/* === Patient Cards === */
+.patient-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  overflow: hidden;
+  transition: background 0.3s;
+}
+
+/* --- Compact Header --- */
+.patient-header {
+  background: var(--primary);
+  color: white;
+  padding: 10px 16px; /* smaller height */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.patient-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* --- Duration + Records in same row --- */
+.patient-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 0.9rem;
+}
+
+.patient-stats i {
+  margin-right: 6px;
+  font-size: 0.95rem;
+}
+
+/* === Card Body === */
+.patient-body {
+  padding: 18px;
+}
+
+.arrhythmia-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.arrhythmia-card {
+  background: var(--card-hover);
+  padding: 15px;
+  border-radius: var(--radius);
+  width: 250px;
+  transition: transform 0.2s;
+}
+.arrhythmia-card:hover {
+  transform: translateY(-3px);
+}
+
+.arrhythmia-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+.arrhythmia-card p {
+  margin: 5px 0;
+  color: var(--muted);
+}
+.header {
+display: flex;
+align-items: center;      /* Vertically center the items */
+gap: 10px;         /* Space between arrow and header */
+margin-bottom: 20px;       
+}
+
+.header h2 {
+  margin: 0;                /* Remove default margin */
+}
+
+.header p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+}
+.live-badge {
+  background: linear-gradient(90deg, #f87171, #ef4444); /* softer reds */
+  color: white;
+  font-size: 0.65rem; /* smaller text */
+  font-weight: 500; /* lighter weight */
+  padding: 2px 6px; /* more compact */
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); /* lighter shadow */
+  animation: softPulse 2s ease-in-out infinite;
+}
+
+/* Softer pulsing glow */
+@keyframes softPulse {
+  0% { box-shadow: 0 0 3px rgba(239,68,68,0.3); }
+  50% { box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+  100% { box-shadow: 0 0 3px rgba(239,68,68,0.3); }
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:40px;">
+<div class="header">
+  <button class="back-btn" onclick="window.location.href='/ommecgdata/'" aria-label="Go back">
+    <i class="fas fa-arrow-left"></i>
+  </button>
+  <div class="header-text">
+    <h2>Patient Arrhythmia Records</h2>
+    <p>Comprehensive view of all patients and their arrhythmia history</p>
+  </div>
+</div>
+
+  <div class="controls">
+    <label for="searchInput"><strong>Search Patients:</strong></label><br>
+    <input type="text" id="searchInput" class="search-bar" placeholder="Search by patientID">
+    <div class="sort-buttons">
+      <button onclick="sortPatients('duration')">Sort by Duration</button>
+      <button onclick="sortPatients('records')">Sort by Records</button>
+      <button id="showLiveBtn" class="filter-btn">Show Live Only</button>
+    </div>
+  </div>
+
+  <div id="patientContainer"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let patients = [];
+
+/* === Utility === */
+function formatTime(seconds) {
+  if (seconds < 60) {
+    // Less than a minute → show seconds
+    return `${Math.floor(seconds)}s`;
+  } else if (seconds < 3600) {
+    // Less than an hour → show minutes and seconds
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}m ${s < 10 ? "0" + s : s}s`;
+  } else if (seconds < 86400) {
+    // Less than a day → show hours, minutes, seconds
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${h}h ${m < 10 ? "0" + m : m}m ${s < 10 ? "0" + s : s}s`;
+  } else {
+    // More than a day → show days, hours, minutes, seconds
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${d}d ${h < 10 ? "0" + h : h}h ${m < 10 ? "0" + m : m}m ${s < 10 ? "0" + s : s}s`;
+  }
+}
+function renderPatients(list) {
+  const container = document.getElementById("patientContainer");
+  container.innerHTML = "";
+
+  if (!list.length) {
+    container.innerHTML = "<p style='color:var(--muted);text-align:center;'>No patients found.</p>";
+    return;
+  }
+
+  list.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "patient-card";
+    card.innerHTML = `
+      <div class="patient-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h2>Patient ID: ${p.patient_id}</h2>
+          ${p.live ? `<span class="live-badge">LIVE</span>` : ""}
+        </div>
+        <div class="patient-stats">
+          <span><i class="fa-regular fa-clock"></i> ${formatTime(p.total_time)}</span>
+          <span><i class="fa-regular fa-file-lines"></i> ${p.total_records}</span>
+        </div>
+      </div>
+      <div class="patient-body">
+        <h4>Arrhythmia Types:</h4>
+        <div class="arrhythmia-list">
+          ${p.arrhythmias.map(a => `
+            <div class="arrhythmia-card"
+                 data-patient-id="${p.patient_id}"
+                 data-arrhythmia="${a.type}">
+              <h3><svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg> ${a.type}</h3>
+              <p>Duration: <strong>${formatTime(a.duration)}</strong></p>
+              <p>Records: <strong>${a.records}</strong></p>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  // === Add Click Handlers (only once per card) ===
+  document.querySelectorAll(".arrhythmia-card").forEach(card => {
+    card.style.cursor = "pointer";
+    card.onclick = debounce(async (e) => {
+      e.preventDefault();
+
+      const arrhythmiaType = card.dataset.arrhythmia;
+      const patientId = card.dataset.patientId;
+
+      if (!arrhythmiaType || !patientId) {
+        console.error("Missing arrhythmiaType or patientId!");
+        return;
+      }
+
+      console.log("Clicked:", patientId, arrhythmiaType);
+      const pageLoader = document.getElementById('page-loader');
+      if (pageLoader) pageLoader.style.display = "flex";
+      // Clear sessionStorage
+      sessionStorage.clear();
+      sessionStorage.setItem("selectedArrhythmia", arrhythmiaType);
+      sessionStorage.setItem("selectedPatientId", patientId);
+      sessionStorage.setItem("dataSource", "random");
+
+      try {
+        const response = await fetch(
+          
+          `/ommecgdata/fetch_random_ecg_data/${encodeURIComponent(arrhythmiaType)}/?patientId=${encodeURIComponent(patientId)}`,
+          { headers: { "X-Requested-With": "XMLHttpRequest" } }
+        );
+
+        const result = await response.json();
+        if (result.status === "success" && result.data?.length > 0) {
+          sessionStorage.setItem("randomData", JSON.stringify(result.data));
+          sessionStorage.setItem("totalPages", result.total_pages || 1);
+          if (pageLoader) pageLoader.style.display = 'none';
+          sessionStorage.setItem("back_to", "patient_list");
+          window.location.href = `/ommecgdata/ecg_details/${encodeURIComponent(arrhythmiaType)}/?patientId=${encodeURIComponent(patientId)}`;
+        } else {
+          if (pageLoader) pageLoader.style.display = 'none';
+          alertSystem.info("Info", result.message || `No ECG data found for ${arrhythmiaType} (Patient ${patientId})`);
+        }
+      } catch (err) {
+        console.error("⚠️ Fetch error:", err);
+        if (pageLoader) pageLoader.style.display = 'none';
+        alertSystem.error("Error", "Error fetching ECG data. Please try again.");
+      }
+    }, 200, true); // <-- trigger immediately on first click
+  });
+}
+
+// === Debounce helper (with immediate trigger) ===
+function debounce(fn, delay, immediate = true) {
+  let timeout;
+  return function (...args) {
+    const context = this;
+    const later = () => {
+      timeout = null;
+      if (!immediate) fn.apply(context, args);
+    };
+    const callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, delay);
+    if (callNow) fn.apply(context, args);
+  };
+}
+
+
+/* === Helper: Get CSRF Token === */
+function getCSRFToken() {
+  const name = "csrftoken";
+  const cookies = document.cookie.split("; ");
+  for (let c of cookies) {
+    const [key, val] = c.split("=");
+    if (key === name) return decodeURIComponent(val);
+  }
+  return "";
+}
+
+
+/* === Sorting === */
+function sortPatients(criteria) {
+  const sorted = [...patients];
+  if (criteria === "name") sorted.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  if (criteria === "duration") sorted.sort((a, b) => b.total_time - a.total_time);
+  if (criteria === "records") sorted.sort((a, b) => b.total_records - a.total_records);
+  renderPatients(sorted);
+}
+
+/* === Searching === */
+document.getElementById("searchInput").addEventListener("input", e => {
+  const val = e.target.value.toLowerCase();
+  const filtered = patients.filter(p =>
+    (p.name || "").toLowerCase().includes(val) ||
+    (p.patient_id || "").toLowerCase().includes(val)
+  );
+  renderPatients(filtered);
+});
+
+let showLiveOnly = false;
+
+document.getElementById("showLiveBtn").addEventListener("click", () => {
+  const btn = document.getElementById("showLiveBtn");
+  showLiveOnly = !showLiveOnly; // toggle state
+
+  if (showLiveOnly) {
+    const liveOnly = patients.filter(p => p.live === true);
+    renderPatients(liveOnly);
+    btn.classList.add("active");
+    btn.textContent = "Show All Patients";
+  } else {
+    renderPatients(patients);
+    btn.classList.remove("active");
+    btn.textContent = "Show Live Only";
+  }
+});
+
+/* === Fetch from Backend === */
+async function fetchPatients() {
+  try {
+    const response = await fetch("/auth/patient-arrhythmias/");
+    const data = await response.json();
+    if (data.status === "success") {
+      patients = data.data.map(p => ({
+        patient_id: p.patient_id,
+        name: p.name || p.patient_id,  // fallback
+        total_time: p.total_time,
+        total_records: p.total_records,
+        arrhythmias: p.arrhythmias,
+        live: p.live || false
+      }));
+      renderPatients(patients);
+    } else {
+      console.error("Fetch error:", data);
+    }
+  } catch (err) {
+    console.error("Error fetching patient data:", err);
+  }
+}
+
+/* === Init === */
+fetchPatients();
+</script>
+{% endblock %}

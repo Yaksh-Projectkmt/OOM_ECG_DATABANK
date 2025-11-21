@@ -6,11 +6,12 @@ from bson import ObjectId
 from collections import Counter
 import warnings
 import time
+from pymongo import MongoClient
 warnings.filterwarnings("ignore")
 
-from pymongo import MongoClient
+
 class Mongodb_Get_Data_Fast:
-    def __init__(self, patientID, start_date, end_date,mongo_uri="mongodb://localhost:27017"):
+    def __init__(self, patientID, start_date, end_date,mongo_uri="mongodb://192.168.1.65:27017/"):
         self.patientID = patientID
         self.start_date = start_date
         self.end_date = end_date
@@ -38,7 +39,7 @@ class Mongodb_Get_Data_Fast:
 
         client = pymongo.MongoClient(url)
         # remote target DB (change if needed)
-        self.db_local = pymongo.MongoClient("mongodb://localhost:27017/")["ecgarrhythmias"]
+        self.db_local = pymongo.MongoClient("mongodb://192.168.1.65:27017/")["ecgarrhythmias"]
         return client[dbname]
 
     # ------------------ Vectorized Hex Decode ------------------
@@ -64,7 +65,7 @@ class Mongodb_Get_Data_Fast:
                 if "vTwo" in row: v2 = self._decode_hex_series([row["vTwo"]])
                 if "vThree" in row: v3 = self._decode_hex_series([row["vThree"]])
                 if "vFour" in row: v4 = self._decode_hex_series([row["vFour"]])
-                if "vSix" in row: v6 = self._decode_hex_series([row["vSix"]])   
+                if "vSix" in row: v6 = self._decode_hex_series([row["vSix"]])
 
             n = len(vII)
             timestamps = pd.date_range(start=row["dateTime"], periods=n, freq="4ms")  # 250Hz
@@ -100,50 +101,6 @@ class Mongodb_Get_Data_Fast:
         return pd.concat(all_rows).reset_index(drop=True)
 
     # ------------------ Insert into Remote DB ------------------
-    # def insert_processed_data_to_db(self, arrhythmia_name, df):
-    #     mapping = {
-    #         'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
-    #         'Atrial Fibrillation & Atrial Flutter': ['AFIB', 'Aflutter', 'AFL'],
-    #         'HeartBlock': ['I DEGREE', 'MOBITZ-I', 'MOBITZ-II', 'III Degree', 'III_Degree'],
-    #         'Junctional Rhythm': ['Junctional Bradycardia', 'Junctional Rhythm', 'BR', 'JN-BR', 'JN-RHY'],
-    #         'Premature Atrial Contraction': ['PAC-Isolated', 'PAC-Bigeminy', 'PAC-Couplet', 'PAC-Triplet',
-    #                                          'SVT', 'PAC-Trigeminy', 'PAC-Quadrigeminy'],
-    #         'Premature Ventricular Contraction': ['AIVR', 'PVC-Bigeminy', 'PVC-Couplet', 'PVC-Isolated',
-    #                                               'PVC-Quadrigeminy', 'NSVT', 'PVC-Trigeminy',
-    #                                               'PVC-Triplet', 'IVR', 'VT'],
-    #         'Ventricular Fibrillation and Asystole': ['VFIB', 'VFL', 'ASYSTOLE'],
-    #         'Noise': ['Noise'], 'Others': ['Others'],
-    #         'LBBB & RBBB': ['LBBB', 'RBBB'],
-    #         'Abnormal': ['ABNORMAL'], 'Artifacts': ['Artifacts'],
-    #         'Normal': ['Normal'], 'SINUS-ARR': ['SINUS-ARR'],
-    #         'ShortPause': ['Short Pause', 'Long Pause'],
-    #         'TC': ['TC'], 'WIDE-QRS': ['WIDE-QRS'],
-    #     }
-    #     parent = next((k for k, v in mapping.items() if arrhythmia_name.strip() in v or arrhythmia_name.strip() == k), arrhythmia_name)
-    #     collection = self.db_local[parent]
-
-    #     leads = {col: df[col].tolist() for col in df.columns if col != "DateTime"}
-    #     lead_count = len(leads)
-
-    #     #  Map leads count to final lead value
-    #     if lead_count == 1:
-    #         lead_value = 2
-    #     elif lead_count == 5:
-    #         lead_value = 7
-    #     elif lead_count == 8:
-    #         lead_value = 12
-    #     else:
-    #         lead_value = lead_count  # fallback to original count
-
-    #     record = {
-    #         "PatientID": self.patientID,
-    #         "Arrhythmia": arrhythmia_name,
-    #         "Lead": lead_value,
-    #         "Frequency": 250 if lead_value == 12 else 200,
-    #         "Data": leads
-    #     }
-    #     collection.insert_one(record)
-    #     print(f" ✔ Inserted {arrhythmia_name} ({lead_value} leads)")
     def insert_processed_data_to_db(self, arrhythmia_name, df,source=2):
         # -------------------- Mapping --------------------
         mapping = {
@@ -175,7 +132,7 @@ class Mongodb_Get_Data_Fast:
         # -------------------- Drop DateTime --------------------
         df = df.drop(columns=["DateTime"], errors="ignore")
         if df.empty:
-            print(f" ✘ No data to insert for {arrhythmia_name}")
+            print(f"No data to insert for {arrhythmia_name}")
             return
 
         # -------------------- Determine lead count --------------------
@@ -215,7 +172,7 @@ class Mongodb_Get_Data_Fast:
             }
             collection.insert_one(record)
 
-        print(f" ✔ Inserted {arrhythmia_name} ({lead_value} leads) in {num_chunks} chunks")
+        print(f"Inserted {arrhythmia_name} ({lead_value} leads) in {num_chunks} chunks")
 
         # -------------------- Update patient_db --------------------
         patient_db = self.client["Patients"]
@@ -242,7 +199,7 @@ class Mongodb_Get_Data_Fast:
 
         patient = patients.find_one({"patientId": self.patientID})
         if not patient:
-            print(" ✘ Patient not found.")
+            print("Patient not found.")
             return None
         pid = str(patient["_id"])
         ecgcoll = db[f"{pid}_ecgs"]
@@ -253,12 +210,11 @@ class Mongodb_Get_Data_Fast:
             "endtime": {"$gte": self.start_date, "$lte": self.end_date},
         }
         arr_list = list(ecgarr.find(arr_filter))
-        print("[INFO] Arrhythmia counts:", Counter([a.get("Arrhythmia") for a in arr_list]))
 
         if not arr_list and not mi:
             all_data = list(ecgcoll.find({"dateTime": {"$gte": self.start_date, "$lte": self.end_date}}, projection={"_id": 0}))
             if not all_data:
-                print(" ✘ No ECG found.")
+                print(" No ECG found.")
                 return None
             df = pd.DataFrame(all_data).sort_values("dateTime").reset_index(drop=True)
             return self._process_leads(df)
@@ -269,7 +225,7 @@ class Mongodb_Get_Data_Fast:
             if not seg: continue
             seg_df = pd.DataFrame(seg).sort_values("dateTime").reset_index(drop=True)
             ecg_df = self._process_leads(seg_df)
-            self.insert_processed_data_to_db(doc["Arrhythmia"], ecg_df,source)
+            self.insert_processed_data_to_db(doc["Arrhythmia"], ecg_df)
 
         return None
 
@@ -297,7 +253,6 @@ def get_the_data(patientID, starttime=None, endtime=None,
                 print(f"[DONE] PatientID: {patientID} | Time: {elapsed:.2f} sec")
                 return df
         except Exception as e:
-            print(f"[ERROR] {patientID} ({config}): {e}")
             continue
 
     elapsed = time.time() - start_timer

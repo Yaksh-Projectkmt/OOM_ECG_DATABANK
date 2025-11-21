@@ -16,6 +16,7 @@
 }
 
 .header-content {
+  margin-top:15px;
   max-width: 1400px;
   display: flex;
   justify-content: space-between;
@@ -42,13 +43,10 @@
 }
 
 .header-title h1 {
-  font-size: 24px;
-  font-weight: 600;
   color: var(--text-primary);
 }
 
 .header-title p {
-  font-size: 14px;
   color: var(--text-secondary);
 }
 
@@ -57,7 +55,13 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+.sidebar-title {
+    margin-top: 14px;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 0;
 
+}
 .badge {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -110,6 +114,7 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
+  background: var(--card-bg);
   margin-left: 300px;
 }
 /* When sidebar is closed */
@@ -117,6 +122,7 @@
   margin-left: 0; /* when sidebar is collapsed */
   transition: margin-left 300ms ease;
 }
+
 select {
   background: var(--card-bg);
   color: var(--text-primary);
@@ -271,8 +277,8 @@ select:hover {
   background-color: var(--plot-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  position: relative;
   overflow: hidden;
+  position: relative;
 }
 
 .lead-footer {
@@ -309,7 +315,7 @@ select:hover {
   .header-content { flex-direction: column; align-items: flex-start; }
   .controls-content { flex-direction: column; align-items: stretch; }
 }
-         #page-loader {
+  #page-loader {
             position: fixed;
             top: 0;
             left: 0;
@@ -319,7 +325,7 @@ select:hover {
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
+            z-index: 9999;
         }
 
         .ecg-loader {
@@ -341,7 +347,6 @@ select:hover {
             stroke-linejoin: round;
             animation: pulse 1.5s infinite;
         }
-
         @keyframes pulse {
             0% {
                 stroke-dasharray: 0 100;
@@ -357,19 +362,19 @@ select:hover {
             }
         }
         body.dark-mode select,
-body.dark-mode select option {
-  color: #fff8f8ff !important;
-  background-color: #100f0fff !important;
-  border: 1px solid var(--border-color);
-}
-
-body.dark-mode select:hover {
-  background-color: #f3f4f6 !important;
-}
-
-body.dark-mode label[for="leadSelect"] {
-  color: var(--text-primary);
-}
+        body.dark-mode select option {
+          color: #fff8f8ff !important;
+          background-color: #100f0fff !important;
+          border: 1px solid var(--border-color);
+        }
+        
+        body.dark-mode select:hover {
+          background-color: #f3f4f6 !important;
+        }
+        
+        body.dark-mode label[for="leadSelect"] {
+          color: var(--text-primary);
+        }
 </style>
 {% endblock %}
 
@@ -671,7 +676,7 @@ function plotECG(lead, values) {
         gridwidth: 0.5,
       },
       showticklabels: true,
-      title: "mV",
+      title: "ECG(mV)",
       titlefont: { size: 12 },
       tickfont: { size: 10, color: "#555" }
     },
@@ -718,7 +723,7 @@ async function loadSegment() {
 // === Lead / Version Change ===
 document.getElementById("leadSelect").addEventListener("change", async e => {
   const newLeadCount = parseInt(e.target.value);
-  if (selectedLeadCount === newLeadCount) return; // ✅ Skip redundant reload
+  if (selectedLeadCount === newLeadCount) return; //Skip redundant reload
 
   selectedLeadCount = newLeadCount;
   currentVersion = selectedLeadCount;

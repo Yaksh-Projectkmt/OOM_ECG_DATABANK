@@ -14,31 +14,46 @@ from pathlib import Path
 from pymongo import MongoClient
 import os
 from mongoengine import connect
-
+import datetime
 connect(
     db="ecgarrhythmias",
-    host="mongodb://localhost:27017/",
+    host="mongodb://192.168.1.65:27017/",
 )
-
+DATABASE_ROUTERS = ['ecgdatabank_1.db_router.ECGDBRouter']
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
-
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'mongodb': {
         'ENGINE': 'djongo',
-        'NAME': 'mydatabase',  # Replace with your MongoDB database name
-        'ENFORCE_SCHEMA': False,  # Set to False if you're using a flexible schema
+        'NAME': 'mydatabase',
+        'ENFORCE_SCHEMA': False,
         'CLIENT': {
-            'host': 'mongodb://localhost:27017/',  # Change the host/port if needed
-            'username': '',  # Optional, if authentication is enabled
-            'password': '',  # Optional, if authentication is enabled
-            'authSource': 'admin',  # Needed if MongoDB authentication is enabled
+            'host': 'mongodb://192.168.1.65:27017/',
         }
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'djongo',
+#         'NAME': 'mydatabase',  # Replace with your MongoDB database name
+#         'ENFORCE_SCHEMA': False,  # Set to False if you're using a flexible schema
+#         'CLIENT': {
+#             'host': 'mongodb://192.168.1.65:27017/',  # Change the host/port if needed
+#             'username': '',  # Optional, if authentication is enabled
+#             'password': '',  # Optional, if authentication is enabled
+#             'authSource': 'admin',  # Needed if MongoDB authentication is enabled
+#         }
+#     }
+# }
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -49,10 +64,11 @@ SECRET_KEY = 'django-insecure-vd(#wx^&i9u@q%op3md)-ose(q(cdjgya7p*=9@miw)3o1t+tr
 # SECRET_KEY = None
 
 # SECURITY WARNING: don't run with debug turned on in production!
+SECRET_KEY = "replace-with-your-secret-key" 
 DEBUG = True
-
+AUTH_USER_MODEL = 'authuser.CustomUser'
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.2.96']
-MAINTENANCE_MODE = False
+MAINTENANCE_MODE = False  
 
 # Application definition
 INSTALLED_APPS = [
@@ -62,6 +78,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'subscription.apps.SubscriptionConfig',
     'authuser',
     'analysis_tool',
     'morphology_drow', 
@@ -78,9 +95,33 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'ecgdatabank_1.context_processors.MaintenanceModeMiddleware'
+    
+
 ]
 
 ROOT_URLCONF = 'ecgdatabank_1.urls'
+
+# Cookies & Security for JWT cookies
+CSRF_COOKIE_HTTPONLY = False  # JS will read csrf cookie for X-CSRFToken header (if you use CSRF)
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SAMESITE = "Lax"
+
+SECURE_SSL_REDIRECT = False  # True in production with HTTPS
+SESSION_COOKIE_SECURE = False  # True in production
+CSRF_COOKIE_SECURE = False     # True in production
+
+# JWT settings (tweak in production as env vars)
+JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=7),
+    "ALGORITHM": "HS256",
+    "ACCESS_COOKIE_NAME": "access",
+    "REFRESH_COOKIE_NAME": "refresh",
+}
+JWT_SECRET = SECRET_KEY
+JWT_ALGO = "HS256"
+ACCESS_TOKEN_LIFETIME = 15  # minutes
+REFRESH_TOKEN_LIFETIME = 7  # days
 
 TEMPLATES = [
     {
@@ -106,7 +147,7 @@ from mongoengine import connect
 MONGO_DATABASE_NAME = "ecgarrhythmias"
 connect(
     db=MONGO_DATABASE_NAME,
-    host="mongodb://localhost:27017/",
+    host="mongodb://192.168.1.65:27017/",
 )
 
 
@@ -146,7 +187,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
@@ -157,7 +197,6 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-FILE_CHARSET = "utf-8"
-DEFAULT_CHARSET = "utf-8"
+RAZORPAY_KEY_ID = "rzp_test_RdxIg7t7TByY4O"
+RAZORPAY_KEY_SECRET = "aDfN70ib4I6NkTDjHWwZjkc5"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1,14 +1,16 @@
-{% extends 'ecgdatabank/base.html' %}
-{% load static %}
+  {% extends 'ecgdatabank/base.html' %}
+  {% load subscription_tags %}
 
-{% block title %}ECG Morphology Analysis{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'CSS/Morphology.css' %}">
-{% endblock %}
-
-{% block content %}
-<div class="content">
+  {% load static %}
+  
+  {% block title %}ECG Morphology Analysis{% endblock %}
+  
+  {% block extra_css %}
+  <link rel="stylesheet" href="{% static 'CSS/Morphology.css' %}">
+  {% endblock %}
+  
+  {% block content %}
+  <div class="content">
 <header class="header">
   <div class="header-content">
     <div class="header-left">
@@ -17,8 +19,11 @@
 
     <div class="header-right">
       <div class="view-toggle">
-        <button class="toggle-btn " onclick="showMorphologySection()">Morphology Draw</button>
-        <button class="toggle-btn" onclick="showUploadSection()">Upload ECG Image</button>
+        <button class="toggle-btn {% if not request.user|has_feature:'Morphology_Draw' %}disabled-feature{% endif %} "
+        {% if not request.user|has_feature:'Morphology_Draw' %}onclick="showUpgradeToast(){% endif %}"
+         onclick="showMorphologySection()">Morphology Draw</button>
+        <button class="toggle-btn{% if not request.user|has_feature:'Morphology_Analysis' %}disabled-feature{% endif %} "
+        {% if not request.user|has_feature:'Morphology_Analysis' %}onclick="showUpgradeToast(){% endif %}" onclick="showUploadSection()">Upload ECG Image</button>
       </div>
     </div>
   </div>
@@ -49,7 +54,7 @@
         <div class="controls-grid">
         <div class="control-group">
             <label for="replicationCount" class="control-label">Replication Count</label>
-            <input type="number" id="replicationCount" placeholder="Enter replication (<200)" min="1" max="200"
+            <input type="number" id="replicationCount" placeholder="Enter replication (<10)" min="1" max="9"
             class="control-input">
         </div>
 
@@ -62,6 +67,7 @@
 
         <div class="action-section">
         <input type="text" id="patientIdInput" placeholder="Enter Patient ID" class="control-input">
+        
         <select id="arrhythmiaSelect" onchange="updateSubarrhythmia()" class="control-input">
             <option value="">Select Arrhythmia</option>
         </select>
@@ -81,12 +87,11 @@
       <div class="card">
         <div class="card-header">
           <div class="header-icon">
-             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                            <polyline points="17 6 23 6 23 12"></polyline>
+              <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="none">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="#000000"/>
             </svg>
           </div>
-          <h2 class="card-title">ECG Morphology Analysis</h2>
+          <h2 class="card-title">ECG Image Analysis</h2>
         </div>
 
         <div class="upload-area" id="uploadArea">
@@ -186,13 +191,13 @@
 
     
   </main>
-</div>
-{% endblock %}
-
-{% block scripts %}
-
-<script src="{% static 'js/morph_index.js' %}"></script>
-<script>var uploadFileUrl = "{% url 'uploaded_file' %}"</script>
-<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-{% endblock %}
+  </div>
+  {% endblock %}
+  
+  {% block scripts %}
+  
+  <script src="{% static 'js/morph_index.js' %}"></script>
+  <script>var uploadFileUrl = "{% url 'uploaded_file' %}"</script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  {% endblock %}

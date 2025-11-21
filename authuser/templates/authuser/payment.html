@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Processing Payment</title>
+     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+</head>
+
+<body>
+<h2>Processing {{ plan_name }} for ₹{{ amount }}</h2>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var options = {
+    "key": "{{ razorpay_key }}",
+    "amount": "{{ payment.amount }}",
+    "currency": "INR",
+    "name": "{{ username }}",
+    "description": "{{ plan_name }}",
+    "order_id": "{{ payment.id }}",
+    "callback_url": "/auth/payment-status/",
+
+    "prefill": {
+        "name": "{{ username }}",
+        "email": "{{ email }}"
+    },
+
+    // 🔥 USER CLOSES PAYMENT WINDOW
+    "modal": {
+        "ondismiss": function () {
+            window.location.href = "/auth/payment-failed/";
+        }
+    }
+};
+
+// Initialize Razorpay
+var rzp1 = new Razorpay(options);
+
+// PAYMENT FAILED CALLBACK
+rzp1.on('payment.failed', function (response){
+    // Optional: show message
+    // alert("Payment Failed: " + response.error.description);
+    
+    window.location.href = "/auth/payment-failed/";
+});
+
+// Open Payment Window
+rzp1.open();
+</script>
+</body>
+</html>

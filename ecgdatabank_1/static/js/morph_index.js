@@ -1,4 +1,3 @@
-
 const leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 const arrhythmiaDict = {
 'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
@@ -64,7 +63,7 @@ function handleContainerClick(event) {
 async function uploadFile() {
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
-    const pageLoader = document.getElementById('page-loader');
+    const loader = document.getElementById('page-loader');
 
     const allowedExtensions = ['jpg', 'jpeg', 'png'];
     const fileExtension = file.name.split('.').pop().toLowerCase();
@@ -73,7 +72,7 @@ async function uploadFile() {
         return;
     }
 
-    pageLoader.style.display = 'block';
+    loader.style.display = 'block';
 
     try {
         const img = new Image();
@@ -99,7 +98,7 @@ async function uploadFile() {
         });
 
         const data = await response.json();
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
 
         if (data.error) {
             alertSystem.error('Error', data.error);
@@ -111,15 +110,15 @@ async function uploadFile() {
             await fetchCSVData(data.csv_file);
         }
     } catch (error) {
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
         console.error('Upload Error:', error);
         alertSystem.error('Error', 'File upload failed. Please try again.');
     }
 }
 
 async function fetchCSVData(csvFileName) {
-    const pageLoader = document.getElementById('page-loader');
-    pageLoader.style.display = 'block';
+    const loader = document.getElementById('page-loader');
+    loader.style.display = 'block';
 
     try {
         const response = await fetch('/morphology/csv_data/', {
@@ -133,7 +132,7 @@ async function fetchCSVData(csvFileName) {
         });
 
         const data = await response.json();
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
 
         if (data.error) {
             alertSystem.error('Error', data.error);
@@ -144,7 +143,7 @@ async function fetchCSVData(csvFileName) {
         document.getElementById('ecgForm').style.display = 'block';
         document.getElementById('plot').style.display = 'block';
     } catch (error) {
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
         console.error('Fetch CSV Error:', error);
         alertSystem.error('Error', 'Failed to fetch ECG data.');
     }
@@ -202,9 +201,9 @@ function plotECG(data) {
 async function uploadECG() {
     const form = document.getElementById('ecgForm');
     const formData = new FormData(form);
-    const pageLoader = document.getElementById('page-loader');
+    const loader = document.getElementById('page-loader');
 
-    pageLoader.style.display = 'block';
+    loader.style.display = 'block';
 
     try {
         const response = await fetch('/morphology/upload_ecg/', {
@@ -217,7 +216,7 @@ async function uploadECG() {
         });
 
         const data = await response.json();
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
 
         if (data.message) {
             alertSystem.success('Success', data.message);
@@ -228,7 +227,7 @@ async function uploadECG() {
             alertSystem.error('Error', data.error);
         }
     } catch (error) {
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
         console.error('Upload ECG Error:', error);
         alertSystem.error('Error', 'Failed to upload ECG data.');
     }
@@ -238,14 +237,14 @@ async function handleECGSubmit() {
     const lead = document.getElementById('leads').value.trim();
     const arrhythmia = document.getElementById('arrhythmia').value.trim();
     const subArrhythmia = document.getElementById('subArrhythmia').value.trim();
-    const pageLoader = document.getElementById('page-loader');
+    const loader = document.getElementById('page-loader');
 
     if (!lead || !arrhythmia || !subArrhythmia) {
         alertSystem.warning('Warning', 'Please fill in all fields: Lead, Arrhythmia, and Sub-arrhythmia.');
         return;
     }
 
-    pageLoader.style.display = 'block';
+    loader.style.display = 'block';
 
     try {
         const form = document.getElementById('ecgForm');
@@ -260,7 +259,7 @@ async function handleECGSubmit() {
         });
 
         const data = await response.json();
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
 
         if (data.message) {
             alertSystem.success('Success', data.message);
@@ -269,7 +268,7 @@ async function handleECGSubmit() {
             alertSystem.error('Error', data.error);
         }
     } catch (error) {
-        pageLoader.style.display = 'none';
+        loader.style.display = 'none';
         console.error('Submit ECG Error:', error);
         alertSystem.error('Error', 'Failed to submit ECG data.');
     }
@@ -324,10 +323,10 @@ async function hide() {
 }
 function originalimage() {
     const fileInput = document.getElementById('fileInput');
-    const pageLoader = document.getElementById('page-loader');
+    const loader = document.getElementById('page-loader');
 
     if (fileInput.files.length > 0) {
-        pageLoader.style.display = 'flex';  // Show pageLoader
+        loader.style.display = 'flex';  // Show loader
 
         const file = fileInput.files[0];
         const reader = new FileReader();
@@ -400,8 +399,8 @@ function originalimage() {
             // Trigger fade-in
             setTimeout(() => overlay.style.opacity = 1, 50);
 
-            // Hide pageLoader
-            pageLoader.style.display = 'none';
+            // Hide loader
+            loader.style.display = 'none';
         };
 
         reader.readAsDataURL(file);
@@ -416,7 +415,6 @@ if (canvas) {
 
 let painting = false;
 let rawPoints = [];
-
 // Initialize the canvas and grid
 function initCanvas() {
     if (!canvas) return;
@@ -491,11 +489,9 @@ function stopDrawing() {
 
 function drawLoop() {
     if (!painting) return;
-
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawECGGrid(ctx, canvas.width, canvas.height); // redraw grid each frame
-
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#FF0000';
@@ -508,7 +504,6 @@ function drawLoop() {
         }
         ctx.stroke();
     }
-
     requestAnimationFrame(drawLoop);
 }
 // Show grid immediately when page loads
@@ -519,6 +514,7 @@ canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', addPoint);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseleave', stopDrawing);
+
 function resetDrawing() {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -541,8 +537,8 @@ function resetDrawing() {
 
 function augmentSignal() {
     const count = parseInt(document.getElementById('replicationCount').value);
-    if (isNaN(count) || count < 1 || count >= 200) {
-        alertSystem.warning('Warning', 'Please enter a valid number between 1 and 199.');
+    if (isNaN(count) || count < 1 || count >= 10) {
+        alertSystem.warning('Warning', 'Please enter a valid number between 1 and 10.');
         return;
     }
     if (rawPoints.length < 2) {
@@ -567,7 +563,6 @@ function augmentSignal() {
     }
 
     alertSystem.success('Success', `Signal augmented ${count} times (same height preserved).`);
-    
 }
 
 
@@ -624,13 +619,11 @@ function saveData() {
 }
 
 function showGraph() {
-    const pageLoader = document.getElementById('page-loader');
     const signalPlotDiv = document.getElementById('signalPlot');
     const pointsToPlot = augmentedData.length > 0 ? augmentedData : rawPoints;
-    pageLoader.style.display = 'block';
+
     if (pointsToPlot.length < 2) {
         alertSystem.warning('Warning', 'Draw or augment the signal first.');
-        pageLoader.style.display = 'none';
         return;
     }
 
@@ -638,32 +631,27 @@ function showGraph() {
     signalPlotDiv.style.display = 'block';
     signalPlotDiv.style.overflowX = 'auto';  // allow horizontal scroll
     signalPlotDiv.style.whiteSpace = 'nowrap'; // prevent wrapping
-
     const containerWidth = signalPlotDiv.offsetWidth;
     const containerHeight = 400; // fixed height (you can adjust)
 
-
     const x = pointsToPlot.map(p => p.x);
-    const y = pointsToPlot.map(p => canvas.height - p.y); // invert Y
+    const y = pointsToPlot.map(p => canvas.height - p.y);
     const ySmoothed = lowpassFilter(y);
 
-    // Determine signal boundaries
+     // Determine signal boundaries
     const xMin = Math.min(...x);
     const xMax = Math.max(...x);
     const signalWidth = xMax - xMin;
 
     // Use signal width or container width (whichever is greater)
-    const plotWidth = Math.max(signalWidth+100, containerWidth);
+    const plotWidth = Math.max(signalWidth + 100, containerWidth);
     const plotHeight = canvas.height;
-
-    // Grid spacing
     const majorSpacing = 50;
     const minorSpacing = 10;
 
-    // Build ECG grid lines
     const gridShapes = [];
 
-    // Minor grid
+    // Minor grid lines
     for (let i = 0; i <= plotWidth; i += minorSpacing) {
         gridShapes.push({
             type: 'line',
@@ -679,7 +667,7 @@ function showGraph() {
         });
     }
 
-    // Major grid
+    // Major grid lines
     for (let i = 0; i <= plotWidth; i += majorSpacing) {
         gridShapes.push({
             type: 'line',
@@ -695,60 +683,52 @@ function showGraph() {
         });
     }
 
-    // Plot with Plotly
-    try {
-        Plotly.newPlot('signalPlot', [
-            {
-                x, y,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Original',
-                line: { color: 'gray', width: 2 }
-            },
-            {
-                x, y: ySmoothed,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Filtered',
-                line: { color: 'blue', width: 2 }
-            }
-        ], {
-            width: plotWidth,
-            height: plotHeight,
-            plot_bgcolor: 'rgba(255,255,255,1)',
-            paper_bgcolor: 'rgba(255,255,255,1)',
-            margin: { t: 1, b: 1, l: 1, r: 1 },
-            shapes: gridShapes,
-            xaxis: {
-                range: [0, plotWidth],
-                showgrid: false,
-                zeroline: false,
-                fixedrange: true,
-                visible: false, 
-            },
-            yaxis: {
-                range: [0, plotHeight],
-                showgrid: false,
-                zeroline: false,
-                fixedrange: true,
-                scaleanchor: "x",
-                scaleratio: 1,
-                visible: false, 
+    // Plot with augmentation + ECG grid
+    Plotly.newPlot('signalPlot', [
+        {
+            x, y,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Original',
+            line: { color: 'gray', width: 2 }
+        },
+        {
+            x, y: ySmoothed,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Filtered',
+            line: { color: 'blue', width: 2 }
+        }
+    ], {
+         width: plotWidth,
+        height: plotHeight,
+        plot_bgcolor: 'rgba(255,255,255,1)',
+        paper_bgcolor: 'rgba(255,255,255,1)',
+        margin: { t: 10, b: 10, l: 10, r: 10 },
+        shapes: gridShapes,
+        xaxis: {
+            range: [0, plotWidth],
+            showgrid: false,
+            zeroline: false,
+            fixedrange: true,
+             visible: false, 
+        },
+        yaxis: {
+            range: [0, plotHeight],
+            showgrid: false,
+            zeroline: false,
+            visible: false,
+            fixedrange: true,
+            scaleanchor: "x",
+            scaleratio: 1
+        },
+        autosize: false
+    }, {
+        displayModeBar: false,
+        responsive: true
+    });
 
-            },
-            autosize: false
-        }, {
-            displayModeBar: false,
-            responsive: true
-        });
-    } catch (err) {
-        console.error("Plotly render error:", err);
-        alertSystem.error('Error', 'Failed to render ECG graph.');
-    } finally {
-        // --- Hide loader once plot is done ---
-        pageLoader.style.display = 'none';
-    }
-    // Adjust layout on resize
+ // Adjust layout on resize
     window.addEventListener('resize', () => {
         const newContainerWidth = signalPlotDiv.offsetWidth;
         const newPlotWidth = Math.max(signalWidth + 100, newContainerWidth);
@@ -757,8 +737,7 @@ function showGraph() {
             height: plotHeight
         });
     });
-}
-
+    }
 
 function lowpassFilter(data) {
     const alpha = 0.3;
@@ -838,6 +817,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 👇 Make Morphology Section the default active view
+    //  Make Morphology Section the default active view
     showMorphologySection();
 });

@@ -131,7 +131,6 @@ document.getElementById('passwordChangeForm').addEventListener('submit', async f
             alertSystem.success('Success', result.message || 'Password changed successfully!');
             document.getElementById('passwordChangeForm').reset();
             navigateToSection('main');
-
         } else {
             alertSystem.warning('Warning', result.error || 'Password change failed!');
         }
@@ -214,3 +213,71 @@ function handleProfileEditSubmit(e) {
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
+document.addEventListener("DOMContentLoaded", () => {
+    const topUpBtn = document.getElementById("topUpBtn");
+    const addMoneyModal = document.getElementById("addMoneyModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const cancelAddMoney = document.getElementById("cancelAddMoney");
+    const confirmAddMoney = document.getElementById("confirmAddMoney");
+    const amountButtons = document.querySelectorAll(".amount-btn");
+    const customAmountInput = document.getElementById("customAmount");
+
+    // Fetch Django-rendered URL safely from hidden input
+    const walletAddMoneyUrl = document.getElementById("walletAddMoneyUrl").value;
+
+    // Open modal
+    topUpBtn.onclick = () => addMoneyModal.style.display = "flex";
+
+    // Close modal
+    [closeModalBtn, cancelAddMoney].forEach(btn => {
+        btn.onclick = () => {
+            addMoneyModal.style.display = "none";
+            resetModal();
+        };
+    });
+
+    // Close when clicking outside
+    window.onclick = (e) => {
+        if (e.target === addMoneyModal) {
+            addMoneyModal.style.display = "none";
+            resetModal();
+        }
+    };
+
+    // Select predefined amount
+    amountButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            amountButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            customAmountInput.value = btn.textContent.trim();
+        });
+    });
+
+    // Confirm Add Money (POST to Django)
+    confirmAddMoney.addEventListener("click", () => {
+        const amount = parseFloat(customAmountInput.value);
+        if (!amount || amount < 10) {
+            alert("Please enter an amount of at least 10.");
+            return;
+        }
+
+        // Create form dynamically for POST
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = walletAddMoneyUrl; //uses Django URL from hidden input
+        form.innerHTML = `
+            {% csrf_token %}
+            <input type="hidden" name="amount" value="${amount}">
+            <input type="hidden" name="name" value="${USER_NAME}">
+            <input type="hidden" name="email" value="${USER_EMAIL}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // Reset modal
+    function resetModal() {
+        amountButtons.forEach(b => b.classList.remove("active"));
+        customAmountInput.value = "";
+    }
+});

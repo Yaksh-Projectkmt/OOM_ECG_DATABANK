@@ -1,26 +1,33 @@
 {% extends 'ecgdatabank/base.html' %}
+{% load subscription_tags %}
 {% load static %}
 {% block title %}Analysis Tool{% endblock %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'CSS/ecg_index.css' %}">
 {% endblock %}
 
 {% block content %}
     <div class="content-area">
+        
         <div class="content-header">
-            <h3 class="content-title">ECG Arrhythmia & MI</h3>
+            <h3 class="content-title">ECG Arrhythmias & MI</h3>
             <p class="content-description">
                 Select a condition to view detailed information and manage patient records
             </p>
 
             <!-- Action Buttons -->
             <div class="action-buttons">
-                <button class="action-btn primary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#insertModal"
-                    id="openInsertModalBtn">
+                <button class="action-btn primary {% if not user|has_feature:'ecg_insert' %}disabled-feature{% endif %}"
+                    {% if user|has_feature:"ecg_insert" %}
+                        data-bs-toggle="modal"
+                        data-bs-target="#insertModal"
+                        id="openInsertModalBtn"
+                    {% else %}
+                        onclick="showUpgradeToast()"
+                    {% endif %}>
                     <div class="btn-shimmer"></div>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2"
@@ -31,10 +38,15 @@
                     <span>Add Arrhythmia</span>
                 </button>
 
-                <button class="action-btn secondary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#unifiedSearchModal"
-                    id="openUnifiedSearchBtn">
+
+                <button class="action-btn secondary {% if not user|has_feature:'multi_search' %}disabled-feature{% endif %}"
+                    {% if user|has_feature:'multi_search' %} 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#unifiedSearchModal" 
+                        id="openUnifiedSearchBtn"
+                    {% else %}
+                        onclick="showUpgradeToast()"
+                    {% endif %}>
                     <div class="btn-shimmer"></div>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2"
@@ -45,10 +57,14 @@
                     <span>Search Arrhythmia</span>
                 </button>
 
-                <button class="action-btn tertiary"
-                    data-bs-toggle="modal"
-                    data-bs-target="#insertDataModal"
-                    id="insertData">
+                <button class="action-btn tertiary {% if not user|has_feature:'transfer' %}disabled-feature{% endif %}"
+                    {% if user|has_feature:'transfer' %} 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#insertDataModal" 
+                        id="insertData"
+                    {% else %}
+                        onclick="showUpgradeToast()"
+                    {% endif %}>
                     <div class="btn-shimmer"></div>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2"
@@ -65,11 +81,6 @@
         <div class="cards-grid">
             <div class="condition-card" data-arrhythmia="Premature Ventricular Contraction" style="animation-delay: 0ms;">
                 <div class="card-gradient"></div>
-                    <div class="ecg-pattern">
-                        <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                            <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                        </svg>
-                    </div>
 
                     <div class="card-glow"></div>
                 <div class="card-content">
@@ -87,11 +98,6 @@
             
             <div class="condition-card" data-arrhythmia="Premature Atrial Contraction" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
@@ -108,11 +114,7 @@
 
             <div class="condition-card" data-arrhythmia="Atrial Fibrillation & Atrial Flutter" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header" >
@@ -127,11 +129,7 @@
 
             <div class="condition-card" data-arrhythmia="HeartBlock" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
@@ -147,15 +145,11 @@
 
             <div class="condition-card" data-arrhythmia="Junctional Rhythm" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+                
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
-                        <h3 class="card-title">Junctional</h3>
+                        <h3 class="card-title">Junctional Rhythm</h3>
                         <svg class="card-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                     </div>
                 </div>
@@ -167,11 +161,7 @@
 
             <div class="condition-card" data-arrhythmia="Ventricular Fibrillation and Asystole" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+               
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
@@ -185,11 +175,7 @@
 
             <div class="condition-card" data-arrhythmia="Myocardial Infarction" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+                
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
@@ -206,11 +192,7 @@
 
             <div class="condition-card" data-arrhythmia="Artifacts" style="animation-delay: 100ms;">
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20"></polyline>
-                    </svg>
-                </div>
+                
                 <div class="card-glow"></div>
                 <div class="card-content">
                     <div class="card-header">
@@ -225,13 +207,7 @@
             <div class="condition-card" data-arrhythmia="LBBB" style="animation-delay: 100ms;">
                 
                 <div class="card-gradient"></div>
-                <div class="ecg-pattern">
-                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-                        <polyline class="ecg-line" 
-                            points="0,20 15,20 18,8 21,32 24,12 27,20 35,20 38,15 41,25 44,18 47,20 100,20">
-                        </polyline>
-                    </svg>
-                </div>
+                
                 <div class="card-glow"></div>
 
                 <div class="card-content">
@@ -252,94 +228,146 @@
     </div>
 
     <!-- Insert Data Modal (keeping original) -->
-    <div class="modal fade" id="insertModal" tabindex="-1" aria-labelledby="insertModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="insertModalLabel">
-                        <i class="fas fa-plus me-2"></i>Insert Data
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="insertForm" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-file-csv me-2"></i>Upload CSV
-                            </label>
-                            <input type="file" class="form-control" name="csv_file" id="csv_file" accept=".csv" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="patientId" class="form-label">
-                                <i class="fas fa-id-card me-2"></i>Patient ID
-                            </label>
-                            <input type="text" class="form-control" id="newpatientId" name="patientId" placeholder="Enter patient ID" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-heartbeat me-2"></i>Lead Type
-                            </label>
-                            <select class="form-control" name="lead" id="leadTypeMI">
-                                <option value="">Select Lead Type</option>
-                                <option value="2">2 Lead</option>
-                                <option value="7">7 Lead</option>
-                                <option value="12">12 Lead</option>
-                            </select>
-                        </div>
-                        <div id="arrhythmiaContainer">
-                        <!-- First Arrhythmia Group -->
-                        <div class="row arrhythmia-group mb-2">
-                            <!-- Arrhythmia -->
-                            <div class="col-md-5">
-                                <label class="form-label">Arrhythmia</label>
-                                <select name="arrhythmia[]" class="form-control arrhythmia-select" required>
-                                    <option value="">Select Arrhythmia</option>
-                                    {% for arrhythmia, subArrhythmiaList in arrhythmias_dict.items %}
-                                        <option value="{{ arrhythmia }}">{{ arrhythmia }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+<div class="modal fade" id="insertModal" tabindex="-1" aria-labelledby="insertModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="insertModalLabel">
+            <i class="fas fa-plus me-2"></i>Insert Data
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
 
-                            <!-- Sub-Arrhythmia -->
-                            <div class="col-md-5">
-                                <label class="form-label">Sub-Arrhythmia</label>
-                                <select name="subArrhythmia[]" class="form-control sub-arrhythmia-select" required>
-                                    <option value="">Select Sub-Arrhythmia</option>
-                                    {% for arrhythmia, subArrhythmiaList in arrhythmias_dict.items %}
-                                        {% for subArrhythmia in subArrhythmiaList %}
-                                            <option value="{{ subArrhythmia }}" data-arrhythmia="{{ arrhythmia }}" style="display:none;">
-                                                {{ subArrhythmia }}
-                                            </option>
-                                        {% endfor %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <!-- Buttons -->
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-primary btn-sm add-btn" onclick="addArrhythmiaGroup()">+</button>
-                            </div>
-                          </div>
+        <div class="modal-body">
+            <form id="insertForm" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- CSV Upload -->
+            <div class="mb-3">
+                <label class="form-label">
+                <i class="fas fa-file-csv me-2"></i>Upload CSV <span class="required">*</span>
+                </label>
+                <input type="file" class="form-control" name="csv_file" id="csv_file" accept=".csv" required>
+            </div>
+
+            <!-- Patient ID -->
+            <div class="mb-3">
+                <label for="patientId" class="form-label">
+                <i class="fas fa-id-card me-2"></i>Patient ID <span class="required">*</span>
+                </label>
+                <input type="text" class="form-control" id="newpatientId" name="patientId" placeholder="Enter patient ID" required>
+            </div>
+
+            <!-- Sex -->
+            <div class="mb-3">
+                <label class="form-label">
+                <i class="fas fa-venus-mars me-2"></i>Sex <span class="required">*</span>
+                </label>
+                <select class="form-control" name="sex" id="sex" required>
+                <option value="">Select Sex</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Others">Others</option>
+                </select>
+            </div>
+
+            <!-- Age -->
+            <div class="mb-3">
+                <label class="form-label">
+                <i class="fas fa-user-clock me-2"></i>Age <span class="required">*</span>
+                </label>
+                <input type="number" class="form-control" id="age" name="age" placeholder="Enter age" min="0" required>
+            </div>
+
+            <!-- Height & Weight (Optional) -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                <label class="form-label">
+                    <i class="fas fa-ruler-vertical me-2"></i>Height (cm)
+                </label>
+                <input type="number" class="form-control" id="height" name="height" placeholder="Enter height (optional)" min="0">
                 </div>
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="fas fa-wave-square me-2"></i>Frequency
-                            </label>
-                            <input type="text" class="form-control" id="newfrequency" name="newfrequency" placeholder="Enter frequency" required>
-                        </div>
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-info me-2" onclick="previewECG()">
-                                    <i class="fas fa-eye me-2"></i>Preview
-                            </button>
-                            <button type="button" class="btn btn-primary" onclick="submitForm()">
-                                <i class="fas fa-save me-2"></i>Save
-                            </button>
-                        </div>
-                    </form>
+
+                <div class="col-md-6 mb-3">
+                <label class="form-label">
+                    <i class="fas fa-weight me-2"></i>Weight (kg)
+                </label>
+                <input type="number" class="form-control" id="weight" name="weight" placeholder="Enter weight (optional)" min="0">
                 </div>
             </div>
+
+            <!-- Lead Type -->
+            <div class="mb-3">
+                <label class="form-label">
+                <i class="fas fa-heartbeat me-2"></i>Lead Type <span class="required">*</span>
+                </label>
+                <select class="form-control" name="lead" id="leadTypeMI" required>
+                <option value="">Select Lead Type</option>
+                <option value="2">2 Lead</option>
+                <option value="7">7 Lead</option>
+                <option value="12">12 Lead</option>
+                </select>
+            </div>
+
+            <!-- Arrhythmia Section -->
+            <div id="arrhythmiaContainer">
+                <div class="row arrhythmia-group mb-2">
+                <div class="col-md-5">
+                    <label class="form-label">Arrhythmia <span class="required">*</span></label>
+                    <select name="arrhythmia[]" class="form-control arrhythmia-select" required>
+                    <option value="">Select Arrhythmia</option>
+                    {% for arrhythmia, subArrhythmiaList in arrhythmias_dict.items %}
+                        <option value="{{ arrhythmia }}">{{ arrhythmia }}</option>
+                    {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="form-label">Sub-Arrhythmia <span class="required">*</span></label>
+                    <select name="subArrhythmia[]" class="form-control sub-arrhythmia-select" required>
+                    <option value="">Select Sub-Arrhythmia</option>
+                    {% for arrhythmia, subArrhythmiaList in arrhythmias_dict.items %}
+                        {% for subArrhythmia in subArrhythmiaList %}
+                        <option value="{{ subArrhythmia }}" data-arrhythmia="{{ arrhythmia }}" style="display:none;">
+                            {{ subArrhythmia }}
+                        </option>
+                        {% endfor %}
+                    {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-outline-primary btn-sm add-btn" onclick="addArrhythmiaGroup()">+</button>
+                </div>
+                </div>
+            </div>
+
+            <!-- Frequency -->
+            <div class="mb-3">
+                <label class="form-label">
+                <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Frequency (Hz) <span class="required">*</span>
+                </label>
+                <input type="text" class="form-control" id="newfrequency" name="newfrequency" placeholder="Enter frequency" required>
+            </div>
+
+            <!-- Buttons -->
+            <div class="text-end">
+                <button type="button" class="btn btn-outline-info me-2" onclick="previewECG()">
+                <i class="fas fa-eye me-2"></i>Preview
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                <i class="fas fa-save me-2"></i>Save
+                </button>
+            </div>
+            </form>
+        </div>
         </div>
     </div>
+</div>
 <!-- Preview Lead Modal -->
     <div class="modal fade" id="previewLeadModal" tabindex="-1" aria-labelledby="previewLeadModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
@@ -384,6 +412,7 @@
                         <li class="nav-item1" role="presentation">
                             <button class="nav-link" id="patient-search-tab" data-bs-toggle="tab" data-bs-target="#patientSearchTab" type="button" role="tab">
                                 <i class="fas fa-id-card me-2"></i>Raw Data Search
+                                <span class="beta-badge">Beta</span>
                             </button>
                         </li>
                     </ul>
@@ -397,13 +426,13 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="patientId" class="form-label">
                                             <i class="fas fa-id-card me-2"></i>Patient ID
-                                        </label>
+                                        <span class="required">*</span></label>
                                         <input type="text" class="form-control" id="patientId" name="patientId" placeholder="Enter patient ID">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">
                                             <i class="fas fa-heartbeat me-2"></i>Lead Type
-                                        </label>
+                                        <span class="required">*</span></label>
                                         <select class="form-control" id="leadType" name="leadType">
                                             <option value="">Select Lead Type</option>
                                             <option value="2">2 Lead</option>
@@ -416,7 +445,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="arrhythmiaMI" class="form-label">
                                             <i class="fas fa-activity me-2"></i>Arrhythmia
-                                        </label>
+                                        <span class="required">*</span></label>
                                         <select id="arrhythmiaMI" name="arrhythmia" class="form-control">
                                             <option value="">Select an Arrhythmia</option>
                                             {% for arrhythmia, sub_arrhythmias in arrhythmias_dict.items %}
@@ -426,8 +455,10 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">
-                                            <i class="fas fa-wave-square me-2"></i>Frequency (Hz)
-                                        </label>
+                                              <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>Frequency (Hz)
+                                        <span class="required">*</span></label>
                                         <input type="text" class="form-control" id="frequency" name="frequency" placeholder="Enter frequency">
                                     </div>
                                 </div>
@@ -452,20 +483,33 @@
                                     </label>
                                     <div id="arrhythmiaDurationContainer">
                                         <div class="row arrhythmia-group mb-3 search-item">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Arrhythmia</label>
-                                                <select name="arrhythmia[]" class="form-control" required>
-                                                    <option value="">Select an Arrhythmia</option>
-                                                    {% for arrhythmia, _ in arrhythmias_dict.items %}
-                                                    <option value="{{ arrhythmia }}">{{ arrhythmia }}</option>
-                                                    {% endfor %}
-                                                </select> 
-                                            </div>
-                                            
                                             <div class="col-md-4">
-                                                <label class="form-label">Duration(S)</label>
-                                                <input type="number" class="form-control" name="duration[]" min="1"  max="2000" placeholder="Seconds" required>
-                                            </div>
+                                        <label class="form-label">Arrhythmia<span class="required">*</span></label>
+                                        <select name="arrhythmia[]" class="form-control arrhythmia-select" required>
+                                            <option value="">Select an Arrhythmia</option>
+                                            {% for arrhythmia, _ in arrhythmias_dict.items %}
+                                            <option value="{{ arrhythmia }}">{{ arrhythmia }}</option>
+                                            {% endfor %}
+                                        </select> 
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Sub-Arrhythmia<span class="required">*</span></label>
+                                        <select name="subArrhythmiaName[]" class="form-control sub-arrhythmia-select" required>
+                                            <option value="">Select Sub-Arrhythmia</option>
+                                            {% for arrhythmia, subArrhythmiaList in arrhythmias_dict.items %}
+                                                {% for subArrhythmia in subArrhythmiaList %}
+                                                    <option value="{{ subArrhythmia }}" data-arrhythmia="{{ arrhythmia }}" style="display:none;">
+                                                        {{ subArrhythmia }}
+                                                    </option>
+                                                {% endfor %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <label class="form-label">Duration(S)<span class="required">*</span></label>
+                                        <input type="number" class="form-control" name="duration[]" min="1" max="2000" placeholder="Seconds" required>
+                                    </div>
                                             <div class="col-md-2 d-flex align-items-end">
                                                 <button type="button" class="btn btn-outline-primary btn-sm add-btn" onclick="addArrhythmiaDurationGroup()">+</button>
                                             </div>   
@@ -477,7 +521,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">
                                             <i class="fas fa-heartbeat me-2"></i>Lead Type
-                                        </label>
+                                        <span class="required">*</span></label>
                                         <select class="form-control" id="leadTypeSimple" name="leadTypess" required>
                                             <option value="">Select Lead Type</option>
                                             <option value="2">2 Lead</option>
@@ -487,31 +531,34 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">
-                                            <i class="fas fa-wave-square me-2"></i>Frequency (Hz)
-                                        </label>
+                                            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>Frequency (Hz)
+                                        <span class="required">*</span></label>
                                         <input type="text" class="form-control" id="frequencySimple" name="frequencyss" placeholder="Enter frequency" min="1" required>
                                     </div>
                                 </div>
 
                                 <div class="text-end mt-4">
+                                <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search me-2"></i>Search
+                                    </button>
                                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
                                         <i class="fas fa-times me-2"></i>Cancel
                                     </button>
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="fas fa-search me-2"></i>Search
-                                    </button>
-                                </div>
+                                
+                            </div>
                             </form>
+                            
                         </div>
-
                         <div class="tab-pane fade" id="patientSearchTab" role="tabpanel" aria-labelledby="patient-search-tab">
                             <form id="Search" method="GET">
                             {% csrf_token %}
                             <div class="mb-3">
                                 <label for="newpatientId" class="form-label">
                                 <i class="fas fa-id-card me-2"></i>Patient ID
-                                </label>
-                                <input type="text" class="form-control" id="newpatientId1" name="patientId" placeholder="Enter patient ID" required>
+                               <span class="required">*</span></label>
+                                <input type="text" class="form-control" id="newpatientId1" name="patientId" placeholder="Enter Live patient ID" required>
                             </div>
                             <div class="text-end mt-4">
                                 <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">
@@ -544,13 +591,13 @@
                         <div class="mb-3">
                             <label for="newpatientId" class="form-label">
                                 <i class="fas fa-id-card me-2"></i>Patient ID
-                            </label>
+                           <span class="required">*</span></label>
                             <input type="text" class="form-control" id="newpatientId" name="patientId" placeholder="Enter patient ID" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">
                                 <i class="fas fa-database me-2"></i>Select Database
-                            </label>
+                           <span class="required">*</span></label>
                             <select class="form-control" name="source" id="source" required>
                                 <option value="">Select Database</option>
                                 <option value="0">Development</option>
@@ -573,6 +620,10 @@
     </div>
 {% endblock %}
 {% block scripts %}
+<script>
+    const hasShareFeature = {{ user|has_feature:"share"|yesno:"true,false" }};
+</script>
+
 <script src="{% static 'js/scripts.js' %}"></script> 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

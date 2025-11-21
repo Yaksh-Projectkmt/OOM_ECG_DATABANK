@@ -83,8 +83,6 @@
                 </div>
             </div>
 
-
-            
             <!-- Enhanced Content Grid -->
             <div class="content-grid">
                 <!-- Revolutionary Chart Container -->
@@ -239,6 +237,7 @@
    // ===================== ECG Dashboard =====================
 let ecgChartInstance = null;
 let currentChartType = 'doughnut'; // default doughnut
+
 const labelMap = {
     'Premature Ventricular Contraction': 'PVC',
     'Ventricular Fibrillation and Asystole': 'VFL',
@@ -251,19 +250,18 @@ const labelMap = {
     'SINUS-ARR': 'SINUS-ARR',
     'ShortPause': 'ShortPause',
     'WIDE-QRS': 'WIDE-QRS',
-    'Artifacts': 'Artifacts',
+    'Artifacts':'Artifacts',
     'TC': 'TC',
     'Noise': 'Noise',
-    'Normal': 'Normal',
-    'Abnormal': 'Abnormal',
+    'Normal':'Normal',
+    'Abnormal':'Abnormal',
     'Others': 'Others',
 };
 
 // ========= Chart Update =========
 function updatePieChart(collectionDataCount) {
     window.collectionDataCount = collectionDataCount;
-
-    document.getElementById("chart-loader").style.display = "none";
+    document.getElementById("chart-loader").style.display = "none";    
     document.getElementById("patientChart").style.display = "block";
 
     const ctx = document.getElementById('patientChart').getContext('2d');
@@ -273,9 +271,6 @@ function updatePieChart(collectionDataCount) {
     const values = dbLabels.map(label => collectionDataCount[label] || 0);
     const total = values.reduce((a, b) => a + b, 0);
 
-    const isDarkMode = document.documentElement.getAttribute('dark-mode') === 'dark' ||
-                       localStorage.getItem("theme") === "dark";
-
     const chartData = {
         labels: shortLabels,
         datasets: [{
@@ -284,10 +279,13 @@ function updatePieChart(collectionDataCount) {
                 '#00d4ff', '#ff4757', '#00ff88', '#ffa726',
                 '#8b5cf6', '#ff6b9d', '#26de81', '#fd79a8',
                 '#fdcb6e', '#6c5ce7', '#a29bfe', '#fd79a8',
-                '#00b894', '#e17055', '#74b9ff', '#0015ff',
-                '#520000'
+                '#00b894', '#e17055', '#74b9ff', '#0015ffff',
+                '#520000ff'
             ],
-            borderColor: isDarkMode ? '#1a1f2e' : '#ffffff',
+            borderColor: () => 
+                document.documentElement.getAttribute('data-theme') === 'dark' 
+                ? '#1a1f2e' 
+                : '#ffffff',
             borderWidth: 3,
             hoverBorderWidth: 5,
             hoverOffset: 15
@@ -302,29 +300,19 @@ function updatePieChart(collectionDataCount) {
             legend: {
                 position: 'left',
                 labels: {
-                    color: () => {
-                        const themeNow = document.documentElement.getAttribute('dark-mode') === 'dark' ||
-                                         localStorage.getItem("theme") === "dark";
-                        return themeNow ? '#ffffff' : '#1e2a44';
-                    },
+                    // ? compute dynamically
+                    color: (ctx) => 
+                        document.documentElement.getAttribute('data-theme') === 'dark'
+                        ? '#ffffff'
+                        : '#1e2a44',
                     font: { size: 12, weight: '600' },
                     usePointStyle: true,
                     pointStyle: 'circle',
-                    generateLabels: (chart) => {
-                        const data = chart.data;
-                        if (!data.labels.length) return [];
-
-                        return data.labels.map((label, i) => {
-                            const value = data.datasets[0].data[i];
-                            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            const percentage = total ? ((value / total) * 100).toFixed(1) : 0;
-                            return {
-                                text: `${label} (${percentage}%)`,
-                                fillStyle: data.datasets[0].backgroundColor[i],
-                                hidden: !chart.getDataVisibility(i),
-                                index: i
-                            };
-                        });
+                    formatter: (value, ctx) => {
+                        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const val = ctx.chart.data.datasets[0].data[ctx.index];
+                        const percentage = total ? ((val / total) * 100).toFixed(1) : 0;
+                        return `${value} (${percentage}%)`;
                     }
                 },
                 onClick: (e, legendItem, legend) => {
@@ -334,14 +322,22 @@ function updatePieChart(collectionDataCount) {
                 }
             },
             tooltip: {
-                backgroundColor: () => {
-                    const dark = document.documentElement.getAttribute('dark-mode') === 'dark' ||
-                                 localStorage.getItem("theme") === "dark";
-                    return dark ? 'rgba(26, 31, 46, 0.95)' : 'rgba(255, 255, 255, 0.95)';
-                },
-                titleColor: () => (isDarkMode ? '#ffffff' : '#1a202c'),
-                bodyColor: () => (isDarkMode ? '#a8b3cf' : '#4a5568'),
-                borderColor: () => (isDarkMode ? '#2d3748' : '#e2e8f0'),
+                backgroundColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? 'rgba(26, 31, 46, 0.95)'
+                    : 'rgba(255, 255, 255, 0.95)',
+                titleColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#ffffff'
+                    : '#1a202c',
+                bodyColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#a8b3cf'
+                    : '#4a5568',
+                borderColor: () => 
+                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    ? '#2d3748'
+                    : '#e2e8f0',
                 borderWidth: 1,
                 cornerRadius: 12,
                 callbacks: {
@@ -405,7 +401,7 @@ function fetchRecentRecords() {
     .catch(err => console.error("Error fetching records:", err));
 }
 
-function fetchData() {
+function fetchReportData() {
     fetch("{% url 'total_data' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
     .then(r => r.json())
     .then(data => {
@@ -437,7 +433,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const initialPieData = {{ initial_pie_data|safe }};
     updatePieChart(initialPieData);
 
-    fetchData();
+    fetchReportData();
     fetchPieChart();
     fetchRecentRecords();
 
@@ -506,11 +502,17 @@ window.addEventListener("load", function () {
   if (pageLoader) pageLoader.style.display = 'none';
 });
 
+// Watch for theme changes
 const observer = new MutationObserver(() => {
     if (window.collectionDataCount) {
         updatePieChart(window.collectionDataCount);
     }
 });
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['dark-mode'] });
+
+observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+});
+
 </script>
 {% endblock %}

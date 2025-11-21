@@ -19,12 +19,12 @@ import base64
 import os
 from oom_ecg_data.PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
 import traceback
+from subscription.templatetags.subscription_tags import has_feature
 # ======================== THREAD LOCK ========================
 refresh_lock = threading.Lock()
 
 # ======================== DB CONNECTIONS ========================
-# client = MongoClient("mongodb://192.168.1.65:27017/")
-client = MongoClient("mongodb://localhost:27017/")
+client = MongoClient("mongodb://192.168.1.65:27017/")
 patient_db = client['Patients']
 ecg_db = client['ecgarrhythmias']
 
@@ -72,23 +72,12 @@ arrhythmias_dict = {
 }
 # ======================== DASHBOARD VIEW ========================
 def index(request):
-    stats_collection = patient_db["stats"]
-    stats = stats_collection.find_one({"_id": "patients_totals"})
-    if stats:
-        initial_pie_data = stats.get("pie_data", {})
-    else:
-        pie_data, totals = get_patients_data()
-        stats_collection.update_one(
-            {"_id": "patients_totals"},
-            {"$set": {"pie_data": pie_data, **totals, "updated_at": datetime.utcnow()}},
-            upsert=True
-        )
-        initial_pie_data = pie_data
-        stats = totals
+    pie_data, totals = get_patients_data()
+    initial_pie_data = get_pie_chart_data()
 
     return render(request, "report/report_index.html", {
         "initial_pie_data": initial_pie_data,
-        "totals": stats
+        "totals": totals
     })
 def get_pie_chart_data():
     """Compute pie chart (per group time in minutes)."""
@@ -149,19 +138,9 @@ def get_patients_data():
     return pie_data, totals
 
 def patients_totals_api(request):
-    stats_collection = patient_db["stats"]
-    stats = stats_collection.find_one({"_id": "patients_totals"})
-
-    if not stats or not stats.get("updated_at") or \
-       (datetime.utcnow() - stats["updated_at"]).total_seconds() > 10:
-        if refresh_lock.acquire(blocking=False):
-            threading.Thread(target=refresh_patients_cache, daemon=True).start()
-            refresh_lock.release()
-
-    if stats:
-        stats.pop("_id", None)
-        return JsonResponse(stats)
-    return JsonResponse({"total_patients": 0, "total_records": 0, "total_time": 0})
+    """Return total patients, records, and time (live, no cache)."""
+    _, totals = get_patients_data()
+    return JsonResponse(totals)
 
 
 def refresh_patients_cache():
@@ -174,31 +153,11 @@ def refresh_patients_cache():
         )
 
 def pie_chart_api(request):
-    stats_collection = patient_db["stats"]
-    stats = stats_collection.find_one({"_id": "pie_chart"})
-
-    if not stats:
-        # No cache -> compute now
-        data = get_pie_chart_data()
-        stats_collection.update_one(
-            {"_id": "pie_chart"},
-            {"$set": {"data": data, "updated_at": datetime.utcnow()}},
-            upsert=True
-        )
-        return JsonResponse(data)
-
-    # Check expiry (e.g. 10s)
-    last_update = stats.get("updated_at")
-    if not last_update or datetime.utcnow() - last_update > timedelta(seconds=10):
-        if refresh_lock.acquire(blocking=False):
-            threading.Thread(target=refresh_pie_cache, daemon=True).start()
-            refresh_lock.release()
-
-    return JsonResponse(stats.get("data", {}))
-
+    data = get_pie_chart_data()
+    return JsonResponse(data)
+   
 
 def refresh_pie_cache():
-    """Recompute pie chart data and update stats cache."""
     with refresh_lock:
         data = get_pie_chart_data()
         patient_db["stats"].update_one(
@@ -209,7 +168,6 @@ def refresh_pie_cache():
 
 # ======================== RECENT ECG RECORDS (ecgarrhythmias DB) ========================
 def recent_records_api(request):
-    """Return last 5 ECG records across ecgarrhythmias collections."""
     records = []
     for collection_name in collections:
         coll = ecg_db[collection_name]
@@ -233,7 +191,18 @@ def recent_records_api(request):
     records = sorted(records, key=lambda x: ObjectId(x["_id"]).generation_time, reverse=True)[:5]
     return JsonResponse({"records": records})
 
+
 def waveform_by_id(request, collection_name, record_id):
+     # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "waveforms"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include waveforms detection."
+        }, status=403)
+    # ---------------------------
+
     try:
         record = ecg_db[collection_name].find_one({"_id": ObjectId(record_id)})
     except Exception:
@@ -265,9 +234,10 @@ def waveform_by_id(request, collection_name, record_id):
         # Send as safe JSON for Plotly
         "ecg_signal": mark_safe(json.dumps(data)),
     })
-    
+
 def update_patient_on_edit(patient_id, old_arrhythmia, new_arrhythmia, datalength, frequency):
-    """When moving a record from old_arrhythmia ? new_arrhythmia, update both sides."""
+   
+
     time_minutes = (datalength / frequency) / 60
 
     # Decrement from old arrhythmia
@@ -294,13 +264,22 @@ def update_patient_on_edit(patient_id, old_arrhythmia, new_arrhythmia, datalengt
     )
 
 def get_parent_collection(subtype_name):
-    """Map subtype (like 'PVC-Bigeminy') to top-level arrhythmia collection."""
     for parent, subtypes in arrhythmias_dict.items():
         if subtype_name in subtypes or subtype_name == parent:
             return parent
     return None
 
 def edit_data(request):
+    # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "edit_data"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include Edit detection."
+        }, status=403)
+    # ---------------------------
+
     db = client["ecgarrhythmias"]
 
     if request.method != "POST":
@@ -382,9 +361,16 @@ def edit_data(request):
 
 @csrf_exempt
 def upload_plot(request):
-    """
-    Handle ECG file uploads for sharing: plot PNG, raw data CSV, PQRST CSV.
-    """
+    # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "share"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include share detection."
+        }, status=403)
+    # ---------------------------
+    
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
@@ -400,7 +386,7 @@ def upload_plot(request):
         if file_type == "plot_png":
             ext = "png"
             subdir = "ecg_plots"
-        elif file_type in ['raw_data','pqrst_csv','selected_data']:
+        elif file_type in ['raw_data','selected_data']:
             ext = "csv"
             subdir = "ecg_csv"
         else:
@@ -429,8 +415,18 @@ def upload_plot(request):
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        
 @csrf_exempt
 def get_pqrst_data(request):
+     # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "pqrst"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include pqrst detection."
+        }, status=403)
+    # ---------------------------
 
     if request.method != 'POST':
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
@@ -460,8 +456,6 @@ def get_pqrst_data(request):
             if arr in db.list_collection_names():
                 collection = db[arr]
                 doc = collection.find_one({"_id": ObjectId(object_id)})
-                if doc:
-                    print("Document found")
                 if doc and "Data" in doc:
                     record = doc
                     break
@@ -503,17 +497,17 @@ def get_pqrst_data(request):
         df = pd.DataFrame(lead_data)
 
         # Run detection models
-        r_index = check_r_index(df, lead_config, frequency, r_index_model)
-        s_index, q_index = check_qs_index(df, r_index, lead_config)
-        t_index, p_index, _, _, _ = check_pt_index(df, lead_config, r_index)
+        r_index_dic = check_r_index(df, lead_config, frequency, r_index_model)
+        s_index, q_index = check_qs_index(df, r_index_dic, lead_config)
+        t_index, p_index, _, _, _ = check_pt_index(df, r_index_dic, lead_config)
 
         return JsonResponse({
             "status": "success",
-            "r_peaks": [int(i) for i in r_index],
-            "q_points": [int(i) for i in q_index],
-            "s_points": [int(i) for i in s_index],
-            "p_points": [int(i) for i in p_index],
-            "t_points": [int(i) for i in t_index],
+            "R": {lead: [int(i) for i in r_index_dic[lead]] for lead in r_index_dic},
+            "Q": {lead: [int(i) for i in q_index[lead]] for lead in q_index},
+            "S": {lead: [int(i) for i in s_index[lead]] for lead in s_index},
+            "P": {lead: [int(i) for i in p_index[lead]] for lead in p_index},
+            "T": {lead: [int(i) for i in t_index[lead]] for lead in t_index},
         })
 
     except Exception as e:
@@ -523,31 +517,13 @@ def get_pqrst_data(request):
 refresh_lock = threading.Lock()
 
 def total_data(request):
-    stats_collection = patient_db["stats"]
-    stats = stats_collection.find_one({"_id": "patients_totals"})
-
-    trigger_refresh = False
-    if not stats:
-        stats = {"total_patients": 0, "total_records": 0, "total_time": 0}
-        trigger_refresh = True
-    else:
-        last_update = stats.get("updated_at")
-        if not last_update or (datetime.utcnow() - last_update).total_seconds() > 10:
-            trigger_refresh = True
-
-    if trigger_refresh:
-        if refresh_lock.acquire(blocking=False):
-            threading.Thread(target=refresh_totals_cache, daemon=True).start()
-
-    stats.pop("_id", None)
-    stats.pop("updated_at", None)
+    _, totals = get_patients_data()
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-        return JsonResponse(stats)
-    return render(request, "authuser/login.html", stats)
+        return JsonResponse(totals)
+    return render(request, "authuser/login.html", totals)
 
 def refresh_totals_cache():
-    """Recompute totals across Patients DB collections."""
     with refresh_lock:
         total_patients = set()
         total_records = 0

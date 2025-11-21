@@ -1,530 +1,242 @@
-// ui js 
-let currentFileType = null;
-let uploadedImageData = null;
+// Global variables for file upload state
+let uploadedFileName = '';
+let uploadedLeadCount = null; // Store lead count from upload
+let uploadedPlotImage = null;
+let uploadedImageDataURL = null; // Store uploaded image URL
 
-const fileInput = document.getElementById('fileInput');
-const uploadBox = document.getElementById('uploadBox');
-const uploadTitle = document.getElementById('uploadTitle');
-const loadingOverlay = document.getElementById('loadingOverlay');
-const fileInfo = document.getElementById('fileInfo');
-const fileIcon = document.getElementById('fileIcon');
-const fileName = document.getElementById('fileName');
-const removeBtn = document.getElementById('removeBtn');
-
-const defaultState = document.getElementById('defaultState');
-const imageAnalysis = document.getElementById('imageAnalysis');
-const pdfAnalysis = document.getElementById('pdfAnalysis');
-const csvAnalysis = document.getElementById('csvAnalysis');
-
-const viewImageBtn = document.getElementById('viewImageBtn');
-const closeImageBtn = document.getElementById('closeImageBtn');
-const imageViewer = document.getElementById('imageViewer');
-const uploadedImage = document.getElementById('uploadedImage');
-
-const viewPlotBtn = document.getElementById('viewPlotBtn');
-const closePlotBtn = document.getElementById('closePlotBtn');
-const plotViewer = document.getElementById('plotViewer');
-
-const iconSVG = {
-    image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-        <polyline points="21 15 16 10 5 21"></polyline>
-    </svg>`,
-    pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <line x1="16" y1="13" x2="8" y2="13"></line>
-        <line x1="16" y1="17" x2="8" y2="17"></line>
-    </svg>`,
-    csv: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 2h10v20H2V2h10z"></path>
-        <line x1="12" y1="2" x2="12" y2="22"></line>
-    </svg>`
-};
-
-fileInput.addEventListener('change', handleFileSelect);
-removeBtn.addEventListener('click', resetUpload);
-viewImageBtn.addEventListener('click', () => {
-    imageViewer.style.display = 'block';
-});
-closeImageBtn.addEventListener('click', () => {
-    imageViewer.style.display = 'none';
-});
-viewPlotBtn.addEventListener('click', () => {
-    plotViewer.style.display = 'block';
-});
-closePlotBtn.addEventListener('click', () => {
-    plotViewer.style.display = 'none';
-});
-
-uploadBox.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadBox.classList.add('dragging');
-});
-
-uploadBox.addEventListener('dragleave', () => {
-    uploadBox.classList.remove('dragging');
-});
-
-uploadBox.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadBox.classList.remove('dragging');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        processFile(file);
+// Show the selected file name or reset label
+function showFileName(input) {
+    const fileLabel = document.getElementById('fileLabel');
+    if (!fileLabel) {
+        console.error('Error: fileLabel element not found.');
+        return;
     }
-});
-
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        processFile(file);
-    }
+    fileLabel.textContent = input.files.length > 0 
+        ? input.files[0].name 
+        : 'Click to Upload File';
 }
 
-function processFile(file) {
-    if (!file) return;
+// Navigate to a specific section and configure upload settings
+function navigateToSection(section) {
+    const elements = {
+        mainHeader: document.getElementById('mainHeader'),
+        uploadSection: document.getElementById('uploadSection'),
+        isLeadForHolter: document.getElementById('isLeadForHolter'),
+        isLeadForCSV: document.getElementById('isLeadForCSV'),
+        cardsContainer: document.getElementById('cardsContainer'),
+        oeaCard: document.getElementById('oeaCard'),
+        tmtCard: document.getElementById('tmtCard'),
+        holterCard: document.getElementById('holterCard'),
+        csvCard: document.getElementById('csvCard'),
+        uploadTitle: document.getElementById('uploadTitle'),
+        uploadSubtitle: document.getElementById('uploadSubtitle'),
+        fileInput: document.getElementById('fileInput'),
+        viewBtn: document.getElementById('viewBtn')
+    };
 
-    // Reset UI before processing
-    uploadTitle.textContent = 'Processing...';
-    fileInfo.style.display = 'none';
-    loadingOverlay.style.display = 'flex';
+    // Check for missing critical elements
+    for (const [key, el] of Object.entries(elements)) {
+        if (!el && key !== 'viewBtn') {
+            console.error(`Error: ${key} element not found.`);
+            return;
+        }
+    }
 
-    // Clear previous data
-    uploadedImageData = null;
-    uploadedImage.src = '';
-    document.getElementById('TOtalRecords').textContent = '-';
-    document.getElementById('leadvalue').textContent = '-';
+    // Hide all sections and cards initially
+    elements.mainHeader.style.display = 'none';
+    elements.uploadSection.style.display = 'none';
+    if (elements.isLeadForHolter) elements.isLeadForHolter.style.display = 'none';
+    if (elements.isLeadForCSV) elements.isLeadForCSV.style.display = 'none';
+    elements.cardsContainer.style.display = 'none';
+    elements.oeaCard.style.display = 'none';
+    elements.tmtCard.style.display = 'none';
+    elements.holterCard.style.display = 'none';
+    elements.csvCard.style.display = 'none';
 
-    // Show filename immediately
-    fileName.textContent = file.name;
+    // Configure upload section based on selection
+    if (['oea', 'tmt', 'holter', 'csv'].includes(section)) {
+        elements.uploadSection.style.display = 'block';
 
-    // Detect type early
-    const type = file.type;
-    currentFileType = null;
-
-    if (type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            uploadedImageData = e.target.result;
-            uploadedImage.src = uploadedImageData;
+        // Set allowed file types
+        const fileAccept = {
+            oea: 'image/png, image/jpeg, image/jpg',
+            tmt: 'application/pdf',
+            holter: '.csv',
+            csv: '.csv'
         };
-        reader.readAsDataURL(file);
-    }
+        elements.fileInput.accept = fileAccept[section];
 
-    setTimeout(() => {
-        loadingOverlay.style.display = 'none';
-        uploadTitle.textContent = 'Drop your file here';
-
-        // Trigger correct analysis section
-        if (type.startsWith('image/')) {
-            showAnalysis('image', file);
-        } else if (type === 'application/pdf') {
-            showAnalysis('pdf', file);
-        } else if (type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
-            showAnalysis('csv', file);
-        } else {
-            defaultState.style.display = 'block';
+        // Hide additional elements for specific sections
+        if (section === 'oea' || section === 'tmt') {
+            if (elements.isLeadForHolter) elements.isLeadForHolter.style.display = 'none';
+            if (elements.isLeadForCSV) elements.isLeadForCSV.style.display = 'none';
+            if (elements.viewBtn) elements.viewBtn.style.display = 'none';
         }
 
-        // Update file icon safely
-        if (typeof iconSVG !== 'undefined' && iconSVG[currentFileType]) {
-            fileIcon.innerHTML = iconSVG[currentFileType];
-        }
-
-        fileInfo.style.display = 'flex';
-    }, 500); // shorter delay is enough
-}
-
-
-function showAnalysis(type, file = null) {
-    currentFileType = type;
-
-    // Hide all sections first
-    defaultState.style.display = 'none';
-    imageAnalysis.style.display = 'none';
-    pdfAnalysis.style.display = 'none';
-    csvAnalysis.style.display = 'none';
-
-    if (type === 'image') {
-        imageAnalysis.style.display = 'block';
-    } else if (type === 'pdf') {
-        pdfAnalysis.style.display = 'block';
-    } else if (type === 'csv') {
-        csvAnalysis.style.display = 'block';
-
-        // If file is provided, read it immediately
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                const csvText = event.target.result.trim();
-                if (!csvText) return;
-
-                const lines = csvText.split('\n').filter(line => line.trim());
-                const headers = lines[0].split(',').map(h => h.trim());
-                const data = lines.slice(1).map(line => line.split(',').map(v => v.trim()));
-
-                // Update metrics
-                document.getElementById('TOtalRecords').textContent = data.length;
-                document.getElementById('leadvalue').textContent = headers.length; // count columns
-            };
-            reader.readAsText(file);
-        }
+        // Update title and subtitle
+        const titles = {
+            oea: { title: 'OOM ECG Analyzer (OEA)', subtitle: 'Upload ECG Image' },
+            tmt: { title: 'TMT Data Analysis', subtitle: 'Upload TMT Pdf' },
+            holter: { title: 'Holter Data Analysis', subtitle: 'Upload Holter CSV File' },
+            csv: { title: 'CSV File Upload', subtitle: 'Upload CSV File' }
+        };
+        elements.uploadTitle.textContent = titles[section].title;
+        elements.uploadSubtitle.textContent = titles[section].subtitle;
     }
 }
 
-
-
-function resetUpload() {
-    currentFileType = null;
-    uploadedImageData = null;
-    fileInput.value = '';
-    fileInfo.style.display = 'none';
-    imageViewer.style.display = 'none';
-    plotViewer.style.display = 'none';
-
-    defaultState.style.display = 'block';
-    imageAnalysis.style.display = 'none';
-    pdfAnalysis.style.display = 'none';
-    csvAnalysis.style.display = 'none';
-}
-
-
-// functionality js 
-function uploadimage() {
+// Show all cards and hide other sections
+function uploadFile() {
     const fileInput = document.getElementById('fileInput');
     const section = document.getElementById('uploadTitle')?.textContent;
-
     if (!fileInput || !section) {
         console.error('Error: fileInput or uploadTitle element not found.');
-        alertSystem.error('Error', 'Required elements not found.');
+        alertSystem.error('Error','Required elements not found.');
         return;
     }
 
     const file = fileInput.files[0];
     if (!file) {
-        alertSystem.info('Warning', 'Please select an image file.');
+        alertSystem.info('Warning','Please select a file.');
         return;
     }
 
     const fileType = file.name.split('.').pop().toLowerCase();
-    const validImageTypes = ['jpg', 'jpeg', 'png' ,'pdf'];
+    const validTypes = {
+        'TMT Data': ['pdf'],
+        'Holter Data': ['csv'],
+        'CSV File': ['csv'],
+        'OEA': ['jpg', 'png', 'jpeg']
+    };
 
-    // Validate image type
-    if (!validImageTypes.includes(fileType)) {
-        alertSystem.warning('Warning', `Invalid file type. Please upload only: ${validImageTypes.join(', ')}`);
-        return;
+    // Validate file format
+    for (const [key, types] of Object.entries(validTypes)) {
+        if (section.includes(key) && !types.includes(fileType)) {
+            alertSystem.warning('warning','Select the correct file format: Only ${types.join(', ')} files are allowed for ${key}.');
+            return;
+        }
     }
 
-    // Prepare form data
+    // Show loader for TMT, Holter, or CSV sections
+    if (section.includes('TMT Data') || section.includes('Holter Data') || section.includes('CSV File')) {
+        showLoader();
+    }
+
+    // Show popup for OEA section, but don't show loader yet
+    if (section.includes('OEA')) {
+        showUploadedPopup();
+    }
+
+    // Prepare and send file
     const formData = new FormData();
     formData.append('file', file);
+    const uploadUrl = section.includes('TMT Data') ? '/analysis/upload_tmt_pdf/' : uploadFileUrl;
 
-    // Upload image
-    fetch(uploadFileUrl, {
+    fetch(uploadUrl, {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value
-        },
+        headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
         credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        const contentType = response.headers.get('content-type');
+        if (section.includes('TMT Data')) {
+            if (contentType.includes('application/zip') || contentType.includes('application/octet-stream')) {
+                return response.blob();
+            }
+            if (contentType.includes('application/json')) {
+                return response.json();
+            }
+            throw new Error('Unexpected response type for TMT upload');
+        }
+        return response.json();
+    })
     .then(data => {
-        if (data.error) {
-            alertSystem.error('Error', `Image upload failed: ${data.error}`);
+        if (section.includes('TMT Data')) {
+            if (data.error) {
+                alertSystem.error('Error',`TMT Upload Error: ${data.error}`);
+                hideLoader();
+                return;
+            }
+            const zipUrl = `/media/analysis_tool/uploads/${data.zip_file}`;
+            const a = document.createElement('a');
+            a.href = zipUrl;
+            a.download = data.zip_file;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            hideLoader();
+            setTimeout(() => {
+                     alertSystem.success('Success','TMT PDF processed and ZIP downloaded.');
+                    // Reset file input and UI
+                    hide();
+                }, 100);
             return;
         }
 
-        // Image uploaded successfully
-        alertSystem.success('Success', 'Image uploaded successfully!');
+        if (fileType === 'csv') {
+            uploadedFileName = file.name;
+            uploadedLeadCount = data.lead_count;
+            uploadedPlotImage = data.plot_image;
 
-        // Optionally: run post-processing after upload
-        if (typeof processImage === 'function') {
+            // Check for 12-lead requirement in Holter Data section
+            if (section.includes('Holter Data') && uploadedLeadCount !== 12) {
+                hideLoader();
+                setTimeout(() => {
+                    alertSystem.warning('Warning','Holter Data requires exactly 12-lead data. Please upload a valid 12-lead CSV file.');
+                    // Reset file input and UI
+                    hide();
+                }, 100);
+                return;
+            }
+
+            hideLoader();
+
+            // setTimeout(() => {
+            //         alert('CSV file uploaded successfully!');
+            //         // Reset file input and UI
+            //     }, 100);
+            
+            const cardsContainer = document.getElementById('cardsContainer');
+            const viewBtn = document.getElementById('viewBtn');
+            const openPopupButton = document.getElementById('openPopupButton');
+            const isLeadForHolter = document.getElementById('isLeadForHolter');
+            const isLeadForCSV = document.getElementById('isLeadForCSV');
+                
+            if (section.includes('Holter Data')) {
+                if (isLeadForHolter) isLeadForHolter.style.display = 'none';
+                if (isLeadForCSV) isLeadForCSV.style.display = 'none';
+            } else if (section.includes('CSV File')) {
+                if (isLeadForHolter) isLeadForHolter.style.display = 'none';
+                if (isLeadForCSV) isLeadForCSV.style.display = 'block';
+            }
+            if (cardsContainer) cardsContainer.style.display = 'grid';
+            if (viewBtn) viewBtn.style.display = 'inline-block';
+            if (openPopupButton) openPopupButton.style.display = 'none';
+        }
+
+        else {
+            if (isLeadForHolter) isLeadForHolter.style.display = 'none';
+            if (isLeadForCSV) isLeadForCSV.style.display = 'none';
             processImage(file.name)
-                .catch(err => console.error('Process Image Error:', err));
+                .then(() => hideLoader())
+                .catch(error => {
+                    console.error('Process Image Error:', error);
+                    hideLoader();
+                });
         }
     })
     .catch(error => {
         console.error('Upload Error:', error);
-        alertSystem.error('Error', `Upload failed: ${error.message}`);
+        alertSystem.error('Error',`Upload failed: ${error.message}`);
+        hideLoader();
     });
 }
-
-// TMT Upload Function — Handles only PDF uploads and ZIP response
-function uploadTMTFile() {
-    const fileInput = document.getElementById('fileInput');
-    const section = document.getElementById('uploadTitle')?.textContent;
-
-    if (!fileInput || !section) {
-        console.error('Error: fileInput or uploadTitle element not found.');
-        alertSystem.error('Error', 'Required elements not found.');
-        return;
-    }
-
-    const file = fileInput.files[0];
-    if (!file) {
-        alertSystem.info('Warning', 'Please select a TMT PDF file.');
-        return;
-    }
-
-    const fileType = file.name.split('.').pop().toLowerCase();
-    if (fileType !== 'pdf') {
-        alertSystem.warning('Warning', 'Invalid file type. Please upload only PDF files for TMT Data.');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    fetch('/analysis/upload_tmt_pdf/', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/zip') || contentType.includes('application/octet-stream')) {
-            return response.blob();
-        }
-        if (contentType.includes('application/json')) {
-            return response.json();
-        }
-        throw new Error('Unexpected response type for TMT upload');
-    })
-    .then(data => {
-
-        // Handle JSON error response
-        if (data && data.error) {
-            alertSystem.error('Error', `TMT Upload Error: ${data.error}`);
-            return;
-        }
-
-        // Handle ZIP blob response
-        if (data instanceof Blob) {
-            const zipUrl = window.URL.createObjectURL(data);
-            const a = document.createElement('a');
-            a.href = zipUrl;
-            a.download = `${file.name.replace('.pdf', '')}_processed.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(zipUrl);
-
-            setTimeout(() => {
-                alertSystem.success('Success', 'TMT PDF processed and ZIP downloaded successfully.');
-                hide(); // Reset file input and UI
-            }, 100);
-        }
-    })
-    .catch(error => {
-        console.error('TMT Upload Error:', error);
-        alertSystem.error('Error', `TMT upload failed: ${error.message}`);
-    });
-}
-async function uploadCSVFile() {
-    const fileInput = document.getElementById('fileInput');
-    const arrhythmiaSelect = document.getElementById('arrhythmiaSelect');
-    const versionSelect = document.getElementById('versionSelect');
-    const leadValueElement = document.getElementById('leadvalue');
-
-    if (!fileInput || !fileInput.files[0]) {
-        alertSystem.info('Info', 'Please select a CSV file.');
-        return;
-    }
-
-    const file = fileInput.files[0];
-
-    // Prepare form data
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-        const response = await fetch(uploadFileUrl, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
-            credentials: 'same-origin'
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        const data = await response.json();
-
-        uploadedFileName = file.name;
-        alertSystem.success('Success', 'CSV uploaded successfully!');
-
-        // Get values for arrhythmia processing
-        const category = arrhythmiaSelect.value;
-        const modelFileName = versionSelect.value;
-        const leadType = leadValueElement.textContent.trim();
-
-        if (!category || !modelFileName || !leadType) {
-            alertSystem.info('Info', 'Please select arrhythmia, version, and lead type.');
-            return;
-        }
-
-        // Call processArrhythmia with correct URL
-        processArrhythmia(category, modelFileName, leadType);
-
-    } catch (err) {
-        console.error(err);
-        alertSystem.error('Error', `Upload failed: ${err.message}`);
-    }
-}
-
-// Process arrhythmia function
-function processArrhythmia(category, modelFileName, leadType) {
-    if (!uploadedFileName) {
-        alertSystem.info('Info', 'No uploaded file found!');
-        return;
-    }
-
-    // Use placeholder-based URL like old JS
-    const url = processArrhythmiaUrl
-        .replace('CATEGORY_PLACEHOLDER', encodeURIComponent(category))
-        .replace('FILENAME_PLACEHOLDER', encodeURIComponent(modelFileName))
-        .replace('IMAGE_NAME_PLACEHOLDER', encodeURIComponent(uploadedFileName))
-        .replace('LEAD_TYPE_PLACEHOLDER', encodeURIComponent(leadType));
-
-    fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
-        credentials: 'same-origin'
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) throw new Error(data.error);
-        alertSystem.success('Success', `Arrhythmia Check Result: ${data.result}`);
-        window.location.href = '/analysis/download_result/';
-    })
-    .catch(err => {
-        console.error(err);
-        alertSystem.error('Error', `Failed: ${err.message}`);
-    });
-}
-
-// function uploadCSVFile() {
-//     const fileInput = document.getElementById('fileInput');
-//     const section = document.getElementById('uploadTitle')?.textContent;
-
-//     if (!fileInput) {
-//         console.error('Error: fileInput element not found.');
-//         alertSystem.error('Error','File input not found.');
-//         return;
-//     }
-
-//     const file = fileInput.files[0];
-//     if (!file) {
-//         alertSystem.info('Warning','Please select a CSV file.');
-//         return;
-//     }
-
-//     const fileType = file.name.split('.').pop().toLowerCase();
-//     if (fileType !== 'csv') {
-//         alertSystem.warning('Warning', 'Only CSV files are allowed.');
-//         return;
-//     }
-
-//     // Prepare form data
-//     const formData = new FormData();
-//     formData.append('file', file);
-
-//     fetch(uploadFileUrl, {  // uploadFileUrl should point to your CSV upload endpoint
-//         method: 'POST',
-//         body: formData,
-//         headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
-//         credentials: 'same-origin'
-//     })
-//     .then(response => response.json())
-//     .then(data => {
-
-//         uploadedFileName = file.name;
-//         uploadedLeadCount = data.lead_count; // optional if your backend returns it
-//         uploadedPlotImage = data.plot_image; // optional if your backend returns it
-
-//         alertSystem.success('Success','CSV file uploaded successfully!');
-//     })
-//     .catch(error => {
-//         console.error('Upload Error:', error);
-//         alertSystem.error('Error',`Upload failed: ${error.message}`);
-//     });
-// }
-// // Process arrhythmia for a file
-// function processArrhythmia(category, filename) {
-//     let leadType = getSelectedLead();
-//     if (!leadType) {
-//         alertSystem.info('info',"Please select a lead type.");
-//         return;
-//     }
-//     if (!uploadedFileName) {
-//         alertSystem.info('info',"No uploaded file found!");
-//         return;
-//     }
-
-//     //  Hide modal before processing
-//     const modalElement = document.getElementById('fileModal');
-//     if (modalElement) {
-//         const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
-//         modal.hide();
-//     }
-
-//     //  Show loader after modal is hidden
-//     setTimeout(() => {
-//         showLoader('Processing Arrhythmia... Please Wait');
-
-//         const url = processArrhythmiaUrl
-//             .replace('CATEGORY_PLACEHOLDER', category)
-//             .replace('FILENAME_PLACEHOLDER', filename)
-//             .replace('IMAGE_NAME_PLACEHOLDER', uploadedFileName)
-//             .replace('LEAD_TYPE_PLACEHOLDER', leadType);
-
-//         fetch(url, {
-//             method: 'POST',
-//             headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
-//             credentials: 'same-origin'
-//         })
-//             .then(response => {
-//                 if (!response.ok) {
-//                     throw new Error(`HTTP error! Status: ${response.status}`);
-//                 }
-//                 const contentType = response.headers.get('content-type');
-//                 if (!contentType || !contentType.includes('application/json')) {
-//                     throw new Error(`Unexpected response type: ${contentType || 'unknown'}. Expected JSON.`);
-//                 }
-//                 return response.json();
-//             })
-//             .then(data => {
-//                 if (data.error) {
-//                     throw new Error(`Server error: ${data.error}`);
-//                 }
-//                 const downloadUrl = '/analysis/download_result/';
-//                 window.location.href = downloadUrl;
-
-//            
-//                 setTimeout(() => {
-//                     alertSystem.success('Success',`Arrhythmia Check Result: ${data.result}`);
-//                     hide();
-//                 }, 100);
-//             })
-//             .catch(error => {
-//                 console.error('Processing error:', error);
-//                 hide();
-//            
-//                 setTimeout(() => {
-//                     alertSystem.error('Error',`Failed to process arrhythmia: ${error.message}`);
-//                 }, 100);
-//             });
-
-//     }, 300); // small delay to allow modal to close cleanly
-// }
-
 // Process uploaded ECG image
 function processImage(filename) {
     return new Promise((resolve, reject) => {
+        // // Show loader after the alert is confirmed
+        showLoader();
  
         const url = processImageUrl.replace('FILENAME_PLACEHOLDER', filename);
 
@@ -561,6 +273,11 @@ function processImage(filename) {
                 throw new Error(`Unsupported content type: ${contentType}`);
             })
             .then(data => {
+                hideLoader();
+                // setTimeout(() => {
+                //     alert('ECG image processing completed successfully.');
+                //     // Reset file input and UI
+                // }, 100);
                 
                 const outputButton = document.getElementById('showOutputButton');
                 if (outputButton) outputButton.style.display = 'block';
@@ -581,6 +298,7 @@ function processImage(filename) {
                 } else {
                     throw new Error('Unexpected data format in response.');
                 }
+                hideLoader();
                 resolve();
             })
             .catch(error => {
@@ -588,6 +306,7 @@ function processImage(filename) {
                 const outputButton = document.getElementById('showOutputButton');
                 if (outputButton) outputButton.style.display = 'none';
 
+                hideLoader();
 
                 setTimeout(() => {
                     if (error.message.includes('No ECG detected')) {
@@ -605,8 +324,309 @@ function processImage(filename) {
                 reject(error);
             });
     });
-    
 }
+
+// Fetch files for a given category
+function fetchFiles(category) {
+    const url = fetchFilesUrl.replace('CATEGORY_PLACEHOLDER', category);
+
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                alertSystem.error('Error',data.error);
+            } else {
+                showModal(category, data.files);
+            }
+        })
+        .catch(error => console.error('Fetch error:', error));
+}
+
+// Display modal with files
+function showModal(category, files) {
+    const modalTitle = document.getElementById('fileModalLabel');
+    const modalBody = document.getElementById('fileModalBody');
+    if (!modalTitle || !modalBody) {
+        console.error('Error: Modal elements not found.');
+        return;
+    }
+
+    modalTitle.textContent = `${category.toUpperCase()} Models`;
+    modalTitle.style.color = 'black';
+    modalBody.innerHTML = files.map(file => `
+        <button class="btn btn-outline-primary m-2" onclick="processArrhythmia('${category}', '${file}')">${file}</button>
+    `).join('');
+
+    const modalElement = document.getElementById('fileModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+    } else {
+        console.error('Error: fileModal element not found.');
+    }
+}
+
+// Get selected lead type
+function getSelectedLead() {
+    const selectedLead = document.querySelector('input[name="lead"]:checked');
+    return selectedLead ? selectedLead.value : null;
+}
+
+// Process arrhythmia for a file
+function processArrhythmia(category, filename) {
+    let leadType = getSelectedLead();
+    if (!leadType) {
+        alertSystem.info('info',"Please select a lead type.");
+        return;
+    }
+    if (!uploadedFileName) {
+        alertSystem.info('info',"No uploaded file found!");
+        return;
+    }
+
+    //  Hide modal before processing
+    const modalElement = document.getElementById('fileModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+        modal.hide();
+    }
+
+    //  Show loader after modal is hidden
+    setTimeout(() => {
+        showLoader('Processing Arrhythmia... Please Wait');
+
+        const url = processArrhythmiaUrl
+            .replace('CATEGORY_PLACEHOLDER', category)
+            .replace('FILENAME_PLACEHOLDER', filename)
+            .replace('IMAGE_NAME_PLACEHOLDER', uploadedFileName)
+            .replace('LEAD_TYPE_PLACEHOLDER', leadType);
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value },
+            credentials: 'same-origin'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error(`Unexpected response type: ${contentType || 'unknown'}. Expected JSON.`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(`Server error: ${data.error}`);
+                }
+                const downloadUrl = '/analysis/download_result/';
+                window.location.href = downloadUrl;
+
+                hideLoader();
+                setTimeout(() => {
+                    alertSystem.success('Success',`Arrhythmia Check Result: ${data.result}`);
+                    hide();
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Processing error:', error);
+                hide();
+                hideLoader();
+                setTimeout(() => {
+                    alertSystem.error('Error',`Failed to process arrhythmia: ${error.message}`);
+                }, 100);
+            });
+
+    }, 300); // small delay to allow modal to close cleanly
+}
+
+
+// Handle file input change and store image data URL
+const fileInput = document.getElementById('fileInput');
+if (fileInput) {
+    fileInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                uploadedImageDataURL = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// Show uploaded image in popup
+function showUploadedPopup() {
+    const uploadPopup = document.getElementById('uploadPopup');
+    const uploadPopupImage = document.getElementById('uploadPopupImage');
+    if (!uploadPopup || !uploadPopupImage) {
+        console.error('Error: uploadPopup or uploadPopupImage element not found.');
+        return;
+    }
+    if (uploadedImageDataURL) {
+        uploadPopupImage.src = uploadedImageDataURL;
+        uploadPopup.style.display = 'block';
+    }
+}
+
+// Show output image in popup
+function showOutputPopup() {
+    const uploadedFileInput = document.getElementById('fileInput');
+    const popupImage = document.getElementById('outputPopupImage');
+    if (!uploadedFileInput || !popupImage) {
+        console.error('Error: fileInput or outputPopupImage element not found.');
+        return;
+    }
+
+    const fullPath = uploadedFileInput.files[0]?.name;
+    if (!fullPath) {
+        console.error('Error: No file selected.');
+        return;
+    }
+
+    const fileName = fullPath.substring(0, fullPath.lastIndexOf('.')) || fullPath;
+
+    const imageUrl = `/media/analysis_tool/uploads/${fileName}.jpg`;
+
+    popupImage.src = imageUrl;
+    popupImage.style.display = 'block';
+}
+
+// Hide UI elements and reset file input
+function hide() {
+    const elements = {
+        showOutputButton: document.getElementById('showOutputButton'),
+        uploadPopup: document.getElementById('uploadPopup'),
+        popcard: document.getElementById('popcard'),
+        viewBtn: document.getElementById('viewBtn'),
+        chartContainer: document.getElementById('chart-container'),
+        isLeadForHolter: document.getElementById('isLeadForHolter'),
+        isLeadForCSV: document.getElementById('isLeadForCSV'),
+        cardsContainer: document.getElementById('cardsContainer'),
+        fileInput: document.getElementById('fileInput'),
+        fileLabel: document.getElementById('fileLabel'),
+    };
+
+    // Close the fileModal if it exists
+    const modalElement = document.getElementById('fileModal');
+    if (modalElement) {
+        const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+        modal.hide();
+    } else {
+        console.warn('Warning: fileModal element not found.');
+    }
+
+    for (const [key, el] of Object.entries(elements)) {
+        if (!el) {
+            console.error(`Error: ${key} element not found.`);
+            continue;
+        }
+        if (key === 'fileInput') {
+            el.value = '';
+        } else if (key === 'fileLabel') {
+            el.textContent = 'Click to Upload File';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    const openPopupButton = document.getElementById('openPopupButton');
+    if (openPopupButton) {
+        openPopupButton.style.display = 'block';
+    }
+    deleteFiles();
+}
+
+// Show loader overlay
+function showLoader(message = 'Please Wait......') {
+    let overlay = document.getElementById('overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 2em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        `;
+        overlay.innerText = message;
+        document.body.appendChild(overlay);
+    } else {
+        overlay.style.display = 'flex';
+        overlay.innerText = message;
+    }
+}
+
+// Hide loader overlay
+function hideLoader() {
+    const overlay = document.getElementById('overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+// Toggle info popup for both Holter and CSV
+function toggleInfoPopup(event, popupId) {
+    const popup = document.getElementById(popupId);
+    if (!popup) {
+        console.error(`Error: ${popupId} element not found.`);
+        return;
+    }
+    popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+    const rect = event.target.getBoundingClientRect();
+    popup.style.top = `${window.scrollY + rect.bottom + 5}px`;
+    popup.style.left = `${window.scrollX + rect.left}px`;
+}
+
+// Add event listeners for both info buttons
+document.addEventListener('DOMContentLoaded', function () {
+    const infoButtons = [
+        { id: 'informations', popup: 'infoPopupHolter' },
+        { id: 'informations_csv', popup: 'infoPopupCSV' }
+    ];
+
+    infoButtons.forEach(button => {
+        const element = document.getElementById(button.id);
+        if (element) {
+            element.addEventListener('click', function (e) {
+                toggleInfoPopup(e, button.popup);
+            });
+        } else {
+            console.error(`Error: ${button.id} element not found.`);
+        }
+    });
+
+    // Hide info popups on outside click
+    document.addEventListener('click', function (event) {
+        infoButtons.forEach(button => {
+            const popup = document.getElementById(button.popup);
+            const infoButton = document.getElementById(button.id);
+            if (popup && popup.style.display === 'block' && 
+                !popup.contains(event.target) && 
+                infoButton && !infoButton.contains(event.target)) {
+                popup.style.display = 'none';
+            }
+        });
+    });
+
+    const showOutputButton = document.getElementById('showOutputButton');
+    if (showOutputButton) {
+        showOutputButton.addEventListener('click', showOutputPopup);
+    } else {
+        console.error('Error: showOutputButton element not found.');
+    }
+});
 
 // Upload and plot ECG data
 function uploadAndPlot() {
@@ -635,13 +655,15 @@ function uploadAndPlot() {
     .then(data => {
         if (data.error) {
             alertSystem.error('Error', data.error);
+            hideLoader();
             return;
         }
 
-        const plotDiv = document.getElementById('plotModal');
+        const plotDiv = document.getElementById('chart-container');
         if (!plotDiv) {
             console.error('Error: chart-container element not found.');
             alertSystem.error('Error', 'Plot container not found.');
+            hideLoader();
             return;
         }
         plotDiv.style.display = 'block';
@@ -668,8 +690,10 @@ function uploadAndPlot() {
     .catch(error => {
         console.error('Error:', error);
         alertSystem.error('Error', error.message);
+        hideLoader();
     });
 }
+
 function plotECG(data) {
     const plotDiv = document.getElementById('plot');
     if (!plotDiv) {
@@ -758,15 +782,44 @@ function plotECG(data) {
         }
     });
 }
-const modal = document.getElementById('plotModal');
-const closeBtn = document.getElementById('closePlotBtn');
-closeBtn.addEventListener('click', () => {
-    modal.style.display = 'none';
-});
 
-// Close when clicking outside the modal content
-window.addEventListener('click', (e) => {
-    if (e.target == modal) {
-        modal.style.display = 'none';
+// Close chart container
+function closeChart() {
+    const chartContainer = document.getElementById('chart-container');
+    const viewBtn = document.getElementById('viewBtn');
+    if (chartContainer) chartContainer.style.display = 'none';  
+    if (viewBtn) viewBtn.style.display = 'block';
+}
+
+async function deleteFiles() {  
+    try {
+        const response = await fetch('/analysis/delete-files/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']")?.value || ''
+            },
+            body: JSON.stringify({ delete_all: true }),
+            credentials: 'same-origin'
+        });
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response received:', text.slice(0, 100) + '...');
+            console.error('Error: Expected JSON, got', contentType || 'unknown');
+            return; // Silently exit, no frontend feedback
+        }
+
+        const data = await response.json();
+        if (response.ok) {
+            // Reset global variable
+            uploadedFileName = '';
+        } else {
+            console.error('Deletion error:', data.error || 'Unknown server error');
+        }
+    } catch (error) {
+        console.error('Fetch error:', error.message);
     }
-});
+}

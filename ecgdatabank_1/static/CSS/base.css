@@ -1,17 +1,12 @@
-:root {
-  --chart-text-color: #222;
-  --chart-bg-color: #fff;
---transition-speed: 500ms;
-}
 
-[data-theme="dark"] {
-  --chart-text-color: #f5f5f5;
-  --chart-bg-color: #1a1a1a;
+:root {
+    --transition-speed: 500ms;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    min-height: 100vh;
+    /* min-height: 100vh; */
+    padding: auto;
 }
 
 /* Dark Mode Variables */
@@ -29,7 +24,7 @@ body.dark-mode {
     --sidebar-border: #374151;
     --header-bg: linear-gradient(to right, #111827, #1f2937);
     --header-border: #374151;
-    --card-bg: linear-gradient(to bottom right, #536277, #111827);
+    --card-bg: linear-gradient(to bottom right, #1f2937, #111827);
     --card-border: #374151;
     --card-hover-border: #6b7280;
     --nav-hover: rgba(55, 65, 81, 0.5);
@@ -51,6 +46,8 @@ body.dark-mode {
     --ecg-opacity: 0.1;
     --ecg-opacity-hover: 0.2;
     --border-color: #b7b3b3;
+    --sidebar-accent: #0ff; /* cyan glow-like accent for dark mode */
+
 }
 
 /* Light Mode Variables */
@@ -64,7 +61,7 @@ body.light-mode {
     --sidebar-border: #e5e7eb;
     --header-bg: linear-gradient(to right, #ffffff, #f9fafb);
     --header-border: #e5e7eb;
-    --card-bg: linear-gradient(to bottom right, #8f856f, #fffefa);
+    --card-bg: linear-gradient(to bottom right, #ffffff, #f9fafb);
     --card-border: #e5e7eb;
     --card-hover-border: #9ca3af;
     --nav-hover: #f3f4f6;
@@ -90,6 +87,8 @@ body.light-mode {
     --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.2);
     --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
     --border-color: #b7b3b3;
+    --sidebar-accent: #1e40af; /* deep blue for light mode */
+
 }
 
 body {
@@ -100,7 +99,6 @@ body {
 
 /* Sidebar */
 .sidebar {
-    
     position: fixed;
     left: 0;
     top: 0;
@@ -121,16 +119,17 @@ body {
 }
 
 .sidebar-header {
-    padding: 12px;
-    margin-top: 10px;
-    margin-left: 10px;
+    padding: 8px 12px;
+    margin: 0;
 }
 
 .sidebar-header-content {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 0;
+    border-bottom:1px solid var(--header-border);
 }
 
 .logo-section {
@@ -146,11 +145,13 @@ body {
 .sidebar-title {
     font-size: 20px;
     font-weight: 700;
+    margin-bottom:0;
 }
 
 .sidebar-subtitle {
     font-size: 12px;
     color: var(--text-secondary);
+    margin-top 0;
 }
 
 .close-sidebar-btn {
@@ -296,6 +297,8 @@ body {
     transition: all 300ms;
     position: relative;
     overflow: hidden;
+    margin-left: 15px;
+    margin-right: 15px;
 }
 
 .stat-card:hover {
@@ -340,7 +343,7 @@ body {
 }
 
 .stat-icon {
-    cursor: pointer;
+
     color: var(--text-secondary);
     transition: transform 200ms;
 }
@@ -717,7 +720,7 @@ body.light-mode .moon-icon {
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
+            z-index: 9999;
         }
 
         .ecg-loader {
@@ -1138,12 +1141,237 @@ body.dark-mode {
     transition: width 0.1s linear;
     opacity: 0.7;
 }
-/* Make body full height */
-html, body {
-    height: 100%;
-    margin: 0;
+.sidebar-subtitle span {
+    font-weight: 600;
+    color: var(--sidebar-accent);
+     /* Automatically changes with mode */
+}
+.sidebar-subtitle span a {
+  color: inherit;          /* Inherit the span's color */
+  text-decoration: none;   /* Remove underline */
+  font-weight: inherit;    /* Keep same font weight */
+}
+
+.sidebar-subtitle span a:hover {
+  text-decoration: underline; /* Optional: show underline on hover */
+}
+
+.sidebar-subtitle {
+  margin-top: 0; /* removes space above p */
 }
 .stat-icon {
   cursor: pointer;
+  cursor: pointer;
   transition: transform 0.2s;
+}
+.glow-icon {
+  stroke: #00e6e6; /* Cool cyan tone */
+  filter: drop-shadow(0 0 6px #00e6e6);
+  animation: pulseGlow 1.8s ease-in-out infinite;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Smooth hover interaction */
+.glow-icon:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px #00ffff);
+}
+
+/* Animated glowing effect */
+@keyframes pulseGlow {
+  0% {
+    filter: drop-shadow(0 0 3px #00e6e6);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px #00ffff);
+  }
+  100% {
+    filter: drop-shadow(0 0 3px #00e6e6);
+  }
+}
+
+/* Modal Base */
+.modal1 {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+
+/* Modal Content */
+.modal-content1 {
+  background: #111;
+  color: #eee;
+  border-radius: 12px;
+  padding: 30px;
+  width: 90%;
+  max-width: 1000px;
+  position: relative;
+  box-shadow: 0 0 30px rgba(0,0,0,0.4);
+  animation: fadeIn 0.3s ease-in-out;
+  width: auto;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: scale(0.95);}
+  to {opacity: 1; transform: scale(1);}
+}
+
+/* Close Button */
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+/* Header Text */
+.modal-title1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.modal-subtext {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 25px;
+}
+
+/* Plans Container */
+.plans-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+/* Plan Card */
+.plan-card {
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 25px;
+  width: 280px;
+  transition: all 0.3s;
+}
+
+.plan-card:hover {
+  border-color: #5a5aff;
+  transform: translateY(-3px);
+}
+
+/* Highlighted (middle card) */
+.highlighted {
+  border-color: #5a5aff;
+  background: #151530;
+}
+
+/* Plan Title */
+.plan-card h3 {
+color:white;
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+/* Price */
+.price {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.price span {
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* Description */
+.desc {
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 20px;
+}
+
+/* Button */
+.upgrade-btn {
+  background: #5a5aff;
+  border: none;
+  padding: 8px 20px;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.upgrade-btn:hover {
+  background: #7a7aff;
+}
+
+/* Features List */
+.features {
+  list-style: none;
+  padding: 0;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.features li {
+  margin: 5px 0;
+}
+.beta-badge {
+  background: linear-gradient(135deg, #ff6b6b, #f06595);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Optional subtle animation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 107, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 107, 107, 0); }
+}
+.nav-item.disabled-feature {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: auto; /* still clickable for JS toast */
+    position: relative;
+}
+
+.nav-item.disabled-feature:hover {
+    opacity: 0.6;
+}
+
+.nav-item.disabled-feature .nav-shimmer {
+    display: none;
+}
+
+.nav-item.disabled-feature::after {
+    content: "🔒";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #ff4d4d;
 }
