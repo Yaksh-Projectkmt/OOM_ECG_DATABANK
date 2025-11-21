@@ -565,12 +565,52 @@
         height:475px;
         overflow-y: auto;
     }
-
+    /* container */
+    .scroll-banner{
+      overflow: hidden;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #dddddd, #0b1220);
+      padding: 0.6rem 0;
+      font-weight: 600;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      font-size: 1rem;
+      border-radius: 8px;
+    }
+    
+    /* the moving text */
+    .scroll-inner{
+      display: inline-block;
+      padding-left: 100%; /* start off-screen right */
+      animation: scroll-left 14s linear infinite;
+    }
+    
+    /* pause on hover/focus */
+    .scroll-banner:hover .scroll-inner,
+    .scroll-banner:focus-within .scroll-inner{
+      animation-play-state: paused;
+    }
+    
+    /* keyframes */
+    @keyframes scroll-left{
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+    
+    /* respect user motion preferences */
+    @media (prefers-reduced-motion: reduce){
+      .scroll-inner { animation: none; transform: translateX(0); }
+      .scroll-banner { text-align: center; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content">
+<div class="scroll-banner" role="status" aria-live="polite">
+  <div class="scroll-inner">
+    This page is under development — we'll be back soon.
+  </div>
+</div>
     <div>
         <h2 id="mainHeader">Analysis Tool</h2><!--class="text-center mb-4"-->
      

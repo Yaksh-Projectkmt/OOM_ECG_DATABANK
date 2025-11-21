@@ -20,4 +20,8 @@ urlpatterns = [
     path("get_multiple_segments/", views.get_multiple_segments, name="get_multiple_segments"),
     path("insert_db_Data/",views.insert_db_Data,name="insert_db_Data"),
     path("upload_plot/", views.upload_plot, name="upload_plot"),
+    path("check_patient/",views.check_patient, name="check_patient"),
+    path("patient_search_view",views.patient_search_view, name="patient_search_view"), 
+    path("get_patient_hex_data",views.get_patient_hex_data, name="get_patient_hex_data"),
+    path("share_selected/", views.share_selected, name="share_selected"),
 ]

@@ -1,446 +1,528 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
   <meta name="description" content="Secure login for ECG Databank to access and manage your electrocardiogram data with advanced analytics.">
-  <meta name="robots" content="noindex, nofollow">
   <title>ECG Databank Login</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
     * {
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
 
     body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background: #1c2526; /* Dark gray-black background for depth */
-      color: #ffffff; /* White text for contrast */
-      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(to bottom right, #f9fafb, #eff6ff, #fef3c7);
+      min-height: 100vh;
     }
 
     .container {
       display: flex;
-      height: 100vh;
-      width: 100%;
-      flex-direction: row;
+      min-height: 100vh;
     }
 
-    .login-section, .info-section {
+    .login-section {
       flex: 1;
-      padding: 2rem;
       display: flex;
-      flex-direction: column;
+      align-items: center;
       justify-content: center;
+      padding: 2rem;
+    }
+
+    .info-section {
+      flex: 1;
+      background: linear-gradient(135deg, #3b82f6, #1e40af, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
       position: relative;
       overflow: hidden;
     }
 
-    video#ecgVideo {
+    .info-section::before {
+      content: '';
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 0;
-      opacity: 0.35; /* Slightly increased opacity for visibility */
-      filter: brightness(1.1) contrast(1.15); /* Enhance video vibrancy */
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==');
+      opacity: 0.3;
     }
 
     .login-content {
-      position: relative;
-      z-index: 10;
-      max-width: 450px;
       width: 100%;
-      margin: auto;
+      max-width: 500px;
+      animation: slideInLeft 0.6s ease-out;
     }
 
     .logo {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 2rem;
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      background-color: rgba(255, 87, 51, 0.15); /* Red-orange tint */
-      border-radius: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      color: #ffffff;
+      background: white;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      border: 1px solid #fed7aa;
+      animation: fadeIn 0.8s ease-out;
     }
 
-    .logo i {
-      color: #ff6b00; /* Vibrant orange for icon */
-      font-size: 2.25rem;
+    .logo-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      border-radius: 0.75rem;
+      color: white;
+      font-size: 1.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
     }
 
     .login-card {
-      background: rgba(28, 37, 38, 0.9); /* Blackish semi-transparent background */
+      background: white;
+      border-radius: 1.5rem;
       padding: 2rem;
-      border-radius: 1rem;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 87, 51, 0.3); /* Red border */
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      animation: fadeIn 1s ease-out;
     }
 
     .login-card h2 {
       font-size: 1.875rem;
-      margin-bottom: 1rem;
-      color: #ff3b30; /* Bright red for heading */
       font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
     }
 
-    .login-card p {
+    .login-card > p {
+      color: #6b7280;
       margin-bottom: 1.5rem;
-      color: #d1d5db; /* Light gray for secondary text */
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .user-type-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .user-type-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .user-type-buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .user-type-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.3s ease;
       font-size: 1rem;
     }
 
-    .login-card form {
+    .user-type-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
+    .user-type-btn.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .user-type-btn.active.doctor {
+      border-color: #ea580c;
+      background: #fed7aa;
+      color: #92400e;
+    }
+
+    .user-type-btn i {
+      font-size: 1.25rem;
+    }
+
+    .form-group {
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
     }
 
-    .login-card label {
-      margin-bottom: 0.5rem;
+    label {
       font-size: 0.875rem;
-      font-weight: 500;
-      color: #ffffff;
+      font-weight: 600;
+      color: #1f2937;
     }
 
-    .login-card input[type="text"],
-    .login-card input[type="password"] {
-      padding: 0.75rem;
-      border: 1px solid #ff6b00; /* Orange border */
-      border-radius: 0.5rem;
-      margin-bottom: 1.25rem;
-      background-color: #2d3748; /* Dark gray input background */
-      color: #ffffff;
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: #9ca3af;
+      font-size: 1.25rem;
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select {
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: white;
+      color: #1f2937;
+    }
+
+    input:focus,
+    select:focus {
       outline: none;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
-    .login-card input:focus {
-      border-color: #ff3b30; /* Red focus border */
-      box-shadow: 0 0 0 3px rgba(255, 87, 51, 0.2);
+    input.doctor-focus:focus {
+      border-color: #ea580c;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
     }
 
-    .sign-in {
-      background: linear-gradient(90deg, #ff3b30, #ff6b00); /* Red to orange gradient */
-      color: #ffffff;
-      padding: 0.875rem;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: 500;
-      cursor: pointer;
-      margin-bottom: 1rem;
-      transition: background 0.3s ease, transform 0.2s ease;
+    .phone-wrapper {
+      display: flex;
+      gap: 0.5rem;
     }
 
-    .sign-in:hover {
-      background: linear-gradient(90deg, #d92d20, #e55b00);
-      transform: translateY(-2px);
+    .country-code {
+      width: 30%;
+      padding: 0.75rem 1rem !important;
+      appearance: none;
+      background: white url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNCZwdDtNNDJMOCA4TDEyIDQiIHN0cm9rZT0iIzZCNzI4MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=') no-repeat right 0.5rem center;
+      padding-right: 2rem !important;
     }
 
-    .sign-in:focus {
-      outline: 2px solid #ff3b30;
-      outline-offset: 2px;
-    }
-
-    .register {
-      font-size: 0.875rem;
-      text-align: center;
-      color: #d1d5db;
-    }
-
-    .register a {
-      color: #ff6b00; /* Orange link */
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s ease;
-    }
-
-    .register a:hover {
-      color: #e55b00; /* Darker orange on hover */
-    }
-
-    .glowing-icon {
-      color: #ff6b00;
-      font-size: 2.25rem;
-      animation: pulse 2s infinite ease-in-out;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-        text-shadow: 0 0 5px rgba(255, 107, 0, 0.4);
-      }
-      50% {
-        transform: scale(1.1);
-        text-shadow: 0 0 10px rgba(255, 107, 0, 0.6);
-      }
-      100% {
-        transform: scale(1);
-        text-shadow: 0 0 5px rgba(255, 107, 0, 0.4);
-      }
+    .phone-input {
+      flex: 1;
     }
 
     .error-message {
-      color: #ff3b30; /* Red for errors */
+      color: #dc2626;
       font-size: 0.875rem;
-      margin-bottom: 1rem;
-      opacity: 1;
-      transition: opacity 0.5s ease;
-      font-weight: 500;
+      margin-top: 0.25rem;
+      display: none;
     }
 
-    .info-section {
-      background: linear-gradient(135deg, #1c2526, #2d3748); /* Black to dark gray gradient */
+    .error-message.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
     }
 
-    .info-section::before {
-      content: '';
-      background: url('/static/images/hypertension-1.png') center/cover no-repeat;
-      position: absolute;
-      inset: 0;
-      opacity: 0.25; /* Slightly increased for theme alignment */
-      z-index: 1;
+    .hidden {
+      display: none !important;
     }
 
+    .doctor-id-group {
+      animation: slideDown 0.3s ease-out;
+    }
+
+    button[type="submit"] {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(90deg, #ea580c, #dc2626);
+      color: white;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      background: linear-gradient(90deg, #d97706, #b91c1c);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px rgba(234, 88, 12, 0.3);
+    }
+
+    button[type="submit"]:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .register-link {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+    }
+
+    .register-link a {
+      color: #ea580c;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .register-link a:hover {
+      color: #d97706;
+    }
+
+    /* Info Section Styles */
     .info-content {
       position: relative;
-      z-index: 2;
+      z-index: 10;
       max-width: 550px;
-      width: 100%;
-      margin: auto;
+      color: white;
+      animation: slideInRight 0.6s ease-out;
     }
 
-    .info-section h1 {
+    .info-content h1 {
       font-size: 2.25rem;
-      color: #ff3b30; /* Red for heading */
-      margin-bottom: 1.5rem;
-      text-align: left;
       font-weight: 700;
+      margin-bottom: 1rem;
+      text-align: left;
     }
 
-    .info-section p {
+    .info-content > p {
       font-size: 1.125rem;
-      color: #d1d5db; /* Light gray for text */
+      color: rgba(255, 255, 255, 0.9);
       margin-bottom: 2rem;
       text-align: left;
     }
 
-    .info-section ul {
+    .features-list {
       list-style: none;
-      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
 
-    .info-section li {
+    .features-list li {
       background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
       padding: 0.875rem 1.5rem 0.875rem 2.75rem;
       border-radius: 0.75rem;
-      margin-bottom: 0.75rem;
-      color: #d1d5db;
+      color: rgba(255, 255, 255, 0.95);
       font-size: 1rem;
       position: relative;
-      text-align: } left;
+      transition: all 0.3s ease;
     }
 
-    .info-section li::before {
-      content: '✔';
+    .features-list li:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateX(4px);
+    }
+
+    .features-list li::before {
+      content: '✓';
       position: absolute;
       left: 0.75rem;
-      bottom: 0.5rem;
-      color: #ff6b00; /* Orange checkmark */
+      color: #fcd34d;
+      font-weight: 700;
       font-size: 1.25rem;
     }
-    .info-section li::before {
-      content: '✔';
-      position: absolute;
-      left: 0.75rem;
-      bottom: 0.5rem;
-      color: #ff6b00;
-      font-size: 1.25rem;
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(234, 88, 12, 0);
+      }
+    }
+
+    /* Responsive Design */
     @media (max-width: 900px) {
       .container {
         flex-direction: column;
       }
 
-      .login-section, .info-section {
+      .login-section,
+      .info-section {
         padding: 1.5rem;
       }
 
-      .login-content, .info-content {
-        max-width: 100%;
+      .info-content h1 {
+        font-size: 1.75rem;
       }
 
       .login-card h2 {
         font-size: 1.5rem;
       }
 
-      .info-section h1 {
-        font-size: 1.75rem;
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="tel"],
+      select {
+        padding: 0.75rem 1rem 0.75rem 2.2rem;
+      }
+
+      .phone-wrapper {
+        flex-direction: column;
+      }
+
+      .country-code {
+        width: 100% !important;
+      }
+
+      .phone-input {
+        width: 100% !important;
       }
     }
-    
-  /* === Keep Your Original Styles === */
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: 'Roboto', sans-serif;
-    background: #1c2526;
-    color: #ffffff;
-    overflow: hidden;
-  }
 
-  /* === Animations === */
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(40px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+    @media (max-width: 640px) {
+      .login-section {
+        padding: 1rem;
+      }
 
-  @keyframes fadeInDown {
-    from { opacity: 0; transform: translateY(-40px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+      .login-card {
+        padding: 1.5rem;
+      }
 
-  @keyframes slideInLeft {
-    from { opacity: 0; transform: translateX(-80px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
+      .user-type-buttons {
+        flex-direction: column;
+      }
 
-  @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(80px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
+      .logo {
+        margin-bottom: 1rem;
+      }
 
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
+      .login-card h2 {
+        font-size: 1.25rem;
+      }
 
-  @keyframes glowPulse {
-    0% { text-shadow: 0 0 8px rgba(255, 107, 0, 0.4); }
-    50% { text-shadow: 0 0 20px rgba(255, 107, 0, 0.8); }
-    100% { text-shadow: 0 0 8px rgba(255, 107, 0, 0.4); }
-  }
-
-  @keyframes zoomPan {
-    0% { transform: scale(1) translateX(0); }
-    50% { transform: scale(1.1) translateX(-2%); }
-    100% { transform: scale(1) translateX(0); }
-  }
-
-  @keyframes waveGlow {
-    0%, 100% { box-shadow: 0 0 15px rgba(255, 107, 0, 0.5); }
-    50% { box-shadow: 0 0 30px rgba(255, 107, 0, 0.8); }
-  }
-
-  @keyframes focusGlow {
-    from { box-shadow: 0 0 0 rgba(255, 107, 0, 0); }
-    to { box-shadow: 0 0 10px rgba(255, 107, 0, 0.7); }
-  }
-
-  /* === Apply Animations === */
-  .container {
-    animation: fadeInDown 1.5s ease forwards;
-  }
-
-  .login-content {
-    animation: slideInLeft 1.2s ease forwards;
-  }
-
-  .info-section {
-    animation: slideInRight 1.2s ease forwards;
-  }
-
-  .logo {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .logo i {
-    animation: glowPulse 2.5s ease-in-out infinite;
-  }
-
-  #ecgVideo {
-    animation: zoomPan 20s ease-in-out infinite alternate;
-  }
-
-  .login-card {
-    animation: fadeInUp 1.3s ease forwards;
-  }
-
-  .info-content h1, .info-content p {
-    animation: fadeInUp 1.5s ease forwards;
-  }
-
-  /* Sequential list animation */
-  .info-content li {
-    opacity: 0;
-    animation: fadeInUp 1s ease forwards;
-  }
-  .info-content li:nth-child(1) { animation-delay: 0.3s; }
-  .info-content li:nth-child(2) { animation-delay: 0.6s; }
-  .info-content li:nth-child(3) { animation-delay: 0.9s; }
-  .info-content li:nth-child(4) { animation-delay: 1.2s; }
-
-  /* Animated button */
-  .sign-in {
-    background: linear-gradient(90deg, #ff3b30, #ff6b00);
-    animation: waveGlow 2.5s infinite ease-in-out;
-    transition: transform 0.3s ease;
-  }
-  .sign-in:hover {
-    transform: scale(1.08);
-  }
-
-  /* Inputs glow on focus */
-  .login-card input[type="text"]:focus,
-  .login-card input[type="password"]:focus {
-    animation: focusGlow 0.5s ease forwards;
-  }
-
-  /* Error message shake */
-  .error-message {
-    animation: fadeInDown 0.5s ease, shake 0.5s ease;
-  }
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-5px); }
-    40%, 80% { transform: translateX(5px); }
-  }
+      form {
+        gap: 1rem;
+      }
+    }
+        .required {
+  color: #dc2626;
+  font-weight: bold;
+}
+input.error, select.error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
   </style>
 </head>
 <body>
   <main class="container" role="main">
     <section class="login-section" aria-labelledby="login-heading">
-      <video id="ecgVideo" autoplay loop muted playsinline aria-hidden="true">
-        <source src="/static/images/heartvideo.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
       <div class="login-content">
         <div class="logo" aria-label="ECG Databank logo">
-          <i class="fa-solid fa-heart-pulse glowing-icon" aria-hidden="true"></i> ECG Databank
+          <div class="logo-icon">
+          <i class="fas fa-heartbeat"></i>
         </div>
-        <div class="login-card">
+        <span class="logo-text">OOM ECG Databank</span>
+      </div>
+      <div class="login-card">
           <h2 id="login-heading">Access Your ECG Portal</h2>
           <p>Sign in to unlock advanced ECG analytics and secure patient data management.</p>
-
           {% if messages %}
             {% for message in messages %}
-              <div class="error-message" role="alert">{{ message }}</div>
+              {% if message.tags == "success" %}
+                <div class="alert-message success show"
+                     style="margin-bottom: 1rem; border: 1px solid #bbf7d0; background: #dcfce7; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#166534; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% else %}
+                <div class="alert-message error show"
+                     style="margin-bottom: 1rem; border: 1px solid #fecaca; background: #fee2e2; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#b91c1c; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% endif %}
             {% endfor %}
           {% endif %}
 
           <form method="POST" action="{% url 'login' %}">
             {% csrf_token %}
-            <label for="username">Username</label>
+            <label for="username">Username<span class="required">*</span></label>
             <input type="text" name="username" id="username" placeholder="Enter your username" required aria-describedby="username-error">
 
-            <label for="password">Password</label>
+            <label for="password">Password<span class="required">*</span></label>
             <input type="password" name="password" id="password" placeholder="Enter your password" required aria-describedby="password-error">
 
             <button type="submit" class="sign-in">Sign In</button>
@@ -451,7 +533,7 @@
               </div>
             {% endif %}
           </form>
-          <p class="register">
+          <p class="register-link">
             New to ECG Databank? <a href="{% url 'register' %}" aria-label="Create a new account">Create an Account</a>
           </p>
         </div>
@@ -462,7 +544,7 @@
       <div class="info-content">
         <h1 id="info-heading">Transforming Cardiac Care</h1>
         <p>Empower your practice with our secure platform for ECG data storage, analysis, and collaboration.</p>
-        <ul>
+        <ul class="features-list">
           <li>Effortless ECG record management</li>
           <li>AI-driven diagnostic tools</li>
           <li>Secure data sharing with specialists</li>
@@ -471,27 +553,66 @@
       </div>
     </section>
   </main>
-
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      // Ensure video plays on mobile devices
-      const video = document.getElementById("ecgVideo");
-      video.play().catch((error) => {
-        console.error("Video playback failed:", error);
-      });
+      function showError(element, message, inputElement = null) {
+    element.textContent = message;
+    element.classList.add('show');
+    if (inputElement) inputElement.classList.add('error');
+    
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      hideError(element, inputElement);
+    }, 3000);
+  }
 
-      // Fade out error messages
-      const messages = document.querySelectorAll(".error-message");
-      if (messages.length > 0) {
-        setTimeout(() => {
-          messages.forEach((msg) => {
-            msg.style.transition = "opacity 0.5s ease";
-            msg.style.opacity = "0";
-            setTimeout(() => msg.remove(), 500);
-          });
-        }, 1000);
-      }
-    });
-  </script>
+  function hideError(element, inputElement = null) {
+    element.classList.remove('show');
+    if (inputElement) inputElement.classList.remove('error');
+  }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const alerts = document.querySelectorAll('.alert-message.show');
+  alerts.forEach(alert => {
+    setTimeout(() => {
+      alert.classList.remove('show');
+      alert.style.opacity = "0";
+      setTimeout(() => alert.remove(), 500);
+    }, 6000);
+  });
+});
+  // Prevent caching of login page
+  if (window.history && window.history.pushState) {
+    window.history.pushState('forward', null, null);
+    window.history.forward();
+  }
+
+  // Remove back history
+  history.replaceState(null, document.title, location.pathname + "#no-back");
+  history.pushState(null, document.title, location.pathname);
+
+  window.addEventListener("popstate", function () {
+    history.pushState(null, document.title, location.pathname);
+  });
+
+  // Strict no-cache headers (client side)
+  document.addEventListener("DOMContentLoaded", () => {
+    const meta1 = document.createElement("meta");
+    meta1.httpEquiv = "Cache-Control";
+    meta1.content = "no-cache, no-store, must-revalidate";
+
+    const meta2 = document.createElement("meta");
+    meta2.httpEquiv = "Pragma";
+    meta2.content = "no-cache";
+
+    const meta3 = document.createElement("meta");
+    meta3.httpEquiv = "Expires";
+    meta3.content = "0";
+
+    document.head.appendChild(meta1);
+    document.head.appendChild(meta2);
+    document.head.appendChild(meta3);
+  });
+    </script>
+
 </body>
 </html>

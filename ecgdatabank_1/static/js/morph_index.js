@@ -537,8 +537,8 @@ function resetDrawing() {
 
 function augmentSignal() {
     const count = parseInt(document.getElementById('replicationCount').value);
-    if (isNaN(count) || count < 1 || count >= 200) {
-        alertSystem.warning('Warning', 'Please enter a valid number between 1 and 199.');
+    if (isNaN(count) || count < 1 || count >= 10) {
+        alertSystem.warning('Warning', 'Please enter a valid number between 1 and 10.');
         return;
     }
     if (rawPoints.length < 2) {
@@ -546,17 +546,25 @@ function augmentSignal() {
         return;
     }
 
+    // Calculate signal width (span of drawn points)
+    const xMin = Math.min(...rawPoints.map(p => p.x));
+    const xMax = Math.max(...rawPoints.map(p => p.x));
+    const signalWidth = xMax - xMin;
+
+    // Build repeated (augmented) signal segments
     augmentedData = [];
     for (let i = 0; i < count; i++) {
-        rawPoints.forEach((pt) => {
+        rawPoints.forEach(pt => {
             augmentedData.push({
-                x: pt.x + i * canvas.width,
-                y: pt.y
+                x: pt.x + i * signalWidth, // shift horizontally
+                y: pt.y                    // keep same height
             });
         });
     }
-    alertSystem.success('Success', `Signal augmented ${count} times. You can now save or view it.`);
+
+    alertSystem.success('Success', `Signal augmented ${count} times (same height preserved).`);
 }
+
 
 function saveData() {
     const patientId = document.getElementById('patientIdInput').value.trim();
@@ -610,15 +618,6 @@ function saveData() {
     });
 }
 
-function minMaxScaler(data, minRange = 0, maxRange = 4) {
-    const minVal = Math.min(...data);
-    const maxVal = Math.max(...data);
-    return data.map(value => {
-        if (maxVal === minVal) return minRange; // Avoid division by zero
-        return minRange + (maxRange - minRange) * (value - minVal) / (maxVal - minVal);
-    });
-}
-
 function showGraph() {
     const signalPlotDiv = document.getElementById('signalPlot');
     const pointsToPlot = augmentedData.length > 0 ? augmentedData : rawPoints;
@@ -628,60 +627,117 @@ function showGraph() {
         return;
     }
 
+    // Show container
     signalPlotDiv.style.display = 'block';
-    const computedStyle = window.getComputedStyle(signalPlotDiv);
-    const width = signalPlotDiv.offsetWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
-    const height = signalPlotDiv.offsetHeight - parseFloat(computedStyle.paddingTop) - parseFloat(computedStyle.paddingBottom);
+    signalPlotDiv.style.overflowX = 'auto';  // allow horizontal scroll
+    signalPlotDiv.style.whiteSpace = 'nowrap'; // prevent wrapping
+    const containerWidth = signalPlotDiv.offsetWidth;
+    const containerHeight = 400; // fixed height (you can adjust)
 
-    const x = pointsToPlot.map((_, i) => i);
-    const yOriginal = pointsToPlot.map(p => canvas.height - p.y);
-    const ySmoothed = lowpassFilter(yOriginal);
+    const x = pointsToPlot.map(p => p.x);
+    const y = pointsToPlot.map(p => canvas.height - p.y);
+    const ySmoothed = lowpassFilter(y);
 
-    // Apply MinMax scaling to both original and filtered data
-    const scaledYOriginal = minMaxScaler(yOriginal);
-    const scaledYSmoothed = minMaxScaler(ySmoothed);
+     // Determine signal boundaries
+    const xMin = Math.min(...x);
+    const xMax = Math.max(...x);
+    const signalWidth = xMax - xMin;
 
+    // Use signal width or container width (whichever is greater)
+    const plotWidth = Math.max(signalWidth + 100, containerWidth);
+    const plotHeight = canvas.height;
+    const majorSpacing = 50;
+    const minorSpacing = 10;
+
+    const gridShapes = [];
+
+    // Minor grid lines
+    for (let i = 0; i <= plotWidth; i += minorSpacing) {
+        gridShapes.push({
+            type: 'line',
+            x0: i, x1: i, y0: 0, y1: plotHeight,
+            line: { color: 'rgba(244, 210, 216, 0.92)', width: 0.5 }
+        });
+    }
+    for (let j = 0; j <= plotHeight; j += minorSpacing) {
+        gridShapes.push({
+            type: 'line',
+            x0: 0, x1: plotWidth, y0: j, y1: j,
+            line: { color: 'rgba(244, 210, 216, 0.92)', width: 0.5 }
+        });
+    }
+
+    // Major grid lines
+    for (let i = 0; i <= plotWidth; i += majorSpacing) {
+        gridShapes.push({
+            type: 'line',
+            x0: i, x1: i, y0: 0, y1: plotHeight,
+            line: { color: 'rgba(245,121,121,0.9)', width: 1 }
+        });
+    }
+    for (let j = 0; j <= plotHeight; j += majorSpacing) {
+        gridShapes.push({
+            type: 'line',
+            x0: 0, x1: plotWidth, y0: j, y1: j,
+            line: { color: 'rgba(245,121,121,0.9)', width: 1 }
+        });
+    }
+
+    // Plot with augmentation + ECG grid
     Plotly.newPlot('signalPlot', [
         {
-            x, y: scaledYOriginal,
-            type: 'scatter', mode: 'lines', name: 'Original',
-            line: { color: 'gray' }
+            x, y,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Original',
+            line: { color: 'gray', width: 2 }
         },
         {
-            x, y: scaledYSmoothed,
-            type: 'scatter', mode: 'lines', name: 'Filtered',
-            line: { color: 'blue' }
+            x, y: ySmoothed,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Filtered',
+            line: { color: 'blue', width: 2 }
         }
     ], {
-        title: 'ECG Signal (Original vs Filtered)',
-        margin: { t: 40, b: 40, l: 40, r: 40 },
-        width: width,
-        height: height,
-        yaxis: { range: [0, 4] }, // Set y-axis range to 0-4
+         width: plotWidth,
+        height: plotHeight,
+        plot_bgcolor: 'rgba(255,255,255,1)',
+        paper_bgcolor: 'rgba(255,255,255,1)',
+        margin: { t: 10, b: 10, l: 10, r: 10 },
+        shapes: gridShapes,
+        xaxis: {
+            range: [0, plotWidth],
+            showgrid: false,
+            zeroline: false,
+            fixedrange: true,
+             visible: false, 
+        },
+        yaxis: {
+            range: [0, plotHeight],
+            showgrid: false,
+            zeroline: false,
+            visible: false,
+            fixedrange: true,
+            scaleanchor: "x",
+            scaleratio: 1
+        },
         autosize: false
     }, {
         displayModeBar: false,
         responsive: true
     });
 
-    setTimeout(() => {
-        const newWidth = signalPlotDiv.offsetWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
-        const newHeight = signalPlotDiv.offsetHeight - parseFloat(computedStyle.paddingTop) - parseFloat(computedStyle.paddingBottom);
-        Plotly.relayout('signalPlot', {
-            width: newWidth,
-            height: newHeight
-        });
-    }, 0);
-
+ // Adjust layout on resize
     window.addEventListener('resize', () => {
-        const newWidth = signalPlotDiv.offsetWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
-        const newHeight = signalPlotDiv.offsetHeight - parseFloat(computedStyle.paddingTop) - parseFloat(computedStyle.paddingBottom);
+        const newContainerWidth = signalPlotDiv.offsetWidth;
+        const newPlotWidth = Math.max(signalWidth + 100, newContainerWidth);
         Plotly.relayout('signalPlot', {
-            width: newWidth,
-            height: newHeight
+            width: newPlotWidth,
+            height: plotHeight
         });
     });
-}
+    }
 
 function lowpassFilter(data) {
     const alpha = 0.3;

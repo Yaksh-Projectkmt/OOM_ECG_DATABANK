@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
 db=mongo_client['Analysis_data']
-analysis_csv_patient = mongo_client['Analysis_patients']
+analysis_csv_patient = mongo_client['Analysis_Patients']
 
 def index(request):
     images = Image.objects.all()  # Fetch all uploaded images

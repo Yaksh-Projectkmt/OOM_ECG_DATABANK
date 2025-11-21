@@ -1,477 +1,719 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
   <meta name="description" content="Create an account for ECG Databank to manage your electrocardiogram data securely.">
-  <meta name="robots" content="noindex, nofollow">
-  <title>ECG Databank Register</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <title>OOMECG Databank Register</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     * {
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
 
     body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background: #1c2526;
-      color: #ffffff;
-      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(to bottom right, #f9fafb, #eff6ff, #fef3c7);
+      min-height: 100vh;
     }
 
     .container {
       display: flex;
-      height: 100vh;
-      width: 100%;
-      flex-direction: row;
+      min-height: 100vh;
     }
 
-    .register-section, .info-section {
+    .register-section {
       flex: 1;
-      padding: 40px;
-      display: flex;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    video#ecgVideo {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 0;
-      opacity: 0.35;
-      filter: brightness(1.1) contrast(1.15);
-    }
-
-    .register-content {
-      position: relative;
-      z-index: 10;
-      max-width: 550px;
-      width: 80%;
-      height: auto;
-      margin: auto;
-    }
-
-    .logo {
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 40px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      background-color: rgba(255, 87, 51, 0.15);
-      border-radius: 0.75rem;
-      padding: 10px 20px;
-      color: #ffffff;
-    }
-
-    .logo i {
-      color: #ff6b00;
-      {% comment %} font-size: 2.25rem; {% endcomment %}
-    }
-
-    .register-card {
-      background: rgba(28, 37, 38, 0.9);
-      padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 87, 51, 0.3);
-    }
-
-    .register-card h2 {
-      font-size: 26px;
-      margin-bottom: 12px;
-      color: #ff3b30;
-      font-weight: 700;
-    }
-
-    .register-card p {
-      margin-bottom: 24px;
-      color: #d1d5db;
-      {% comment %} font-size: 1rem; {% endcomment %}
-    }
-
-    .register-card form {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .register-card label {
-      margin-bottom: 6px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #ffffff;
-    }
-
-    .register-card input[type="text"],
-    .register-card input[type="password"],
-    .register-card input[type="email"],
-    .register-card input[type="tel"] {
-      padding: 10px;
-      border: 1px solid #ff6b00;
-      border-radius: 0.5rem;
-      margin-bottom: 16px;
-      background-color: #2d3748;
-      color: #ffffff;
-      outline: none;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .register-card input:focus {
-      border-color: #ff3b30;
-      box-shadow: 0 0 0 3px rgba(255, 87, 51, 0.2);
-    }
-
-    .sign-up {
-      background: linear-gradient(90deg, #ff3b30, #ff6b00);
-      color: #ffffff;
-      padding: 12px;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: 500;
-      cursor: pointer;
-      margin-bottom: 12px;
-      transition: background 0.3s ease, transform 0.2s ease;
-    }
-
-    .sign-up:hover {
-      background: linear-gradient(90deg, #d92d20, #e55b00);
-      transform: translateY(-2px);
-    }
-
-    .sign-up:focus {
-      outline: 2px solid #ff3b30;
-      outline-offset: 2px;
-    }
-
-    .login-link {
-      font-size: 0.875rem;
-      text-align: center;
-      color: #d1d5db;
-    }
-
-    .login-link a {
-      color: #ff6b00;
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.3s ease;
-    }
-
-    .login-link a:hover {
-      color: #e55b00;
-    }
-
-    .glowing-icon {
-      color: #ff6b00;
-      font-size: 2.25rem;
-      animation: pulse 2s infinite ease-in-out;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-        text-shadow: 0 0 5px rgba(255, 107, 0, 0.4);
-      }
-      50% {
-        transform: scale(1.1);
-        text-shadow: 0 0 10px rgba(255, 107, 0, 0.6);
-      }
-      100% {
-        transform: scale(1);
-        text-shadow: 0 0 5px rgba(255, 107, 0, 0.4);
-      }
-    }
-
-    .error-message {
-      color: #ff3b30;
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
-      opacity: 1;
-      transition: opacity 0.5s ease;
-      font-weight: 500;
+      justify-content: center;
+      padding: 2rem;
+      animation: slideInLeft 0.6s ease-out;
     }
 
     .info-section {
-      background: linear-gradient(135deg, #1c2526, #2d3748);
+      flex: 1;
+      background: linear-gradient(135deg, #3b82f6, #1e40af, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+      animation: slideInRight 0.6s ease-out;
     }
 
     .info-section::before {
       content: '';
-      background: url('/static/images/hypertension-1.png') center/cover no-repeat;
       position: absolute;
       inset: 0;
-      opacity: 0.25;
-      z-index: 1;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==');
+      opacity: 0.3;
     }
 
+    .register-content {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      border: 1px solid #fed7aa;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .logo-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      border-radius: 0.75rem;
+      color: white;
+      font-size: 1.5rem;
+      animation: pulseGlow 2s infinite;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .register-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      animation: fadeIn 1s ease-out;
+    }
+
+    .register-card h2 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .register-card > p {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .user-type-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .user-type-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .user-type-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .user-type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.875rem;
+    }
+
+    .user-type-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      transform: scale(1.05);
+    }
+
+    .user-type-btn.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .user-type-btn.active.doctor {
+      border-color: #ea580c;
+      background: #fed7aa;
+      color: #92400e;
+    }
+
+    .user-type-btn i {
+      font-size: 1.5rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .required {
+      color: #dc2626;
+      font-weight: bold;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: #9ca3af;
+      font-size: 1.25rem;
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: white;
+      color: #1f2937;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    input.error,
+    select.error {
+      border-color: #dc2626 !important;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+    }
+
+    .phone-wrapper {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .country-code {
+      width: 30%;
+      padding: 0.75rem 1rem !important;
+    }
+
+    .phone-input {
+      flex: 1;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px dashed #e5e7eb;
+      border-radius: 0.75rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    input[type="file"]:hover {
+      border-color: #3b82f6;
+      background: #f9fafb;
+    }
+
+    .file-uploaded {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #059669;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+
+    .error-message {
+      color: #dc2626;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    button[type="submit"] {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(90deg, #ea580c, #dc2626);
+      color: white;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      background: linear-gradient(90deg, #d97706, #b91c1c);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px rgba(234, 88, 12, 0.3);
+    }
+
+    button[type="submit"]:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .login-link {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+    }
+
+    .login-link a {
+      color: #ea580c;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .login-link a:hover {
+      color: #d97706;
+      text-decoration: underline;
+    }
+
+    /* Info Section Styles */
     .info-content {
       position: relative;
-      z-index: 2;
+      z-index: 10;
       max-width: 550px;
-      width: 100%;
-      margin: auto;
+      color: white;
     }
 
-    .info-section h1 {
+    .info-content h1 {
       font-size: 2.25rem;
-      color: #ff3b30;
-      margin-bottom: 1.5rem;
-      text-align: left;
       font-weight: 700;
+      margin-bottom: 1rem;
+      text-align: left;
     }
 
-    .info-section p {
+    .info-content > p {
       font-size: 1.125rem;
-      color: #d1d5db;
+      color: rgba(255, 255, 255, 0.9);
       margin-bottom: 2rem;
       text-align: left;
     }
 
-    .info-section ul {
+    .features-list {
       list-style: none;
-      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
 
-    .info-section li {
+    .features-list li {
       background: rgba(255, 255, 255, 0.1);
-      padding: 0.875rem 1.5rem 0.875rem 2.75rem;
+      backdrop-filter: blur(10px);
+      padding: 1rem 1.5rem 1rem 3rem;
       border-radius: 0.75rem;
-      margin-bottom: 0.75rem;
-      color: #d1d5db;
+      color: rgba(255, 255, 255, 0.95);
       font-size: 1rem;
       position: relative;
-      text-align: left;
+      transition: all 0.3s ease;
     }
 
-    .info-section li::before {
-      content: '✔';
+    .features-list li:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateX(4px);
+    }
+
+    .features-list li::before {
+      content: '✓';
       position: absolute;
-      left: 0.75rem;
-      bottom: 0.5rem;
-      color: #ff6b00;
+      left: 1rem;
+      color: #fcd34d;
+      font-weight: 700;
       font-size: 1.25rem;
     }
 
-    @media (max-width: 900px) {
-      .container {
-        flex-direction: column;
+    /* Success Toast */
+    .toast {
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      z-index: 1000;
+      animation: slideInRight 0.3s ease-out;
+    }
+
+    .toast.show {
+      display: flex;
+    }
+
+    .toast.success {
+      border-left: 4px solid #059669;
+    }
+
+    .toast.error {
+      border-left: 4px solid #dc2626;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(234, 88, 12, 0);
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+      .info-section {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .register-section {
+        padding: 1rem;
       }
 
-      .register-section, .info-section {
+      .register-card {
         padding: 1.5rem;
       }
 
-      .register-content, .info-content {
-        max-width: 100%;
+      .user-type-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .phone-wrapper {
+        flex-direction: column;
+      }
+
+      .country-code {
+        width: 100% !important;
       }
 
       .register-card h2 {
         font-size: 1.5rem;
       }
 
-      .info-section h1 {
+      .info-content h1 {
         font-size: 1.75rem;
       }
     }
-.phone-wrapper {
-  display: flex;
-  gap: 0.5rem;
-  {% comment %} margin-bottom: 1rem; {% endcomment %}
-}
-
-.phone-wrapper select,
-.phone-wrapper input {
-  border: 1px solid #ff6b00;
-  border-radius: 0.5rem;
-  padding: 10px;
-  background-color: #2d3748;
-  color: #ffffff;
-  outline: none;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.phone-wrapper select {
-  width: 30%;
-  height:10%;
-  appearance: none;
-}
-
-.phone-wrapper input {
-  width: 65%;
-}
-
-.phone-wrapper select:focus,
-.phone-wrapper input:focus {
-  border-color: #ff3b30;
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.3);
-}
-  /* === New Animations === */
-  @keyframes fadeIn {
-    from {opacity: 0; transform: translateY(30px);}
-    to {opacity: 1; transform: translateY(0);}
-  }
-
-  @keyframes slideInLeft {
-    from {opacity: 0; transform: translateX(-50px);}
-    to {opacity: 1; transform: translateX(0);}
-  }
-
-  @keyframes slideInRight {
-    from {opacity: 0; transform: translateX(50px);}
-    to {opacity: 1; transform: translateX(0);}
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-
-  @keyframes glowPulse {
-    0% { text-shadow: 0 0 5px rgba(255,107,0,0.5); }
-    50% { text-shadow: 0 0 15px rgba(255,107,0,0.9); }
-    100% { text-shadow: 0 0 5px rgba(255,107,0,0.5); }
-  }
-
-  @keyframes zoomSlow {
-    from {transform: scale(1);}
-    to {transform: scale(1.05);}
-  }
-
-  /* Apply Animations */
-  body {
-    animation: fadeIn 1s ease-in-out;
-  }
-
-  .register-section {
-    animation: slideInLeft 1s ease;
-  }
-
-  .info-section {
-    animation: slideInRight 1s ease;
-  }
-
-  .logo {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .logo i {
-    animation: glowPulse 2s infinite;
-  }
-
-  .register-card {
-    animation: fadeIn 1.2s ease-in-out;
-  }
-
-  .register-card input,
-  .sign-up {
-    transition: all 0.3s ease;
-  }
-
-  /* Inputs Glow on Focus */
-  .register-card input:focus {
-    box-shadow: 0 0 10px rgba(255,107,0,0.5);
-    transform: scale(1.02);
-  }
-
-  /* Button Pop Effect */
-  .sign-up:hover {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 10px 20px rgba(255,107,0,0.4);
-  }
-
-  /* Video slow zoom for depth */
-  #ecgVideo {
-    animation: zoomSlow 20s ease-in-out infinite alternate;
-  }
-
-  /* List staggered animation */
-  .info-section li {
-    opacity: 0;
-    animation: fadeIn 1s forwards;
-  }
-  .info-section li:nth-child(1) { animation-delay: 0.5s; }
-  .info-section li:nth-child(2) { animation-delay: 0.8s; }
-  .info-section li:nth-child(3) { animation-delay: 1.1s; }
-  .info-section li:nth-child(4) { animation-delay: 1.4s; }
-
-  /* Error message pop-in */
-  .error-message {
-    animation: fadeIn 0.5s ease;
-  }
-    .hidden { display: none; }
-    .text-red-500 { color: #ff3b30; }
-    .disabled-btn {
-      opacity: 0.5;
-      cursor: not-allowed;
+      @keyframes dash {
+    to {
+      stroke-dashoffset: -200;
     }
-    span {
-      font-size: 0.875rem;
-    }
+  }
+  #page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(249, 250, 251, 0.66); /* Light background */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  
+  .ecg-loader {
+      width: 150px; /* Increased width */
+      height: 60px;
+      position: relative;
+  }
+  
+  .ecg-loader svg {
+      width: 100%;
+      height: 100%;
+  }
+  
+  .ecg-line {
+      fill: none;
+      stroke:rgb(227, 6, 6);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: pulse 1.5s infinite;
+  }
+  
+  @keyframes pulse {
+      0% {
+          stroke-dasharray: 0 100;
+          stroke-dashoffset: 0;
+      }
+      50% {
+          stroke-dasharray: 50 50;
+          stroke-dashoffset: -25;
+      }
+      100% {
+          stroke-dasharray: 0 100;
+          stroke-dashoffset: -50;
+      }
+  }
+
   </style>
 </head>
 <body>
   <main class="container" role="main">
     <section class="register-section" aria-labelledby="register-heading">
-      <video id="ecgVideo" autoplay loop muted playsinline aria-hidden="true">
-        <source src="/static/images/heartvideo.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
       <div class="register-content">
         <div class="logo" aria-label="ECG Databank logo">
-          <i class="fa-solid fa-heart-pulse glowing-icon" aria-hidden="true"></i> ECG Databank
+          <div class="logo-icon">
+            <i class="fas fa-heartbeat"></i>
+          </div>
+          <span class="logo-text">OOM ECG Databank</span>
         </div>
+
         <div class="register-card">
           <h2 id="register-heading">Create Your Account</h2>
-          <p>Join ECG Databank to start managing your medical data securely.</p>
-
+          <p>Join ECG Databank to manage your medical data securely.</p>
           {% if messages %}
             {% for message in messages %}
-              <div class="error-message" role="alert">{{ message }}</div>
+              {% if message.tags == "success" %}
+                <div class="alert-message success show"
+                     style="margin-bottom: 1rem; border: 1px solid #bbf7d0; background: #dcfce7; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#166534; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% else %}
+                <div class="alert-message error show"
+                     style="margin-bottom: 1rem; border: 1px solid #fecaca; background: #fee2e2; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#b91c1c; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% endif %}
             {% endfor %}
           {% endif %}
 
-          <form method="POST" id="registerForm" action="{% url 'register' %}">
+        
+          <form id="registerForm" method="POST" action="{% url 'register' %}" enctype="multipart/form-data">
             {% csrf_token %}
-            <label for="username">Username</label>
-            <input type="text" name="username" id="username" placeholder="Enter your Username" required aria-describedby="username-error">
+            <input type="hidden" id="userType" name="userType" value="student">
 
-            <label for="email">Email</label>
-            <input type="text" id="email" placeholder="Email" required>
-            <span id="email-error" class="hidden text-red-500"></span>
+            <!-- User Type Selection -->
+            <div class="user-type-group">
+              <label class="user-type-label">I am a</label>
+              <div class="user-type-buttons">
+                <button type="button" class="user-type-btn active" data-type="student">
+                  <i class="fas fa-graduation-cap"></i>
+                  <span>Student</span>
+                </button>
+                <button type="button" class="user-type-btn doctor" data-type="doctor">
+                  <i class="fas fa-stethoscope"></i>
+                  <span>Doctor</span>
+                </button>
+                <button type="button" class="user-type-btn" data-type="other">
+                  <i class="fas fa-users"></i>
+                  <span>Others</span>
+                </button>
+              </div>
+            </div>
 
-            <label for="phone">Phone</label>
+            <!-- Username -->
+            <div class="form-group">
+              <label for="username">Username <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" id="username" name="username" placeholder="Enter your username" required>
+              </div>
+              <div class="error-message" id="usernameError"></div>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+              <label for="email">Email <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-envelope input-icon"></i>
+                <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
+              </div>
+              <div class="error-message" id="emailError"></div>
+            </div>
+
+            <!-- Phone -->
+            <div class="form-group">
+              <label for="phone">Phone <span class="required">*</span></label>
               <div class="phone-wrapper">
-                <select id="countryCode" name="countryCode" required class="w-1/3 p-2 border border-orange-500 rounded-md bg-gray-800 text-white">
-                  <option value="+91">+91 (IN)</option>
-                  <option value="+1">+1 (US)</option>
-                  <option value="+44">+44 (UK)</option>
-                  <option value="+61">+61 (AU)</option>
-                  <!-- Add more as needed -->
+                <select id="countryCode" name="countryCode" class="country-code">
+                  <option value="+91">+91 IN</option>
+                  <option value="+1">+1 US</option>
                 </select>
-                <input type="text" id="phone" placeholder="Phone (10 digits)" required>
-                <span id="phone-error" class="hidden text-red-500"></span>
+                <div class="input-wrapper phone-input">
+                  <i class="fas fa-phone input-icon"></i>
+                  <input type="tel" id="phone" name="phone" placeholder="10 digit number" required>
+                </div>
               </div>
+              <div class="error-message" id="phoneError"></div>
+            </div>
+
+            <!-- Student Document Uploads -->
+            <div class="form-group" id="studentDocsGroup">
+              <label>Upload Student ID (Max 500KB) <span class="required">*</span></label>
+              <input type="file" id="studentId" name="studentId" accept=".jpg,.jpeg,.png,.pdf">
+              <div class="file-uploaded hidden" id="studentIdUploaded">
+                <i class="fas fa-check-circle"></i>
+                <span>File uploaded</span>
+              </div>
+              <div class="error-message" id="studentIdError"></div>
               
-
-            <label for="password">Password</label>
-            <input type="password" name="password" id="password" placeholder="Enter your password(min 6 characters.)" required >
-             <span id="password-error" class="hidden text-red-500"></span>
-            <button type="submit" class="sign-up" id="registerBtn" disabled>Create Account</button>
-
-            {% if form.errors %}
-              <div class="error-message" id="username-error email-error phone-error password-error" role="alert">
-                Invalid input. Please check your details and try again.
+              <label>Upload Address Proof (Max 500KB) <span class="required">*</span></label>
+              <input type="file" id="addressProof" name="addressProof" accept=".jpg,.jpeg,.png,.pdf">
+              <div class="file-uploaded hidden" id="addressProofUploaded">
+                <i class="fas fa-check-circle"></i>
+                <span>File uploaded</span>
               </div>
-            {% endif %}
+              <div class="error-message" id="addressProofError"></div>
+            </div>
+
+            <!-- Doctor ID + Certificate -->
+            <div class="form-group hidden" id="doctorIdGroup">
+              <label for="doctorId">Doctor ID <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-id-card input-icon"></i>
+                <input type="text" id="doctorId" name="doctorId" placeholder="Enter your medical license ID">
+              </div>
+              <div class="error-message" id="doctorIdError"></div>
+              
+              <label>Upload Medical Certificate (Max 500KB) <span class="required">*</span></label>
+              <input type="file" id="doctorCert" name="doctorCert" accept=".jpg,.jpeg,.png,.pdf">
+              <div class="file-uploaded hidden" id="doctorCertUploaded">
+                <i class="fas fa-check-circle"></i>
+                <span>File uploaded</span>
+              </div>
+              <div class="error-message" id="doctorCertError"></div>
+            </div>
+
+            <!-- Others Address Proof -->
+            <div class="form-group hidden" id="otherDocsGroup">
+              <label>Upload Address Proof (Max 500KB) <span class="required">*</span></label>
+              <input type="file" id="addressProofOther" name="addressProofOther" accept=".jpg,.jpeg,.png,.pdf">
+              <div class="file-uploaded hidden" id="addressProofOtherUploaded">
+                <i class="fas fa-check-circle"></i>
+                <span>File uploaded</span>
+              </div>
+              <div class="error-message" id="addressProofOtherError"></div>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="password">Password <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" id="password" name="password" placeholder="Minimum 6 characters" required>
+              </div>
+              <div class="error-message" id="passwordError"></div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn" disabled>Create Account</button>
           </form>
+
           <p class="login-link">
-            Already have an account? <a href="{% url 'login' %}" aria-label="Sign in to your account">Sign in here</a>
+            Already have an account?
+            <a href="{% url 'login' %}" aria-label="Sign in to your account">Sign in here</a>
           </p>
         </div>
       </div>
@@ -480,8 +722,8 @@
     <section class="info-section" aria-labelledby="info-heading">
       <div class="info-content">
         <h1 id="info-heading">Join Our Healthcare Network</h1>
-        <p>Create your account to access our comprehensive ECG management platform designed for medical professionals.</p>
-        <ul>
+        <p>Create your account to access our comprehensive ECG management platform designed for medical professionals and students.</p>
+        <ul class="features-list">
           <li>Secure and HIPAA-compliant data storage</li>
           <li>Real-time ECG analysis and reporting</li>
           <li>Collaborate with specialists worldwide</li>
@@ -491,76 +733,288 @@
     </section>
   </main>
 
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <i class="fas fa-check-circle" style="color: #059669; font-size: 1.5rem;"></i>
+    <div>
+      <div style="font-weight: 600; color: #1f2937;" id="toastTitle">Success!</div>
+      <div style="font-size: 0.875rem; color: #6b7280;" id="toastMessage">Account created successfully</div>
+    </div>
+  </div>
+  
+  <div id="page-loader">
+    <div class="ecg-loader">
+        <svg viewBox="0 0 100 60">
+            <path class="ecg-line" d="M0 30 H20 L30 10 L40 50 L50 20 L60 40 L70 10 L80 30 H100"/>
+        </svg>
+    </div>
+  </div>
   <script>
-const form = document.getElementById("registerForm");
-    const email = document.getElementById("email");
-    const phone = document.getElementById("phone");
-    const password = document.getElementById("password");
-    const registerBtn = document.getElementById("registerBtn");
+    const form = document.getElementById('registerForm');
+    const usernameInput = document.getElementById('username');
+    const emailInput = document.getElementById('email');
+    const countryCodeSelect = document.getElementById('countryCode');
+    const phoneInput = document.getElementById('phone');
+    const passwordInput = document.getElementById('password');
+    const doctorIdInput = document.getElementById('doctorId');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    const doctorIdGroup = document.getElementById('doctorIdGroup');
+    const studentDocsGroup = document.getElementById('studentDocsGroup');
+    const otherDocsGroup = document.getElementById('otherDocsGroup');
 
-    const emailError = document.getElementById("email-error");
-    const phoneError = document.getElementById("phone-error");
-    const passwordError = document.getElementById("password-error");
+    const userTypeButtons = document.querySelectorAll('.user-type-btn');
+    const userTypeInput = document.getElementById('userType');
+
+    const emailError = document.getElementById('emailError');
+    const phoneError = document.getElementById('phoneError');
+    const passwordError = document.getElementById('passwordError');
+    const doctorIdError = document.getElementById('doctorIdError');
+    
+    const studentIdInput = document.getElementById('studentId');
+    const addressProofInput = document.getElementById('addressProof');
+    const doctorCertInput = document.getElementById('doctorCert');
+    const addressProofOtherInput = document.getElementById('addressProofOther');
+
+    const MAX_FILE_SIZE_KB = 500;
+    let userType = 'student';
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const phoneRegex = /^\d{10}$/;
 
-    function validate() {
-      let valid = true;
+    // User Type Selection
+    userTypeButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        userTypeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        userType = btn.dataset.type;
+        userTypeInput.value = userType;
 
-      // Email
-      if (!emailRegex.test(email.value.trim())) {
-        emailError.textContent = "Must be a valid Email address.";
-        emailError.classList.remove("hidden");
-        valid = false;
-      } else emailError.classList.add("hidden");
+        // Show/hide conditional fields
+        studentDocsGroup.classList.add('hidden');
+        doctorIdGroup.classList.add('hidden');
+        otherDocsGroup.classList.add('hidden');
 
-      // Phone
-      if (!phoneRegex.test(phone.value.trim())) {
-        phoneError.textContent = "Phone must be exactly 10 digits.";
-        phoneError.classList.remove("hidden");
-        valid = false;
-      } else phoneError.classList.add("hidden");
+        if (userType === 'doctor') {
+          doctorIdGroup.classList.remove('hidden');
+          doctorIdInput.required = true;
+          doctorCertInput.required = true;
+          studentIdInput.required = false;
+          addressProofInput.required = false;
+          addressProofOtherInput.required = false;
+        } else if (userType === 'student') {
+          studentDocsGroup.classList.remove('hidden');
+          studentIdInput.required = true;
+          addressProofInput.required = true;
+          doctorIdInput.required = false;
+          doctorCertInput.required = false;
+          addressProofOtherInput.required = false;
+        } else if (userType === 'other') {
+          otherDocsGroup.classList.remove('hidden');
+          addressProofOtherInput.required = true;
+          studentIdInput.required = false;
+          addressProofInput.required = false;
+          doctorIdInput.required = false;
+          doctorCertInput.required = false;
+        }
 
-      // Password
-      if (password.value.trim().length < 6) {
-        passwordError.textContent = "Password must be at least 6 characters.";
-        passwordError.classList.remove("hidden");
-        valid = false;
-      } else passwordError.classList.add("hidden");
+        validateForm();
+      });
+    });
 
-      registerBtn.disabled = !valid;
-      registerBtn.classList.toggle("disabled-btn", !valid);
-      return valid;
+    // File validation and feedback
+    function setupFileInput(inputElement, uploadedElement, errorElement) {
+      inputElement.addEventListener('change', () => {
+        if (inputElement.files.length > 0) {
+          const file = inputElement.files[0];
+          const fileSizeKB = file.size / 1024;
+          
+          if (fileSizeKB > MAX_FILE_SIZE_KB) {
+            showError(errorElement, `File must be less than ${MAX_FILE_SIZE_KB} KB`, inputElement);
+            uploadedElement.classList.add('hidden');
+            inputElement.value = '';
+          } else {
+            hideError(errorElement, inputElement);
+            uploadedElement.classList.remove('hidden');
+          }
+        } else {
+          uploadedElement.classList.add('hidden');
+        }
+        validateForm();
+      });
     }
 
-    [email, phone, password].forEach(input => {
-      input.addEventListener("input", validate);
+    setupFileInput(studentIdInput, document.getElementById('studentIdUploaded'), document.getElementById('studentIdError'));
+    setupFileInput(addressProofInput, document.getElementById('addressProofUploaded'), document.getElementById('addressProofError'));
+    setupFileInput(doctorCertInput, document.getElementById('doctorCertUploaded'), document.getElementById('doctorCertError'));
+    setupFileInput(addressProofOtherInput, document.getElementById('addressProofOtherUploaded'), document.getElementById('addressProofOtherError'));
+
+    // Error handling
+    function showError(element, message, inputElement = null) {
+      element.textContent = message;
+      element.classList.add('show');
+      if (inputElement) inputElement.classList.add('error');
+      
+      setTimeout(() => {
+        hideError(element, inputElement);
+      }, 5000);
+    }
+
+    function hideError(element, inputElement = null) {
+      element.classList.remove('show');
+      if (inputElement) inputElement.classList.remove('error');
+    }
+
+    // Validation functions
+    function validateEmail() {
+      if (!emailRegex.test(emailInput.value.trim())) {
+        showError(emailError, 'Must be a valid email address', emailInput);
+        return false;
+      } else {
+        hideError(emailError, emailInput);
+        return true;
+      }
+    }
+
+    function validatePhone() {
+      if (!phoneRegex.test(phoneInput.value.trim())) {
+        showError(phoneError, 'Phone must be exactly 10 digits', phoneInput);
+        return false;
+      } else {
+        hideError(phoneError, phoneInput);
+        return true;
+      }
+    }
+
+    function validatePassword() {
+      if (passwordInput.value.trim().length < 6) {
+        showError(passwordError, 'Password must be at least 6 characters', passwordInput);
+        return false;
+      } else {
+        hideError(passwordError, passwordInput);
+        return true;
+      }
+    }
+
+    function validateDoctorId() {
+      if (userType === 'doctor' && doctorIdInput.value.trim().length === 0) {
+        showError(doctorIdError, 'Doctor ID is required', doctorIdInput);
+        return false;
+      } else {
+        hideError(doctorIdError, doctorIdInput);
+        return true;
+      }
+    }
+
+    function validateForm() {
+      const isEmailValid = emailRegex.test(emailInput.value.trim());
+      const isPhoneValid = phoneRegex.test(phoneInput.value.trim());
+      const isPasswordValid = passwordInput.value.trim().length >= 6;
+      const isUsernameValid = usernameInput.value.trim() !== '';
+      const isDoctorIdValid = userType !== 'doctor' || doctorIdInput.value.trim() !== '';
+
+      let isFilesValid = false;
+      if (userType === 'student') {
+        isFilesValid = studentIdInput.files.length > 0 && addressProofInput.files.length > 0;
+      } else if (userType === 'doctor') {
+        isFilesValid = doctorCertInput.files.length > 0;
+      } else if (userType === 'other') {
+        isFilesValid = addressProofOtherInput.files.length > 0;
+      }
+
+      const isFormValid = isUsernameValid && isEmailValid && isPhoneValid && isPasswordValid && isDoctorIdValid && isFilesValid;
+      submitBtn.disabled = !isFormValid;
+    }
+
+    // Input event listeners
+    emailInput.addEventListener('input', () => {
+      validateEmail();
+      validateForm();
     });
 
-    form.addEventListener("submit", e => {
-      if (!validate()) e.preventDefault();
+    phoneInput.addEventListener('input', () => {
+      validatePhone();
+      validateForm();
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
-      // Ensure video plays on mobile devices
-      const video = document.getElementById("ecgVideo");
-      video.play().catch((error) => {
-        console.error("Video playback failed:", error);
-      });
+    passwordInput.addEventListener('input', () => {
+      validatePassword();
+      validateForm();
+    });
 
-      // Fade out error messages
-      const messages = document.querySelectorAll(".error-message");
-      if (messages.length > 0) {
+    usernameInput.addEventListener('input', validateForm);
+
+    doctorIdInput.addEventListener('input', () => {
+      validateDoctorId();
+      validateForm();
+    });
+
+    // Toast notification
+    function showToast(title, message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastMessage = document.getElementById('toastMessage');
+      
+      toast.className = `toast ${type} show`;
+      toastTitle.textContent = title;
+      toastMessage.textContent = message;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 5000);
+    }
+
+    // Form submission
+    form.addEventListener('submit', (e) => {
+      e.preventDefault(); 
+      const isEmailValid = validateEmail();
+      const isPhoneValid = validatePhone();
+      const isPasswordValid = validatePassword();
+      const isDoctorIdValid = validateDoctorId();
+
+      if (!isEmailValid || !isPhoneValid || !isPasswordValid || !isDoctorIdValid) {
+        showToast('Validation Error', 'Please fix all validation errors before submitting', 'error');
+        return;
+      }
+
+      if (!submitBtn.disabled) {
+        const formData = new FormData(form);
+        console.log(formData)
+        form.submit();
+        
+        showToast('Success!', 'Account created successfully. Welcome to ECG Databank!', 'success');
+        
+        // Reset form after 2 seconds
         setTimeout(() => {
-          messages.forEach((msg) => {
-            msg.style.transition = "opacity 0.5s ease";
-            msg.style.opacity = "0";
-            setTimeout(() => msg.remove(), 500);
-          });
-        }, 1000);
+          form.reset();
+          userTypeButtons[0].click(); // Reset to student
+        }, 2000);
       }
     });
+    function showLoader() {
+        document.getElementById("page-loader").style.display = "flex";
+      }
+  
+      function hideLoader() {
+        document.getElementById("page-loader").style.display = "none";
+      }
+        function showError(element, message, inputElement = null) {
+      element.textContent = message;
+      element.classList.add('show');
+      if (inputElement) inputElement.classList.add('error');
+      
+      // Hide error after 5 seconds
+      setTimeout(() => {
+        hideError(element, inputElement);
+      }, 3000);
+    }
+  
+    function hideError(element, inputElement = null) {
+      element.classList.remove('show');
+      if (inputElement) inputElement.classList.remove('error');
+    }
+
   </script>
 </body>
 </html>

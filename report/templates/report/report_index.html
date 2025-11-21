@@ -401,7 +401,7 @@ function fetchRecentRecords() {
     .catch(err => console.error("Error fetching records:", err));
 }
 
-function fetchData() {
+function fetchReportData() {
     fetch("{% url 'total_data' %}", { headers: { "X-Requested-With": "XMLHttpRequest" } })
     .then(r => r.json())
     .then(data => {
@@ -433,7 +433,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const initialPieData = {{ initial_pie_data|safe }};
     updatePieChart(initialPieData);
 
-    fetchData();
+    fetchReportData();
     fetchPieChart();
     fetchRecentRecords();
 
