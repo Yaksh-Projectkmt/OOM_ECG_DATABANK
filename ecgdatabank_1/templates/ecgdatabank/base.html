@@ -85,7 +85,7 @@
                           <line x1="12" y1="20" x2="12" y2="4"></line>
                           <line x1="6" y1="20" x2="6" y2="14"></line>
                       </svg>
-                    <span class="nav-label">Analysis Tool</span>
+                    <span class="nav-label">Analysis Tool</span><span class="beta-badge">Beta</span>
                 </button>
             </a>
 
@@ -927,7 +927,7 @@ class TaskManager {
             const taskClearAll = document.getElementById('taskClearAll');
             
             const activeTasks = Array.from(this.tasks.values()).filter(task => 
-                task.status === 'processing' || task.status === 'completed'
+                task.status === 'processing' || task.status === 'completed' || task.status === 'error'
             ).length;
 
             if (activeTasks > 0) {
@@ -1229,7 +1229,7 @@ window.onclick = e => {
 };
 
 // ======================================================
-// UPGRADE BUTTON – WITH APPROVAL CHECK
+// UPGRADE BUTTON WITH APPROVAL CHECK
 // ======================================================
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -1257,7 +1257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (data && data.status) userStatus = data.status;
 
-            // APPROVED → unlock
+            // APPROVED  unlock
             if (userStatus === "approved") {
                 upgradeButtons.forEach(btn => {
                     btn.classList.remove("locked");
@@ -1295,7 +1295,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // ----- APPROVED → PAY -----
+            // ----- APPROVED  PAY -----
             if (userStatus === "approved") {
 
                 const form = document.createElement("form");

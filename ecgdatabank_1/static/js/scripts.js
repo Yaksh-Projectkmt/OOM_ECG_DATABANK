@@ -880,7 +880,6 @@ const updateTableWithData = async (data) => {
             <div class="controls d-flex flex-wrap gap-2 justify-content-end align-items-center">    
               <div class="arrhythmia-label" id="arrhythmiaContainer-${row.object_id || ''}" style="display: none;">
                 <select class="form-control" id="Arrhythmia-${row.object_id || ''}" name="ArrhythmiaType">
-                  <option value=" " selected>Select Arrhythmia Type</option>
                       <option value="Myocardial Infarction">Myocardial Infarction</option>
                       <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
                       <option value="HeartBlock">HeartBlock</option>
@@ -2944,8 +2943,12 @@ document.addEventListener('click', async (e) => {
 
     // Show modal
     $('#sctreeModal').modal('show');
-
-  } catch (error) {
+    document.addEventListener("click", (e) => {
+    if (e.target.closest(".plot-close")) {
+      $('#sctreeModal').modal('hide');
+    }
+});
+  }catch (error) {
     console.error("Error fetching HRV:", error);
      alertSystem.error("Error","loading HRV chart. See console for details.");
   }

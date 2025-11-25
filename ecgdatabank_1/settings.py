@@ -47,7 +47,7 @@ SECRET_KEY = 'django-insecure-vd(#wx^&i9u@q%op3md)-ose(q(cdjgya7p*=9@miw)3o1t+tr
 # SECRET_KEY = None
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 AUTH_USER_MODEL = 'authuser.CustomUser'
 ALLOWED_HOSTS = ['localhost', '127.0.0.1','192.168.2.96','usfda12c.projectkmt.com','45.114.64.12']
 MAINTENANCE_MODE = False  
@@ -76,12 +76,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'ecgdatabank_1.context_processors.MaintenanceModeMiddleware'
+    'ecgdatabank_1.context_processors.MaintenanceModeMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware'
+
 
 ]
 
 ROOT_URLCONF = 'ecgdatabank_1.urls'
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -147,7 +149,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'ecgdatabank_1', 'static')
 ] 
@@ -156,6 +158,6 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-RAZORPAY_KEY_ID = "-enter secure key here-"
-RAZORPAY_KEY_SECRET = "enter secure key here"
+RAZORPAY_KEY_ID = "rzp_test_RdxIg7t7TByY4O"
+RAZORPAY_KEY_SECRET = "aDfN70ib4I6NkTDjHWwZjkc5"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
