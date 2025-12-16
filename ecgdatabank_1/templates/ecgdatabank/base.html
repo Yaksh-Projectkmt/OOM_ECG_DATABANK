@@ -15,7 +15,10 @@
     <link rel="stylesheet" href="{% static 'CSS/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body data-user-role="{{ user.role }}" data-user-package="{{ user.package }}" onload="noBack();">
+<body data-user-role="{{ user.role }}" data-user-package="{{ user.package }}" data-user-wallet_balance="{{wallet_balance}}">
+{% if user_session %}
+<div id="alertWrapper"></div>
+
     <!-- Sidebar -->
     <aside id="sidebar" class="sidebar sidebar-open">
         <!-- Header -->
@@ -41,7 +44,6 @@
                 </div>
             </div>
         </div>
- {% if user_session %}
 <div class="sidebar-content">
     <div class="nav-section">
         <nav class="nav-menu">
@@ -61,22 +63,38 @@
             </a>
 
             <!-- MORPHOLOGY (Only for Pro / Premium) -->
-            <a href="{% if request.user|has_feature:'morphology' %}{% url 'morphology_index' %}{% endif %}"class="nav-link">
-                <button class="nav-item {% if not request.user|has_feature:'morphology' %}disabled-feature{% endif %}" 
-                        data-page="morphology"
-                        {% if not request.user|has_feature:'morphology' %}onclick="showUpgradeToast(){% endif %}">
-                    <div class="nav-shimmer"></div>
-                    <i class="fa-solid fa-file-signature"></i>
-                    <span class="nav-label">Morphology Draw</span>
-                </button>
-            </a>
+            <a 
+                {% if request.user|has_feature:'morphology' %}
+                    href="{% url 'morphology_index' %}"
+                    data-locked="0"
+                {% else %}
+                    href="#"
+                    data-locked="1"
+                {% endif %}
+                class="nav-link"
+                onclick="handleNavClick(event, this)"
+                >
+                    <button class="nav-item {% if not request.user|has_feature:'morphology' %}disabled-feature{% endif %}">
+                        <div class="nav-shimmer"></div>
+                        <i class="fa-solid fa-file-signature"></i>
+                        <span class="nav-label">Morphology Draw</span>
+                    </button>
+                </a>
 
 
             <!-- ANALYSIS TOOL (Only for Premium) -->
-            <a href="{% if request.user|has_feature:'analysis' %}{% url 'analysis_index' %}{% endif %}" class="nav-link">
-                <button class="nav-item {% if not request.user|has_feature:'analysis' %}disabled-feature{% endif %}" 
-                        data-page="analysis"
-                        {% if not request.user|has_feature:'analysis' %}onclick="showUpgradeToast(){% endif %}">
+            <a 
+            {% if request.user|has_feature:'analysis' %}
+                href="{% url 'analysis_index' %}"
+                data-locked="0"
+            {% else %}
+                href="#"
+                data-locked="1"
+            {% endif %}
+            class="nav-link"
+            onclick="handleNavClick(event, this)"
+            >
+                <button class="nav-item {% if not request.user|has_feature:'analysis' %}disabled-feature{% endif %}">
                     <div class="nav-shimmer"></div>
                     <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24"
                            fill="none" stroke="currentColor" stroke-width="2"
@@ -86,6 +104,7 @@
                           <line x1="6" y1="20" x2="6" y2="14"></line>
                       </svg>
                     <span class="nav-label">Analysis Tool</span>
+                    
                 </button>
             </a>
 
@@ -147,10 +166,6 @@
         </nav>
     </div>
 </div>
-{% else %}
-<p><a href="{% url 'login' %}">Login</a></p>
-{% endif %}
-
             <!-- Stats Cards -->
             <div class="stats-container">
                 <div class="stat-card">
@@ -214,7 +229,7 @@
               <div class="modal-content1">
                 <span class="close-btn" id="closeModal">&times;</span>
                 <h2 class="modal-title1">Plans & Credits</h2>
-                <p class="modal-subtext">You're currently on plan: <strong>Free</strong>. Choose your upgrade below.</p>
+                <p class="modal-subtext">upgrade your plan.</p>
             
                 <div class="plans-container">
             
@@ -223,9 +238,15 @@
                     <h3>Basic Plan</h3>
                     <p class="price">1500 INR<span>/ month</span></p>
                      <button class="upgrade-btn" data-plan="basic" data-amount="1500">
-            <span class="btn-text">Upgrade</span>
-            <span class="lock-icon" style="display:none;">🔒</span>
-        </button>
+                        <span class="btn-text">Upgrade</span>
+                        <span class="lock-icon" style="display:none;">??</span>
+                    </button>
+                     <ul>
+                        <li>Access to ECG Data</li>
+                        <li>Basic Support</li>
+                        <li>PQRST Detection</li>
+                        <li>Hrv chart</li>
+                    </ul>
                   </div>
             
                   <!-- Pro Plan -->
@@ -233,9 +254,18 @@
                     <h3>Pro Plan</h3>
                     <p class="price">3000 INR<span>/ month</span></p>
                     <button class="upgrade-btn" data-plan="pro" data-amount="3000">
-            <span class="btn-text">Upgrade</span>
-            <span class="lock-icon" style="display:none;">🔒</span>
-        </button>
+                        <span class="btn-text">Upgrade</span>
+                        <span class="lock-icon" style="display:none;">??</span>
+                    </button>
+                    <ul>
+                        <li>Access to ECG Data</li>
+                        <li>PQRST Detection</li>
+                        <li>Hrv chart</li>
+                        <li>Morphology Tool</li>
+                        <li>CSV Analysis</li>
+                        <li>Search Arrhythmias</li>
+                        <li>Basic Support</li>
+                    </ul>
                   </div>
             
                   <!-- Premium Plan -->
@@ -243,9 +273,18 @@
                     <h3>Premium Plan</h3>
                     <p class="price">5000 INR<span>/ month</span></p>
                    <button class="upgrade-btn" data-plan="premium" data-amount="5000">
-            <span class="btn-text">Upgrade</span>
-            <span class="lock-icon" style="display:none;">🔒</span>
-        </button>
+                      <span class="btn-text">Upgrade</span>
+                      <span class="lock-icon" style="display:none;">??</span>
+                  </button>
+                  <ul>
+                    <li>Morphology Tool</li>
+                    <li>Analysis Tool</li>
+                    <li>Access to ECG Data</li>
+                    <li>PQRST Detection</li>
+                    <li>Hrv chart</li>
+                    <li>Search Arrhythmias</li>
+                    <li>Basic Support</li>
+                  </ul>
                   </div>
             
                 </div>
@@ -294,11 +333,16 @@
                 </button>
                 
                 <div>
-                    <h2 class="page-title">Arrhythmias & MI</h2>
+                    <h2 class="page-title">{% block page_title %}{% endblock %}</h2>
                 </div>
             </div>
             <div class="header-right">
-                <button class="icon-btn theme-toggle" onclick="toggleTheme()">
+
+             <button  class="icon-btn1"  id="walletBtn">
+                    &#8377;<span id="walletBalance">0.00</span>
+                    <i class="fas fa-wallet" style="font-size: 19px;"></i>
+                </button>
+                <button class="icon-btn1 theme-toggle" onclick="toggleTheme()">
                     <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -313,12 +357,30 @@
                     <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                </button>                
+                </button>      
+                <button class="icon-btn1" id="usernotificationBtn">
+                    <i class="fas fa-history" style="widht=30; height=30;"></i>       
+                </button>      
             </div>
         </header>
+             <div id="downloadHistoryBox" class="history-dropdown">
+                <h4 class="history-header">
+                    Download History 
+                    <span class="view-all" id="downloadFile">View All</span>
+                </h4>
 
+                <div id="historyContent">
+                    <p class="empty-msg">Loading...</p>
+                </div>
+            </div>
         {% block content %}{% endblock %}
     </main>
+    {% else %}
+<script>
+    window.location.href="{% url 'session_expired' %}";
+</script>
+
+{% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -927,7 +989,7 @@ class TaskManager {
             const taskClearAll = document.getElementById('taskClearAll');
             
             const activeTasks = Array.from(this.tasks.values()).filter(task => 
-                task.status === 'processing' || task.status === 'completed'
+                task.status === 'processing' || task.status === 'completed' || task.status === 'error'
             ).length;
 
             if (activeTasks > 0) {
@@ -945,7 +1007,7 @@ class TaskManager {
         showEmptyState() {
             const taskList = document.getElementById('taskList');
             const emptyTasks = document.getElementById('emptyTasks');
-            
+       
             if (this.tasks.size === 0) {
                 if (!emptyTasks) {
                     taskList.innerHTML = `
@@ -1022,9 +1084,20 @@ class TaskManager {
     });
 
     window.taskManager = new TaskManager(); 
+function showUpgradeToast() {
+    alertSystem.error("Error", "This feature is locked. Upgrade your plan.");
+}
+document.addEventListener("click", function (event) {
+    const link = event.target.closest("a[data-locked='1']");
 
-    
-
+    if (link) {
+        // STOP ALL OTHER CLICK HANDLERS
+        event.preventDefault();
+        event.stopImmediatePropagation();  // THIS is the key
+        showUpgradeToast();
+        return false;
+    }
+}, true); // USING CAPTURE MODE
 // ======================================================
 // ELEMENT REFERENCES
 // ======================================================
@@ -1040,9 +1113,6 @@ const statusToast = document.getElementById("statusToast");
 
 const username = "{{ user_session.username|default:'' }}";
 
-// ======================================================
-// TOAST NOTIFICATION
-// ======================================================
 function showStatusToast(message, type = "info") {
     statusToast.style.background =
         type === "error"
@@ -1211,9 +1281,9 @@ function showStatusToast(message, type = "info") {
             document.body.classList.remove("dark-mode");
         }
     });
-    document.getElementById("patientsCard").addEventListener("click", function() {
+    document.getElementById("patientsCard").onclick = () => {
         window.location.href = "{% url 'patient_list' %}";
-    });
+    };
 
 // ======================================================
 // SUBSCRIPTION MODAL
@@ -1229,13 +1299,11 @@ window.onclick = e => {
 };
 
 // ======================================================
-// UPGRADE BUTTON – WITH APPROVAL CHECK
+// UPGRADE BUTTON WITH APPROVAL CHECK
 // ======================================================
-document.addEventListener("DOMContentLoaded", () => {
-
     const upgradeButtons = document.querySelectorAll(".upgrade-btn");
-    const name = "{{ user_session.username }}";
-    const email = "{{ user_session.email }}";
+    const name = "{{ user.username }}";
+    const email = "{{ user.email }}";
 
     let userStatus = "pending"; // default
 
@@ -1257,7 +1325,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (data && data.status) userStatus = data.status;
 
-            // APPROVED → unlock
+            // APPROVED  unlock
             if (userStatus === "approved") {
                 upgradeButtons.forEach(btn => {
                     btn.classList.remove("locked");
@@ -1295,7 +1363,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // ----- APPROVED → PAY -----
+            // ----- APPROVED  PAY -----
             if (userStatus === "approved") {
 
                 const form = document.createElement("form");
@@ -1313,12 +1381,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
-
-});
-
-
-
-
 // ======================================================
 // LOGOUT CONFIRMATION
 // ======================================================
@@ -1351,32 +1413,127 @@ function confirmLogout() {
     }
   );
 }
-function showUpgradeToast() { 
-    //Assuming you have a toast system. If not, here's a fallback. 
-if (window.showToast) { 
-    alertSystem.error("Error","This feature is locked. Upgrade your plan to enable it.", "error"); 
-} else { 
-    alertSystem.error("Error","This feature is locked. Upgrade your plan to enable it."); 
-} 
-} 
-document.addEventListener('contextmenu', event => event.preventDefault());
 
-  document.onkeydown = function(e) {
-    if (e.key === "F12" || 
-        (e.ctrlKey && e.shiftKey && e.key === "I") ||
-        (e.ctrlKey && e.shiftKey && e.key === "J") ||
-        (e.ctrlKey && e.key === "U")) {
-      return false;
+    /* ======================================================
+       REAL-TIME ACCOUNT STATUS POLLING (STOP WHEN APPROVED)
+    ======================================================= */
+    let lastUserStatus = null;
+    let statusInterval = null;
+
+    function checkUserStatus() {
+        requestAnimationFrame(() => {
+            fetch(`/auth/get_user_status/?username=${encodeURIComponent(username)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.status) return;
+
+                    const status = data.status.toLowerCase();
+
+                    if (lastUserStatus === null) {
+                        lastUserStatus = status;
+                    }
+
+                    if (status === "approved") {
+                        if (lastUserStatus !== "approved") {
+                            alertSystem.success("success","Your account has been approved.");
+                        }
+                        clearInterval(statusInterval);
+                        lastUserStatus = "approved";
+                        return;
+                    }
+
+                    if (status === "rejected") {
+                        alertSystem.error("Error", "Your request was rejected. Logging out.");
+                        clearInterval(statusInterval);
+
+                        setTimeout(() => {
+                            window.location.href = "{% url 'logout' %}";
+                        }, 4000);
+                    }
+                })
+                .catch(() => {});
+        });
     }
-  };  
-</script>
-<script>
-    // Prevent back button after logout
-    window.history.forward();
-    function noBack() { 
-        window.history.forward(); 
+
+    statusInterval = setInterval(checkUserStatus, 3000);
+
+function updateWalletBalance() {
+    fetch("/auth/get-balance/")
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("walletBalance").textContent =
+                data.balance || "0.00";
+        });
+}
+
+    updateWalletBalance();
+
+// ---------- Download History ----------
+document.getElementById("usernotificationBtn").onclick = async () => {
+
+    const box = document.getElementById("downloadHistoryBox");
+    const content = document.getElementById("historyContent");
+
+    box.classList.toggle("show");
+    if (!box.classList.contains("show")) return;
+
+    content.innerHTML = `<p class="empty-msg">Loading...</p>`;
+
+    try {
+        const res = await fetch("/auth/get_download_history/");
+        const data = await res.json();
+
+        if (!data.history || data.history.length === 0) {
+            content.innerHTML = `<p class="empty-msg">No history found</p>`;
+            return;
+        }
+        //Sort by newest ? oldest
+        const latestFive = data.history
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 5);
+
+        content.innerHTML = "";
+
+        latestFive.forEach(item => {
+            if (!item.Arrhythmia || !item.Lead || !item.PatientID) return;
+
+            const cls = item.status === "Success" ? "price-green" : "price-red";
+
+            content.innerHTML += `
+                <div class="history-item">
+                    <div class="history-left">
+                        <strong>${item.Arrhythmia}_Lead-${item.Lead}_${item.PatientID}</strong>
+                        <div class="history-meta">
+                            Type: ${item.file_type || "NA"} <br>
+                            TID: ${item.transaction_id || "NA"} <br>
+                            Date: ${item.created_at || item.download_at || "NA"}
+                        </div>
+                    </div>
+                    <div class="price-badge ${cls}">&#8377;${item.amount}</div>
+                </div>
+            `;
+        });
+
+        updateWalletBalance();
+
+    } catch (err) {
+content.innerHTML = `<p class="empty-msg">Error loading history</p>`;
     }
+};
+document.getElementById("downloadFile").onclick = () => {
+    window.location.href = "{% url 'all_download_history' %}";
+};
+
+document.addEventListener("click", (e) => {
+    const box = document.getElementById("downloadHistoryBox");
+    const btn = document.getElementById("usernotificationBtn");
+
+    if (!box.classList.contains("show")) return;
+    if (box.contains(e.target) || btn.contains(e.target)) return;
+    box.classList.remove("show");
+});
 </script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>

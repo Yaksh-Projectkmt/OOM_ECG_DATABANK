@@ -96,22 +96,34 @@ function updateHeader(section) {
 }
 
     // Form submission handler
-document.getElementById('passwordChangeForm').addEventListener('submit', async function(e) {
+document.getElementById('passwordChangeForm').addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const currentPassword = document.getElementById('currentPassword').value.trim();
     const newPassword = document.getElementById('newPassword').value.trim();
     const confirmPassword = document.getElementById('confirmPassword').value.trim();
 
-    // Client-side validation
+    // Field validation
     if (!currentPassword || !newPassword || !confirmPassword) {
-        alertSystem.warning('Warning','All fields are required!');
-        return;
+        return alertSystem.warning('Warning', 'All fields are required!');
     }
+
     if (newPassword !== confirmPassword) {
-        alertSystem.warning('Warning','New passwords do not match!');
-        return;
+        return alertSystem.warning('Warning', 'New passwords do not match!');
     }
+
+    // Extra security: Prevent new password same as old password
+    if (currentPassword === newPassword) {
+        return alertSystem.warning('Warning', 'New password cannot be the same as current password!');
+    }
+
+    // Optional: Strong password rule
+    if (newPassword.length < 6) {
+        return alertSystem.warning('Warning', 'Password must be at least 6 characters!');
+    }
+
+    const pageLoader = document.getElementById('page-loader');
+    if (pageLoader) pageLoader.style.display = 'flex';
 
     try {
         const response = await fetch('/auth/change_password/', {
@@ -127,17 +139,25 @@ document.getElementById('passwordChangeForm').addEventListener('submit', async f
         });
 
         const result = await response.json();
+
+        if (pageLoader) pageLoader.style.display = 'none';
+
         if (response.ok) {
             alertSystem.success('Success', result.message || 'Password changed successfully!');
             document.getElementById('passwordChangeForm').reset();
+
+            // Redirect to main section
             navigateToSection('main');
         } else {
             alertSystem.warning('Warning', result.error || 'Password change failed!');
         }
+
     } catch (error) {
-        alertSystem.error('Error','Something went wrong. Please try again later.');
+        if (pageLoader) pageLoader.style.display = 'none';
+        alertSystem.error('Error', 'Something went wrong. Please try again later.');
     }
 });
+
 
 function handleProfileEditSubmit(e) {
     e.preventDefault();

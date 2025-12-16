@@ -1,6 +1,39 @@
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 window.__ecgRowClickAttached = false;
-
+const arrhythmiaDict = {
+    'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
+    'Atrial Fibrillation & Atrial Flutter': ['AFIB', 'Aflutter', 'AFL'],
+    'HeartBlock': ['I DEGREE', 'MOBITZ-I', 'MOBITZ-II', 'III Degree'],
+    'Junctional Rhythm': ['Junctional Bradycardia', 'Junctional Rhythm'],
+    'Premature Atrial Contraction': [
+        'PAC-Isolated','PAC-Bigeminy','PAC-Couplet','PAC-Triplet',
+        'SVT','PAC-Trigeminy','PAC-Quadrigeminy'
+    ],
+    'Premature Ventricular Contraction': [
+        'AIVR','PVC-Bigeminy','PVC-Couplet','PVC-Isolated',
+        'PVC-Quadrigeminy','NSVT','PVC-Trigeminy',
+        'PVC-Triplet','IVR','VT'
+    ],
+    'Ventricular Fibrillation and Asystole': ['VFIB','VFL','ASYSTOLE'],
+    'Noise': ['Noise'],
+    'LBBB': ['LBBB','RBBB'],
+    'Artifacts': ['Artifacts'],
+    'SINUS-ARR': ['SINUS-ARR'],
+    'ShortPause': ['Short Pause','Long Pause'],
+    'TC': ['TC'],
+    'WIDE-QRS': ['WIDE-QRS'],
+    'Abnormal': ['ABNORMAL'],
+    'Normal': ['Normal'],
+    'Others': ['Others']
+};
+function updateWalletBalance() {
+    fetch("/auth/get-balance/")
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("walletBalance").textContent =
+                data.balance || "0.00";
+        });
+}
 function downloadCSV(csvContent, filename) {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -121,8 +154,9 @@ const attachRowEventListeners = () => {
     const row = e.target.closest('tr:not(.plot-row)');
     if (!row) return;
 
-    const isDeleteBtn = e.target.closest('.delete-btn');
+    const isDeleteBtn = e.target.closest('.icon-btn.delete');
     if (isDeleteBtn) {
+      console.log("this one ")
       await deleteData(e.target.dataset.id, e.target.dataset.collection);
       return;
     }
@@ -162,6 +196,7 @@ const attachRowEventListeners = () => {
     let confirmEditBtn = document.getElementById(`confirmEditBtn-${objectId}`);
     let closeBtn = document.getElementById(`closeBtn-${objectId}`); // Query close button
     let arrhythmiaContainer = document.getElementById(`arrhythmiaContainer-${objectId}`);
+    let subArrhythmiaContainer = document.getElementById(`SubArrhythmia-${objectId}`);
     let arrhythmiaSelect = document.getElementById(`Arrhythmia-${objectId}`);
     let downloadTypeSelect = document.getElementById(`downloadType-${objectId}`);
 
@@ -170,7 +205,7 @@ const attachRowEventListeners = () => {
     }
 
     // Reset button states when opening the plot
-    resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+    resetEditState(arrhythmiaContainer,subArrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
 
     if (!isVisible) {
       plotContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -240,6 +275,7 @@ const attachRowEventListeners = () => {
     confirmEditBtn = document.getElementById(`confirmEditBtn-${objectId}`);
     closeBtn = document.getElementById(`closeBtn-${objectId}`); // Re-query close button
     arrhythmiaContainer = document.getElementById(`arrhythmiaContainer-${objectId}`);
+    subArrhythmiaContainer = document.getElementById(`SubArrhythmia-${objectId}`);
     arrhythmiaSelect = document.getElementById(`Arrhythmia-${objectId}`);
     downloadTypeSelect = document.getElementById(`downloadType-${objectId}`);
 
@@ -254,7 +290,7 @@ const attachRowEventListeners = () => {
       editButton = newEditButton;
 
       editButton.addEventListener('click', debounce(async () => {
-        if (!arrhythmiaContainer || !editButton || !saveButton || !confirmEditBtn || !arrhythmiaSelect || !downloadTypeSelect) {
+        if (!arrhythmiaContainer || !subArrhythmiaContainer || !editButton || !saveButton || !confirmEditBtn || !arrhythmiaSelect || !downloadTypeSelect) {
           alertSystem.info('Info','Required elements not found.');
           return;
         }
@@ -273,7 +309,7 @@ const attachRowEventListeners = () => {
         confirmEditBtn.style.display = 'inline-block';
         closeBtn.style.display = 'inline-block'; // Show the close button
         arrhythmiaSelect.value = tableArrhythmia || '';
-
+        updateRowSubArrhythmia(objectId);
         // Remove existing listeners from confirmEditBtn
         const newConfirmEditBtn = confirmEditBtn.cloneNode(true);
         confirmEditBtn.parentNode.replaceChild(newConfirmEditBtn, confirmEditBtn);
@@ -286,16 +322,24 @@ const attachRowEventListeners = () => {
 
         confirmEditBtn.addEventListener('click', debounce(async (e) => {
           if (e.target.classList.contains('close-action')) {
-            resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+            resetEditState(arrhythmiaContainer,subArrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
             return;
           }
 
-          const newArrhythmia = arrhythmiaSelect.value;
-          if (!newArrhythmia || newArrhythmia === tableArrhythmia) {
-            alertSystem.info('Info','No changes made or invalid selection.');
-            resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
-            return;
+          const newArrhythmia = document.getElementById(`Arrhythmia-${objectId}`).value;
+          const newSubArrhythmia = document.getElementById(`SubArrhythmia-${objectId}`).value;
+          // Validate main arrhythmia
+          if (!newArrhythmia) {
+              alertSystem.warning("Warning", "Please select Arrhythmia Type.");
+              return;
           }
+
+          // Validate sub arrhythmia (if arrhythmia has sub-values)
+          if (arrhythmiaDict[newArrhythmia] && !newSubArrhythmia) {
+              alertSystem.warning("Warning", "Please select a Sub Arrhythmia.");
+              return;
+          }
+
 
           const pageLoader = document.getElementById('page-loader');
           if (pageLoader) pageLoader.style.display = 'flex';
@@ -305,6 +349,7 @@ const attachRowEventListeners = () => {
               object_id: objectId,
               old_collection: sessionStorage.getItem('selectedArrhythmia') || tableArrhythmia,
               new_collection: newArrhythmia,
+              sub_arrhythmia: newSubArrhythmia, 
               lead: leadNumeric,
               PatientID: patientId
             };
@@ -330,15 +375,18 @@ const attachRowEventListeners = () => {
             alertSystem.error('Error','Duplicate ECG data found.');
           } finally {
             if (pageLoader) pageLoader.style.display = 'none';
-            resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+            resetEditState(arrhythmiaContainer,subArrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
           }
         }, 100));
 
         // Add event listener for the close button
         closeBtn.addEventListener('click', debounce(() => {
-          resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+          resetEditState(arrhythmiaContainer,subArrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
         }, 100));
       }, 100));
+    }
+    function clonePlotlyFigure(plotDiv) {
+        return JSON.parse(JSON.stringify(plotDiv._fullLayout))
     }
 
     if (saveButton && downloadTypeSelect) {
@@ -353,7 +401,13 @@ const attachRowEventListeners = () => {
           alertSystem.warning('Warning','Please select a download type.');
           return;
         }
+        function generate10DigitID() {
+            return Math.floor(1000000000 + Math.random() * 9000000000).toString();
+        }
+        const arrhythmia = tableArrhythmia;
+        const leadType = leadNumeric;
         const pageLoader = document.getElementById('page-loader');
+        const DownloadfileId=generate10DigitID();
         if (pageLoader) pageLoader.style.display = 'flex';
 
         try {
@@ -361,6 +415,7 @@ const attachRowEventListeners = () => {
 
           switch (downloadType) {
             case 'raw_data':
+            //Deduct wallet BEFORE allowing download
               const rawData = window.ecgData[objectId] || {};
               if (leadNumeric === '2') {
                 if (!rawData.x || !rawData.y) {
@@ -371,7 +426,22 @@ const attachRowEventListeners = () => {
                 for (let i = 0; i < rawData.x.length; i++) {
                   csvContent += `${rawData.x[i]},${rawData.y[i]}\n`;
                 }
-                downloadCSV(csvContent, `raw_ecg_data_${patientId}.csv`);
+                const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+                const filename = `raw_ecg_data_${patientId}.csv`;
+                
+                await uploadFileToDB({
+                  fileBlob: csvBlob,
+                  filename,
+                  patientId,
+                  DownloadfileId,
+                  downloadType: 'raw_data',
+                  arrhythmia,
+                  leadType
+                });
+                const okRaw = await deductWallet("csv",patientId, arrhythmia, leadType,DownloadfileId);  
+                  if (!okRaw) return;
+                downloadCSV(csvContent, filename);
+                updateWalletBalance();
                 return;
               }
               if (leadNumeric === '7' || leadNumeric === '12') {
@@ -386,49 +456,135 @@ const attachRowEventListeners = () => {
                   const row = leadNames.map(lead => rawData.leadDict[lead][i]).join(',');
                   csvContent += row + '\n';
                 }
-                downloadCSV(csvContent, `raw_ecg_data_${patientId}.csv`);
+                const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+                const filename = `raw_ecg_data_${patientId}.csv`;
+
+                
+                await uploadFileToDB({
+                  fileBlob: csvBlob,
+                  filename,
+                  patientId,
+                  DownloadfileId,
+                  downloadType: 'raw_data',
+                  arrhythmia,
+                  leadType
+                });
+                const okRaw = await deductWallet("csv",patientId, arrhythmia, leadType,DownloadfileId);  
+                  if (!okRaw) return;
+                downloadCSV(csvContent, filename);
+                updateWalletBalance();
                 return;
               }
               alertSystem.warning('Warning','Unsupported lead type.');
               return;
 
-          case 'plot_png':
-              const plotDivId = `plot-${objectId}`;
-              const plotDiv = document.getElementById(plotDivId);
-              if (!plotDiv || plotDiv.children.length === 0) {
-                alertSystem.error('Error',"ECG plot not loaded yet. Please wait or try again.");
-                return;
-              }
-              let leadCount = leadNumeric || 12; // Default to 12 leads if not specified
-              // Set dimensions based on lead count
-              let width, height;
-              switch (parseInt(leadCount)) {
-                case 2: // Single-lead ECG
-                  width = 1000;
-                  height = 400;
-                  break;
-                case 7: // 7-lead ECG
-                  width = 700;
-                  height = 1800;
-                  break;
-                case 12: // 12-lead ECG (standard)
-                  width = 1000;
-                  height = 3000;
-                  break;
-                default: // Fallback for other configurations
-                  width = 1600;
-                  height = 1000;
-              }
-      
-              Plotly.downloadImage(plotDiv, {
-                format: 'png',
-                filename: `ecg_plot_${patientId}_leads_${leadCount}`,
-                width: width,
-                height: height,
-                scale: 2
+            case 'plot_png':
+              
+                const plotDivId = `plot-${objectId}`;
+                const plotDiv = document.getElementById(plotDivId);
+                if (!plotDiv) return;
+
+                // ------------------------------
+                // PAGE SIZE LOGIC (AUTO-ADJUST)
+                // ------------------------------
+                let leadCount = leadNumeric || 12;
+
+                let width, height;
+                switch (parseInt(leadCount)) {
+                    case 2:
+                        width = 1000;
+                        height = 400;
+                        break;
+                    case 7:
+                        width = 700;
+                        height = 1800;
+                        break;
+                    case 12:
+                        width = 1000;
+                        height = 3000;
+                        break;
+                    default:
+                        width = 1600;
+                        height = 1200;
+                }
+
+                // 1?? � Get FIGURE safely from Plotly (no circular JSON)
+                const figure = await Plotly.toImage(plotDiv, { format: 'png' })
+                    .then(() => ({
+                        data: plotDiv.data,             // SAFE
+                        layout: { ...plotDiv.layout }   // SAFE shallow copy
+                    }))
+                    .catch(err => {
+                        console.error("Error preparing figure:", err);
+                        return null;
+                    });
+
+                if (!figure) return;
+
+                const newData = JSON.parse(JSON.stringify(figure.data));     // No circular references
+                const newLayout = JSON.parse(JSON.stringify(figure.layout)); // No circular references
+
+                // Remove range slider
+                if (newLayout.xaxis && newLayout.xaxis.rangeslider) {
+                    delete newLayout.xaxis.rangeslider;
+                }
+
+                //� Add HR, MeanRR, SDNN details
+                const pqrst = window.ecgData?.[objectId]?.pqrst || {};
+                const meanRR = pqrst.HRV_metrics?.mean_rr ?? "--";
+                const sdnn   = pqrst.HRV_metrics?.sdnn ?? "--";
+                const HR     = pqrst.HR ?? "--";
+
+                newLayout.title = {
+                text: `Arrhythmia: ${arrhythmia}<br>MeanRR: ${meanRR}ms | SDNN: ${sdnn}ms | HR: ${HR}BPM`,
+                font: { size: 15 },
+                x: 0,           // left aligned
+                y: 1.15,        // ABOVE the plot (top)
+                xanchor: "left",
+                yanchor: "top"
+            };
+
+                // newLayout.margin = { l: 80, r: 40, t: 150, b: 60 };
+                newLayout.showlegend = true;
+
+                //� Render into hidden export div
+                await Plotly.newPlot('exportDiv', newData, newLayout, { displayModeBar: false });
+                
+                //� Download clean PNG with page size logic
+                const dataUrl = await Plotly.toImage('exportDiv', { format: 'png', width, height, scale: 2 });
+                const pngBlob = await (await fetch(dataUrl)).blob();
+                
+                // upload to GridFS
+                const uploadResult = await uploadFileToDB({
+                  fileBlob: pngBlob,
+                  filename: `ecg_plot_${patientId}.png`,
+                  patientId,
+                  downloadType: "plot_png",
+                  arrhythmia,
+                  leadType,
+                  extraMeta: {},
+                  DownloadfileId,
               });
-              return;
-          case 'pqrst_csv':
+                const okPng = await deductWallet("image",patientId, arrhythmia, leadType,DownloadfileId);
+                if (!okPng) return;
+
+                // optionally also trigger user download:
+                const url = URL.createObjectURL(pngBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ecg_plot_${patientId}_leads_${leadCount}.png`;
+                document.body.appendChild(a);
+                a.click();
+                URL.revokeObjectURL(url);
+                a.remove();
+                updateWalletBalance();
+                // Cleanup
+                document.getElementById('exportDiv').innerHTML = '';
+
+                return;
+              case 'pqrst_csv':
+              //Deduct wallet BEFORE allowing download
+              
               // Use updated PQRST indices if available, otherwise fall back to server-provided data
               let updatedPqrstData = {};
               if (leadNumeric === '2') {
@@ -505,7 +661,21 @@ const attachRowEventListeners = () => {
               }
 
               // Download CSV
-              downloadCSV(csvContent, `pqrst_${patientId}.csv`);
+              const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+              const filename = `pqrst_${patientId}.csv`;
+              await uploadFileToDB({
+                  fileBlob: csvBlob,
+                  filename,
+                  patientId,
+                  downloadType: 'pqrst_csv',
+                  arrhythmia,
+                  leadType,
+                  extraMeta: { source: 'client-updated-pqrst' }
+                });
+              const okPqrst = await deductWallet("csv",patientId, arrhythmia, leadType,DownloadfileId);
+              if (!okPqrst) return;
+              downloadCSV(csvContent, filename);
+              updateWalletBalance();
               if (pageLoader) pageLoader.style.display = 'none';
               return;
               
@@ -536,6 +706,7 @@ const attachRowEventListeners = () => {
                   if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
                   const blob = await response.blob();
+                  const filename = `selected_ecg_data_${patientId}.csv`;
                   const url = window.URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
@@ -544,11 +715,20 @@ const attachRowEventListeners = () => {
                   a.click();
                   window.URL.revokeObjectURL(url);
                   document.body.removeChild(a);
+                  await uploadFileToDB({
+                    fileBlob: blob,
+                    filename,
+                    patientId,
+                    downloadType: 'selected_data',
+                    arrhythmia,
+                    leadType
+                  });
                 } catch (error) {
                   console.error('Error downloading file:', error);
                   alertSystem.error('Error', 'downloading file.');
                 }
                 return;
+
                 
             default:
               throw new Error('Invalid download type selected.');
@@ -735,13 +915,14 @@ document.addEventListener("click", async function (e) {
       closeButton.addEventListener('click', debounce(() => {
         plotRow.style.display = 'none';
         Plotly.purge(plotElement);
-        resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+        resetEditState(arrhythmiaContainer,subArrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
         document.getElementById('mainContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100));
     }
 
-    function resetEditState(container, editBtn, saveBtn, confirmBtn, select, downloadSelect,closeBtn=null) {
+    function resetEditState(container,subArrhythmiaContainer, editBtn, saveBtn, confirmBtn, select, downloadSelect,closeBtn=null) {
       if (container) container.style.display = 'none';
+      if (subArrhythmiaContainer) subArrhythmiaContainer.style.display = 'none';
       if (editBtn) editBtn.style.display = 'inline-block';
       if (saveBtn) saveBtn.style.display = 'inline-block';
       if (confirmBtn) confirmBtn.style.display = 'none';
@@ -818,17 +999,17 @@ const updateTableWithData = async (data) => {
         <td>${row.Frequency || ''}</td>
         <td>${row.duration}</td>
         <td>  
-               <button class="icon-btn scatter-plot" title="Show scatter plot" data-patient="${row.PatientID || ''}" data-id="${row.object_id || ''}" data-arrhythmia="${row.ArrhythmiaType || ''}" data-lead="${row.LeadConfig || '2_lead'}"><i class="fas fa-chart-line hrv-icon"></i></button>
+               <button class="icon-btn1 scatter-plot" title="Show scatter plot" data-patient="${row.PatientID || ''}" data-id="${row.object_id || ''}" data-arrhythmia="${row.ArrhythmiaType || ''}" data-lead="${row.LeadConfig || '2_lead'}"><i class="fas fa-chart-line hrv-icon"></i></button>
                </td>
         <td>
-          <button class="icon-btn delete action-delete" 
+         <button class="icon-btn delete" 
               data-id="${row.object_id || ''}" 
               data-collection="${row.collection_name || ''}"
-              data-locked="${hasShareFeature ? 'false' : 'true'}"
+              data-locked="${hasDelFeature ? 'false' : 'true'}"
               title="Delete">
               <i class="fas fa-trash"></i>
           </button>
-        </td>
+          </td>
 
         <td>
           <input type="checkbox"
@@ -879,8 +1060,7 @@ const updateTableWithData = async (data) => {
               </div>
             <div class="controls d-flex flex-wrap gap-2 justify-content-end align-items-center">    
               <div class="arrhythmia-label" id="arrhythmiaContainer-${row.object_id || ''}" style="display: none;">
-                <select class="form-control" id="Arrhythmia-${row.object_id || ''}" name="ArrhythmiaType">
-                  <option value=" " selected>Select Arrhythmia Type</option>
+                <select class="form-control arrhythmia-main" id="Arrhythmia-${row.object_id || ''}" name="ArrhythmiaType" onchange="updateRowSubArrhythmia('${row.object_id}')">
                       <option value="Myocardial Infarction">Myocardial Infarction</option>
                       <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
                       <option value="HeartBlock">HeartBlock</option>
@@ -899,6 +1079,13 @@ const updateTableWithData = async (data) => {
                       <option value="Abnormal">Abnormal</option>
                       <option value="Normal">Normal</option>
                 </select>
+                </div>
+                <div>
+                <select class="form-control arrhythmia-sub" 
+                            id="SubArrhythmia-${row.object_id}" 
+                            style="display:none;">
+                        <option value="">Select Sub Arrhythmia</option>
+                    </select>
               </div>
               <div class="download-label" id="downloadContainer-${row.object_id || ''}">
                 <select class="form-control" id="downloadType-${row.object_id || ''}" name="downloadType">
@@ -910,10 +1097,10 @@ const updateTableWithData = async (data) => {
                 </select>
               </div>
               <div class="button-group">
-                <button class="btn btn-warning edit-btn" id="editEcgData-${row.object_id || ''}" data-id="${row.object_id || ''}">Edit</button>
+                <button class="btn btn-warning edit-btn" id="editEcgData-${row.object_id || ''}" data-id="${row.object_id || ''}" data-locked="${hasShareFeature ? 'false' : 'true'}">Edit</button>
                 <button class="btn btn-success save-btn" id="saveData-${row.object_id || ''}" data-id="${row.object_id || ''}">Download</button>
                 <button class="btn btn-primary confirm-edit-btn" id="confirmEditBtn-${row.object_id || ''}" data-id="${row.object_id || ''}" style="display: none;">Confirm</button>
-                <button class="btn btn-secondary close-btn" id="closeBtn-${row.object_id || ''}" style="display: none;">Close</button>     
+                <button class="btn btn-danger close-edit" id="closeBtn-${row.object_id || ''}" style="display: none;">Close</button>     
                 </div>         
                 </div>
             </div>
@@ -1595,6 +1782,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
         const axisX = `xaxis${idx + 1}`;
         const axisY = `yaxis${idx + 1}`;
         layout[axisX] = {
+          
           range: [0, leadData[lead].length<= windowSize ?leadData[lead].length:windowSize],
           title: { text: 'Time Index', standoff: 20, font: { size: 12 } },
           showgrid: true,
@@ -2909,7 +3097,7 @@ document.addEventListener('click', async (e) => {
     const data = await response.json();
     if (data.status !== "success") {
       console.error("Backend error:", data.message);
-       alertSystem.error("Error","Error fetching HRV data.");
+       alertSystem.error("Error","This feature is locked. Upgrade your plan to enable it.");
       return;
     }
 
@@ -2944,8 +3132,12 @@ document.addEventListener('click', async (e) => {
 
     // Show modal
     $('#sctreeModal').modal('show');
-
-  } catch (error) {
+    document.addEventListener("click", (e) => {
+    if (e.target.closest(".plot-close")) {
+      $('#sctreeModal').modal('hide');
+    }
+});
+  }catch (error) {
     console.error("Error fetching HRV:", error);
      alertSystem.error("Error","loading HRV chart. See console for details.");
   }
@@ -3069,14 +3261,87 @@ async function shareSelected(selectedIds, platform, menu) {
   }
 }
 document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".delete, .row-checkbox, .select-all-checkbox");
+    const btn = e.target.closest("[data-locked='true']");
 
     if (!btn) return;
 
-    if (btn.dataset.locked === "true") {
-        showUpgradeToast();
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
+    //Block actions
+    e.preventDefault();
+    e.stopImmediatePropagation();  // stops Bootstrap, jQuery, SweetAlert
+    showUpgradeToast();
+}, true); 
+
+async function deductWallet(fileType, patientId, arrhythmia, leadType,DownloadfileId) {
+
+  const response = await fetch('/ommecgdata/deduct_wallet_before_download/', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({
+      file_type: fileType,
+      patient_id: patientId,
+      arrhythmia: arrhythmia,
+      lead_type: leadType,
+      DownloadfileId:DownloadfileId
+    })
+  });
+
+  const data = await response.json();
+
+  // FIX: accept backend formats: {status: "success"} or {message: "OK"}
+  if (!response.ok || !(data.status === "success" || data.message === "OK")) {
+    alertSystem.error("Wallet Error", data.error || "Unable to deduct wallet");
+    return false;
+  }
+
+  return true;
+}
+
+
+function updateRowSubArrhythmia(objectId) {
+    const main = document.getElementById(`Arrhythmia-${objectId}`);
+    const sub = document.getElementById(`SubArrhythmia-${objectId}`);
+
+    // FIX: Prevent crash if HTML not rendered yet
+    if (!main || !sub) {
+        console.warn("Sub arrhythmia dropdown not found for object:", objectId);
+        return;
     }
-});
+
+    const arr = main.value;
+    sub.innerHTML = `<option value="">Select Sub Arrhythmia</option>`;
+
+    if (!arr || !arrhythmiaDict[arr]) {
+        sub.style.display = "none";
+        return;
+    }
+
+    arrhythmiaDict[arr].forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        sub.appendChild(opt);
+    });
+
+    sub.style.display = "block";
+}
+async function uploadFileToDB({ fileBlob, filename, patientId, downloadType, arrhythmia, leadType, extraMeta, DownloadfileId }) {
+    const formData = new FormData();
+    formData.append("file", fileBlob, filename);   // IMPORTANT
+    formData.append("patientId", patientId);
+    formData.append("downloadType", downloadType);
+    formData.append("arrhythmia", arrhythmia);
+    formData.append("leadType", leadType);
+    formData.append("DownloadfileId", DownloadfileId);
+    formData.append("meta", JSON.stringify(extraMeta || {}));
+
+    const resp = await fetch("/ommecgdata/save_download_file/", {
+        method: "POST",
+        body: formData
+    });
+
+    return await resp.json();
+}

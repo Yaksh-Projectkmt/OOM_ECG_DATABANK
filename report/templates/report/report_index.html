@@ -6,8 +6,11 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'CSS/report.css' %}">
 {% endblock %}
-
+{% block page_title %}
+ECG Analytics Dashboard
+{% endblock %}
 {% block content %}
+ {% if user_session %}
     <div class="app">
         <!-- Animated Background -->
         <div class="animated-bg">
@@ -229,7 +232,12 @@
             </div>
         </main>
     </div>
+    {% else %}
+<script>
+    window.location.href="{% url 'session_expired' %}";
+</script>
 
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -282,12 +290,12 @@ function updatePieChart(collectionDataCount) {
                 '#00b894', '#e17055', '#74b9ff', '#0015ffff',
                 '#520000ff'
             ],
-            borderColor: () => 
-                document.documentElement.getAttribute('data-theme') === 'dark' 
-                ? '#1a1f2e' 
-                : '#ffffff',
+            borderColor: () =>
+                document.body.classList.contains("dark-mode")
+                    ? "#1a1f2e"
+                    : "#ffffff",
             borderWidth: 3,
-            hoverBorderWidth: 5,
+    hoverBorderWidth: 5,
             hoverOffset: 15
         }]
     };
@@ -301,10 +309,11 @@ function updatePieChart(collectionDataCount) {
                 position: 'left',
                 labels: {
                     // ? compute dynamically
-                    color: (ctx) => 
-                        document.documentElement.getAttribute('data-theme') === 'dark'
-                        ? '#ffffff'
-                        : '#1e2a44',
+                color: document.body.classList.contains("dark-mode")
+                    ? "#ffffff"   // dark ? white
+                    : "#111827",  // light ? black/dark
+
+
                     font: { size: 12, weight: '600' },
                     usePointStyle: true,
                     pointStyle: 'circle',
@@ -323,19 +332,19 @@ function updatePieChart(collectionDataCount) {
             },
             tooltip: {
                 backgroundColor: () => 
-                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    document.documentElement.getAttribute("dark-mode") 
                     ? 'rgba(26, 31, 46, 0.95)'
                     : 'rgba(255, 255, 255, 0.95)',
                 titleColor: () => 
-                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    document.documentElement.getAttribute("dark-mode") 
                     ? '#ffffff'
                     : '#1a202c',
                 bodyColor: () => 
-                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    document.documentElement.getAttribute("dark-mode") 
                     ? '#a8b3cf'
                     : '#4a5568',
                 borderColor: () => 
-                    document.documentElement.getAttribute('data-theme') === 'dark'
+                    document.documentElement.getAttribute("dark-mode") 
                     ? '#2d3748'
                     : '#e2e8f0',
                 borderWidth: 1,
@@ -501,18 +510,28 @@ window.addEventListener("load", function () {
   const pageLoader = document.getElementById('page-loader');
   if (pageLoader) pageLoader.style.display = 'none';
 });
+function refreshChartTheme() {
+    if (!ecgChartInstance) return;
+
+    const legendColor = document.body.classList.contains("dark-mode")
+        ? "#ffffff"
+        : "#111827";
+
+    ecgChartInstance.options.plugins.legend.labels.color = legendColor;
+
+    ecgChartInstance.update();
+}
 
 // Watch for theme changes
 const observer = new MutationObserver(() => {
-    if (window.collectionDataCount) {
-        updatePieChart(window.collectionDataCount);
-    }
+    refreshChartTheme();
 });
 
-observer.observe(document.documentElement, {
+observer.observe(document.body, {
     attributes: true,
-    attributeFilter: ['data-theme']
+    attributeFilter: ["class"]
 });
+
 
 </script>
 {% endblock %}

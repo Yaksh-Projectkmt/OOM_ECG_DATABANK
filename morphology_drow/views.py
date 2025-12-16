@@ -1,21 +1,23 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
-import json,os
 import pandas as pd
 from django.conf import settings
-import os
-import pandas as pd
-from django.shortcuts import render
-import pymongo
 from django.http import JsonResponse
 from morphology_drow.img_to_extract_signal import process_images
-import subprocess
+import subprocess, os, pymongo, json 
 from django.views.decorators.csrf import csrf_exempt
 from pymongo import MongoClient
 from django.utils import timezone
 from scipy import signal
-mongo_client = MongoClient("mongodb://192.168.1.65:27017/")
+
+# Connect to MongoDB
+mongo_uri = os.getenv("MONGO_HOST")
+
+# Create client
+mongo_client = MongoClient(mongo_uri)
+
+#databases
 db = mongo_client['Morphology_data']
 morphology_db = mongo_client['Morphology_Patients']
 
@@ -147,7 +149,7 @@ def upload_ecg(request):
                 'leadtype': lead_type,   # Lead Type
                 "server": "local",
                 'datalength':datalength,
-                "created_At": timezone.now(),
+                "created_At": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
                 'Data': {'II': all_lead_data['II'].to_list()},
             }
             
@@ -223,7 +225,7 @@ def open_morphology_script(request):
                 "Frequency": 200,
                 "datalength":datalength,
                 "server": "local",
-                "created_At": timezone.now(),
+                "created_At": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
                 "Data": {
                     "II": filtered_voltage_list
                 }

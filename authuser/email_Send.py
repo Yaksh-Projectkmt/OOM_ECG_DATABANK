@@ -1,12 +1,14 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
 # Email configuration
-EMAIL_ADDRESS = "aikmtnew@gmail.com"
-EMAIL_PASSWORD = "ryvd emev ocbe vwjt"
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+SMTP_SERVER = os.getenv("SMTP_SERVER")
+SMTP_PORT = os.getenv("SMTP_PORT")
 
 # -----------------------------------------------------------
 # MASTER FUNCTION — Send Email (Auto Detect HTML / Plain Text)
@@ -56,8 +58,8 @@ def email_footer():
     return """
         <hr style="border:0;border-top:1px solid #e8e8e8;margin:25px 0;">
         <p style="text-align:center;color:#888;font-size:13px;">
-          Support: support@ProjectKmt.com<br>
-          © 2025 OOMECG DataBank
+          Support: support@projectkmt.com<br>
+        © 2025–2026 Kali MedTech Pvt. Ltd. 
         </p>
       </div>
     </div>
@@ -134,7 +136,7 @@ def send_approved_email(username, receiver_email):
         </p>
 
         <div style="text-align:center;margin-top:20px;">
-            <a href="http://127.0.0.1:8000/auth/login/"
+            <a href="https://usfda12c.projectkmt.com/auth/login/"
                style="background:#2a9d8f;color:white;padding:12px 25px;text-decoration:none;
                border-radius:6px;font-size:15px;display:inline-block;">
                Login to Website
@@ -161,6 +163,66 @@ def send_rejected_email(username, receiver_email, comment=""):
             Hi <b>{username}</b>,<br><br>
             Unfortunately, your registration has been rejected.<br><br>
             <b>Reason:</b> {comment}
+        </p>
+        """ +
+        email_footer()
+    )
+
+    send_email(receiver_email, subject, html)
+
+def send_password_change_email(username, receiver_email):
+    subject = "Your Password Was Successfully Updated"
+
+    html = (
+        email_header("Password Updated") +
+        f"""
+        <p style="font-size:15px;color:#333;">
+          Hi <b>{username}</b>,<br><br>
+          This is a confirmation that your password for <b>OOMECG DataBank</b> 
+          was successfully changed.
+        </p>
+
+        <div style="background:#fff3cd;border-left:4px solid #ffb703;padding:15px;margin:20px 0;border-radius:8px;">
+          <p style="margin:0;color:#856404;">
+            If you did <b>not</b> make this change, please reset your password immediately 
+            or contact support.
+          </p>
+        </div>
+
+        <p style="font-size:15px;color:#444;">
+          For account safety, we recommend enabling strong passwords and never sharing your login details.
+        </p>
+        """ +
+        email_footer()
+    )
+
+    send_email(receiver_email, subject, html)
+
+def send_subscription_email(username, plan_name, amount, expiry_date, receiver_email):
+
+    subject = "Subscription Activated – Welcome to OOMECG Premium!"
+
+    html = (
+        email_header("Subscription Activated") +
+        f"""
+        <p style="font-size:15px;color:#333;">
+          Hi <b>{username}</b>,<br><br>
+          Thank you for purchasing a subscription on <b>OOMECG DataBank</b>! 🎉
+        </p>
+
+        <div style="background:#f1faf9;border-left:4px solid #2a9d8f;padding:15px;margin:20px 0;border-radius:8px;">
+          <p style="margin:5px 0;"><b>Plan:</b> {plan_name}</p>
+          <p style="margin:5px 0;"><b>Amount Paid:</b> ₹{amount}</p>
+          <p style="margin:5px 0;"><b>Valid Till:</b> {expiry_date}</p>
+        </div>
+
+        <p style="font-size:15px;color:#444;">
+          Your premium features are now unlocked. You may now download ECG data, access advanced tools, 
+          and enjoy priority support.
+        </p>
+
+        <p style="font-size:15px;color:#333;margin-top:20px;">
+          If you need help at any time, feel free to contact our support team.
         </p>
         """ +
         email_footer()

@@ -24,4 +24,8 @@ urlpatterns = [
     path("patient_search_view",views.patient_search_view, name="patient_search_view"), 
     path("get_patient_hex_data",views.get_patient_hex_data, name="get_patient_hex_data"),
     path("share_selected/", views.share_selected, name="share_selected"),
+    path("stream-file/<str:file_id>/", views.stream_file, name="stream_file"),
+    path("deduct_wallet_before_download/", views.deduct_wallet_before_download, name="deduct_wallet_before_download"),
+    path("save_download_file/",views.save_download_file,name="save_download_file"),
+
 ]

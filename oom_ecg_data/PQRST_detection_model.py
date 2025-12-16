@@ -10,7 +10,9 @@ import warnings
 import threading
 from scipy.stats import mode
 from django.conf import settings
+from dotenv import load_dotenv
 
+load_dotenv() 
 warnings.filterwarnings('ignore')
 
 results_lock = threading.RLock()
@@ -24,8 +26,8 @@ def load_tflite_model(model_path):
 
 # Load TFLite models
 with tf.device('/CPU:0'):
-    r_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/rnn_model1_29_10_Unet.tflite")
-    pt_index_model = load_tflite_model("/home/system/ecgdatabank_new/oom_ecg_data/model/ecg_pt_detection_LSTMGRU_TCN_Transpose_v27.tflite")
+    r_index_model = load_tflite_model(os.getenv("rnn_model"))
+    pt_index_model = load_tflite_model(os.getenv("ecg_pt_detection"))
 
 def lowpass(file, cutoff=0.3):
     b, a = signal.butter(3, cutoff, btype='lowpass', analog=False)

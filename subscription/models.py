@@ -8,7 +8,10 @@ class Feature(models.Model):
         return self.name
 
 class Plan(models.Model):
-    name = models.CharField(max_length=50, unique=True)  # free, basic, pro, premium
+    name = models.CharField(max_length=50, unique=True)
+    description = models.TextField(null=True, blank=True)
+    price = models.FloatField(default=0)
+    duration_days = models.IntegerField(default=30)
     features = models.ManyToManyField(Feature, blank=True)
 
     def __str__(self):
@@ -22,3 +25,29 @@ class UserSubscription(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.plan.name}"
+        
+class DownloadPrice(models.Model):
+
+    ROLE_CHOICES = (
+        ('student', 'student'),
+        ('doctor', 'doctor'),
+        ('other', 'other'),
+    )
+
+    FILE_TYPE_CHOICES = (
+        ('image', 'image'),
+        ('pdf', 'pdf'),
+        ('csv', 'csv'),
+        ('zip','zip'),
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    file_type = models.CharField(max_length=20, choices=FILE_TYPE_CHOICES)
+    price = models.FloatField(default=0)
+
+    class Meta:
+        unique_together = ('role', 'file_type')
+
+    def __str__(self):
+        return f"{self.role} | {self.file_type} | ?{self.price}"
+
