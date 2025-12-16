@@ -612,7 +612,13 @@
                 </button>
               </div>
             </div>
-
+            <div class="form-group">
+              <div id="professionBox" class="profession-box" style="display: none;">
+                
+                <label for="professionInput">Profession</label>
+                <input type="text" id="professionInput" name="professionInput" class="profession-input" placeholder="Enter your profession">
+              </div>
+            </div>
             <!-- Username -->
             <div class="form-group">
               <label for="username">Username <span class="required">*</span></label>
@@ -758,6 +764,7 @@
     const passwordInput = document.getElementById('password');
     const doctorIdInput = document.getElementById('doctorId');
     const submitBtn = document.getElementById('submitBtn');
+    const professionBox = document.getElementById('professionBox');
     
     const doctorIdGroup = document.getElementById('doctorIdGroup');
     const studentDocsGroup = document.getElementById('studentDocsGroup');
@@ -798,6 +805,7 @@
 
         if (userType === 'doctor') {
           doctorIdGroup.classList.remove('hidden');
+          professionBox.style.display = 'none';
           doctorIdInput.required = true;
           doctorCertInput.required = true;
           studentIdInput.required = false;
@@ -805,6 +813,7 @@
           addressProofOtherInput.required = false;
         } else if (userType === 'student') {
           studentDocsGroup.classList.remove('hidden');
+          professionBox.style.display = 'none';
           studentIdInput.required = true;
           addressProofInput.required = true;
           doctorIdInput.required = false;
@@ -812,6 +821,7 @@
           addressProofOtherInput.required = false;
         } else if (userType === 'other') {
           otherDocsGroup.classList.remove('hidden');
+          professionBox.style.display = 'block';
           addressProofOtherInput.required = true;
           studentIdInput.required = false;
           addressProofInput.required = false;
@@ -967,6 +977,7 @@
 
     // Form submission
     form.addEventListener('submit', (e) => {
+    showLoader();
       e.preventDefault(); 
       const isEmailValid = validateEmail();
       const isPhoneValid = validatePhone();
@@ -974,6 +985,7 @@
       const isDoctorIdValid = validateDoctorId();
 
       if (!isEmailValid || !isPhoneValid || !isPasswordValid || !isDoctorIdValid) {
+        hideLoader()
         showToast('Validation Error', 'Please fix all validation errors before submitting', 'error');
         return;
       }
@@ -982,8 +994,6 @@
         const formData = new FormData(form);
         console.log(formData)
         form.submit();
-        
-        showToast('Success!', 'Account created successfully. Welcome to ECG Databank!', 'success');
         
         // Reset form after 2 seconds
         setTimeout(() => {
@@ -1014,7 +1024,16 @@
       element.classList.remove('show');
       if (inputElement) inputElement.classList.remove('error');
     }
-
+window.addEventListener('DOMContentLoaded', () => {
+  const alerts = document.querySelectorAll('.alert-message.show');
+  alerts.forEach(alert => {
+    setTimeout(() => {
+      alert.classList.remove('show');
+      alert.style.opacity = "0";
+      setTimeout(() => alert.remove(), 500);
+    }, 6000);
+  });
+});
   </script>
 </body>
 </html>

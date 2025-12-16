@@ -5,9 +5,13 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'CSS/ecg_details.css' %}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
 {% endblock %}
-
+{% block page_title %}
+ECG Data Management
+{% endblock %}
 {% block content %}
+{% if user_session %}
 <div class="container">
   <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
 
@@ -50,7 +54,7 @@
             <td>{{ data.Frequency }}</td>
             <td>{{data.duration}}</td>
              <td>  
-               <button class="icon-btn scatter-plot" title="Show scatter plot" data-patient="${row.PatientID || ''}" data-id="${row.object_id || ''}" data-arrhythmia="${row.ArrhythmiaType || ''}" data-lead="${row.LeadConfig || '2_lead'}"><i class="fas fa-chart-line hrv-icon"></i></button>
+               <button class="icon-btn1 scatter-plot" title="Show scatter plot" data-patient="${row.PatientID || ''}" data-id="${row.object_id || ''}" data-arrhythmia="${row.ArrhythmiaType || ''}" data-lead="${row.LeadConfig || '2_lead'}"><i class="fas fa-chart-line hrv-icon"></i></button>
             </td>
              
              <td>  
@@ -110,8 +114,11 @@
                 </div>
                 <div class="controls d-flex flex-wrap gap-2 justify-content-end align-items-center">    
                   <div class="arrhythmia-label" id="arrhythmiaContainer-${row.object_id || ''}" style="display: none;">
-                    <select class="form-control" id="Arrhythmia-${row.object_id || ''}" name="ArrhythmiaType">
-                      <option value=" " selected>Select Arrhythmia Type</option>
+                     <!-- Main Arrhythmia -->
+                    <select class="form-control arrhythmia-main" 
+                            id="Arrhythmia-${row.object_id}" 
+                            name="ArrhythmiaType"
+                            onchange="updateRowSubArrhythmia('${row.object_id}')">
                           <option value="Myocardial Infarction">Myocardial Infarction</option>
                           <option value="Atrial Fibrillation & Atrial Flutter">Atrial Fibrillation & Atrial Flutter</option>
                           <option value="HeartBlock">HeartBlock</option>
@@ -120,8 +127,7 @@
                           <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
                           <option value="Ventricular Fibrillation and Asystole">Ventricular Fibrillation and Asystole</option>
                           <option value="Noise">Noise</option>
-                          <option value="Others">Others</option>
-                          <option value="LBBB & RBBB">LBBB & RBBB</option>
+                          <option value="LBBB">LBBB & RBBB</option>
                           <option value="Artifacts">Artifacts</option>
                           <option value="SINUS-ARR">SINUS-ARR</option>
                           <option value="ShortPause">ShortPause</option>
@@ -129,7 +135,17 @@
                           <option value="WIDE-QRS">WIDE-QRS</option>
                           <option value="Abnormal">Abnormal</option>
                           <option value="Normal">Normal</option>
+                           <option value="Others">Others</option>
                     </select>
+                    </div>
+                     <div>
+                    <!-- Sub Arrhythmia -->
+                    <select class="form-control arrhythmia-sub" 
+                            id="SubArrhythmia-${row.object_id}" 
+                            style="display:none; margin-top: 6px;">
+                        <option value="">Select Sub Arrhythmia</option>
+                    </select>
+
                   </div>
                 <div class="download-label" id="downloadContainer-${row.object_id || ''}">
                   <select class="form-control" id="downloadType-${row.object_id || ''}" name="downloadType">
@@ -141,10 +157,20 @@
                   </select>
                 </div>
                 <div class="button-group">
-                  <button class="btn btn-warning edit-btn" id="editEcgData-${row.object_id || ''}" data-id="${row.object_id || ''}">Edit</button>
+                  <button class="btn btn-warning edit-btn
+                      {% if not user|has_feature:'edit_data' %}disabled-feature{% endif %}" 
+                      id="editEcgData-${row.object_id || ''}"
+                      {% if not user|has_feature:'edit_data' %}
+                          data-locked="true"
+                      {% else %}
+                          data-locked="false"
+                      {% endif %}
+                      data-id="${row.object_id || ''}">
+                      Edit
+                  </button>
                   <button class="btn btn-success save-btn" id="saveData-${row.object_id || ''}" data-id="${row.object_id || ''}">Download</button>
                   <button class="btn btn-primary confirm-edit-btn" id="confirmEditBtn-${row.object_id || ''}" data-id="${row.object_id || ''}" style="display: none;">Confirm</button>
-                  <button class="btn btn-secondary close-btn" id="closeBtn-${row.object_id || ''}" style="display: none;">Close</button>     
+                  <button class="btn btn-danger close-edit" id="closeBtn-${row.object_id || ''}" style="display: none;">Close</button>     
                   </div>         
                   </div>
               </div>
@@ -164,8 +190,10 @@
     </div>
   <div class="pagination-container">
     
-      <div class="pagination-left">
-        <button id="shareSelectedBtn" class="btn btn-primary">
+<div class="pagination-left">
+    <button id="shareSelectedBtn"
+        class="btn btn-primary {% if not user|has_feature:'share' %}disabled-feature{% endif %}"
+        data-locked="{% if not user|has_feature:'share' %}true{% else %}false{% endif %}">
           <i class="fas fa-share-alt"></i>
           <span>Share Selected</span>
         </button>
@@ -196,9 +224,6 @@
     </button>
 
 </div>
-
-
-
     </div>
     <div class="scroll-to-top" id="scrollToTop">
       <i class="fas fa-arrow-up"></i>
@@ -218,10 +243,23 @@
       </div>
     </div>
   </div>
+  <div id="exportDiv" style="display:none;"></div>
+  {% else %}
+<script>
+    window.location.href="{% url 'session_expired' %}";
+</script>
+
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script>
     const hasShareFeature = {{ user|has_feature:"share"|yesno:"true,false" }};
+    const hasDelFeature ={{user|has_feature:"delete_data"|yesno:"true,false"}};
+    window.userFeatures = {
+    edit_locked: {{ user|has_feature:'edit_data'|yesno:'true,false' }},
+    pqrst_locked: {{ user|has_feature:'pqrst_data'|yesno:'true,false' }},
+    download_locked: {{ user|has_feature:'download'|yesno:'true,false' }},
+};
 </script>
 
 <script src="{% static 'js/scripts.js' %}"></script> 

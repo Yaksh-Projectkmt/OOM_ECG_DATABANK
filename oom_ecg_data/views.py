@@ -1,56 +1,66 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse,FileResponse,HttpResponse
 from bson import ObjectId
-import pymongo
 import matplotlib.pyplot as plt
 from io import BytesIO
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt  
 from pymongo import MongoClient
-import json
 import pandas as pd
 from django.core.files.storage import default_storage
 from django.conf import settings
 from scipy import signal
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-import os
-import math
 import plotly.graph_objects as go
 import plotly.io as pio
-import traceback
-import io
 from .PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
-import random
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from .get_Data import get_the_data
 from django.core.files.base import ContentFile
-import base64
-import matplotlib
 import datetime
-from datetime import datetime, timezone
+from django.utils import timezone  
+
+
 from scipy.signal import butter, filtfilt
-import json, binascii, numpy as np
+import json, base64, gridfs, zipfile, binascii, re, math, datetime, matplotlib, random, io, traceback, os, pymongo
 matplotlib.use('Agg')
-import re
-from django.http import JsonResponse
-import binascii
-import numpy as np
-import zipfile
+
 from subscription.decorators import feature_required
-client = pymongo.MongoClient("mongodb://192.168.1.65:27017/")
-db = client["ecgarrhythmias"]
-patient_db=client['Patients']
+from authuser.views import deduct_wallet_for_download, users_collection
+from subscription.templatetags.subscription_tags import has_feature
+from django.http import Http404
+from subscription.utils import get_download_price, create_download_history
+from gridfs import GridFS
+# Connect to MongoDB
+mongo_uri = os.getenv("MONGO_HOST")
 
-Morphology_data=client["Morphology_data"]
-Morphology_patient_db=client["Morphology_Patients"]
+# Create client
+mongo_client = MongoClient(mongo_uri)
 
-Analysis_data=client["Analysis_data"]
-Analysis_data_patient=client["Analysis_patients"]
+#database
+db = mongo_client["ecgarrhythmias"]
+patient_db=mongo_client['Patients']
 
-Queues = client["Queue"]
+Morphology_data=mongo_client["Morphology_data"]
+Morphology_patient_db=mongo_client["Morphology_Patients"]
+
+Analysis_data=mongo_client["Analysis_data"]
+Analysis_data_patient=mongo_client["Analysis_patients"]
+
+Queues = mongo_client["Queue"]
+media_db=mongo_client["Download_files"]
+admin_db =mongo_client["admin"]
+#collection
 logs_collection = Queues["multiple_segments"]
+
+#chunks
+download_fs = GridFS(media_db, collection="downloads") 
+download_logs = admin_db["download_logs"]
+
+Files_db = mongo_client['Files']
+fs = gridfs.GridFS(Files_db)
 
 arrhythmias_dict = {
 'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
@@ -111,9 +121,9 @@ def update_patient_db(patient_id, arrhythmia, frequency, datalength):
     )
 # Mapping between main DB and patient DB
 PATIENT_DB_MAP = {
-    "ecgarrhythmias": client["Patients"],
-    "Morphology_data": client["Morphology_Patients"],
-    "Analysis_data": client["Analysis_patients"],
+    "ecgarrhythmias": mongo_client["Patients"],
+    "Morphology_data": mongo_client["Morphology_Patients"],
+    "Analysis_data": mongo_client["Analysis_patients"],
 }
 
 def update_patient_on_edit(patient_id, old_arrhythmia, new_arrhythmia, datalength, frequency, source_db):
@@ -173,7 +183,6 @@ def update_patient_on_delete(patient_id, arrhythmia, datalength, frequency, sour
         col.delete_one({"PatientID": patient_id})
 
 @csrf_exempt
-@feature_required('ecg_insert')
 def new_insert_data(request):
     if request.method == "POST":
         try:
@@ -192,7 +201,8 @@ def new_insert_data(request):
             # --- Optional Fields ---
             weight = request.POST.get("weight") or 0
             height = request.POST.get("height") or 0
-           
+            Medical_History = request.POST.get("Medical_History", "").strip()
+            print(patient_id,arrhythmia_mi,sub_arrhythmia,frequency,lead_type,lead, sex,age,weight,height,Medical_History)
             if len(arrhythmia_mi) != len(sub_arrhythmia):
                 return JsonResponse({
                     "status": "error",
@@ -313,9 +323,11 @@ def new_insert_data(request):
                         "Weight": weight,
                         "datalength": len(chunk),
                         "Server": "Local",
-                        "created_at": datetime.now(timezone.utc),
+                        "Medical_History":Medical_History,
+                        "created_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
                         "Data": data_dict
                     }
+                    print(db_insert_data)
                     db[coll_name].insert_one(db_insert_data)
                     # --- Update patient_db after insert ---
                     update_patient_db(patient_id, coll_name, frequency, datalength)
@@ -376,7 +388,7 @@ def fetch_ecg_data(request):
         #  Search in arrhythmia-wise collections across multiple DBs
         collection, total_count = get_collection_with_data(query, arrhythmia)
 
-        if not collection:
+        if collection is None:
             return JsonResponse({
                 "status": "error",
                 "message": "No ECG data found for the given criteria",
@@ -577,9 +589,6 @@ def fetch_random_ecg_data(request, arrhythmia):
         "card_name": arrhythmia
     })
 
-
-import math
-
 def get_object_id(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=405)
@@ -683,7 +692,7 @@ def get_object_id(request):
 
 @csrf_exempt
 def edit_datas(request):
-    db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
+    db_candidates = [mongo_client["ecgarrhythmias"], Morphology_data, Analysis_data]
 
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
@@ -711,6 +720,7 @@ def edit_datas(request):
     old_collection_name = data.get('old_collection')
     new_collection_name = data.get('new_collection')
     lead = data.get('lead')
+    sub_arrhythmia = data.get('sub_arrhythmia')
 
     if not all([object_id, old_collection_name, new_collection_name, lead]):
         return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
@@ -756,21 +766,14 @@ def edit_datas(request):
             new_collection = source_db[col_name]
             break
 
-    if not new_collection:
+    if new_collection is None:
         new_collection = source_db[new_collection_name]
 
-    # Check for duplicates
-    duplicate = new_collection.find_one({'Data': fetched_data.get('Data')})
-    if duplicate:
-        return JsonResponse({
-            'status': 'error',
-            'message': "Duplicate data: This patient's ECG with same lead and arrhythmia already exists."
-        }, status=409)
 
     # Prepare new document
     update_arrhy_data = {
         'PatientID': patient_id,
-        'Arrhythmia': new_collection_name,
+        'Arrhythmia': sub_arrhythmia,
         'Lead': lead,
         'Frequency': fetched_data.get('Frequency'),
         'leadtype': fetched_data.get('leadtype'),
@@ -779,7 +782,7 @@ def edit_datas(request):
         'title_lines': fetched_data.get('title_lines'),
         'summar': fetched_data.get('**metrics'),
         'server': fetched_data.get('server', 'Local'),
-        'created_at': fetched_data.get('created_at', datetime.utcnow()),
+        'created_at': fetched_data.get('created_at'),
         'Data': fetched_data.get('Data')
     }
 
@@ -817,7 +820,7 @@ def delete_data(request):
         obj_id = ObjectId(object_id)
 
         # Candidate DBs to search
-        db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
+        db_candidates = [mongo_client["ecgarrhythmias"], Morphology_data, Analysis_data]
 
         fetched_data = None
         find_collection = None
@@ -899,139 +902,7 @@ def process_and_return_ecg(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
-    
-#def get_pqrst_data(request):
-#    if request.method != 'POST':
-#        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
-#
-#    try:
-#        data = json.loads(request.body)
-#        object_id = data.get("object_id")
-#        arrhythmia_raw = data.get("arrhythmia", "").strip()
-#        lead_config = data.get("lead_config")
-#        
-#        if not object_id or not arrhythmia_raw or not lead_config:
-#            return JsonResponse({
-#                "status": "error",
-#                "message": "Missing parameters: object_id, arrhythmia, or lead_config."
-#            }, status=400)
-#
-#        if lead_config not in ["2_lead", "7_lead", "12_lead"]:
-#            return JsonResponse({
-#                "status": "error",
-#                "message": "Invalid lead_config. Must be '2_lead', '7_lead', or '12_lead'."
-#            }, status=400)
-#        
-#        arrhythmia_list = [a.strip() for a in arrhythmia_raw.split(",") if a.strip()]
-#        record = None
-#        found_collection = None
-#
-#        # Search across all DB candidates
-#        db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
-#
-#        for arr in arrhythmia_list:
-#            for candidate in db_candidates:
-#                for col_name in candidate.list_collection_names():
-#                    # Normalize: ignore case and treat spaces/underscores as same
-#                    if col_name.lower().replace("_", " ") == arr.lower().replace("_", " "):
-#                        collection = candidate[col_name]
-#                        doc = collection.find_one({"_id": ObjectId(object_id)})
-#                        if doc and "Data" in doc:
-#                            record = doc
-#                            found_collection = f"{candidate.name}.{col_name}"
-#                            break
-#                if record:
-#                    break
-#            if record:
-#                break
-#
-#        if not record or "Data" not in record:
-#            return JsonResponse({"status": "error", "message": "Invalid or missing ECG data."}, status=404)
-#
-#        frequency = int(record.get("Frequency", 200))
-#
-#        # Normalize Data keys
-#        standard_leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF',
-#                          'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
-#        lead_mapping = {lead.lower(): lead for lead in standard_leads}
-#
-#        normalized_data = {}
-#        for key, value in record["Data"].items():
-#            norm_key = lead_mapping.get(str(key).lower().strip(), key)
-#            normalized_data[norm_key] = value
-#
-#        # Expected leads by config
-#        if lead_config == "2_lead":
-#            expected_leads = ["II"]
-#        elif lead_config == "7_lead":
-#            expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF", "V5"]
-#        else:
-#            expected_leads = ["I", "II", "III", "aVR", "aVL", "aVF",
-#                              "V1", "V2", "V3", "V4", "V5", "V6"]
-#
-#        available_leads = [lead for lead in expected_leads if lead in normalized_data]
-#
-#        if not available_leads:
-#            return JsonResponse({
-#                "status": "error",
-#                "message": f"No valid leads found. Expected: {expected_leads}"
-#            }, status=404)
-#
-#        # Create DataFrame
-#        lead_data = {lead: normalized_data[lead] for lead in available_leads}
-#        df = pd.DataFrame(lead_data)
-#
-#        # Run detection models
-#        r_index_dic = check_r_index(df, lead_config, frequency, r_index_model)
-#        s_index, q_index = check_qs_index(df, r_index_dic, lead_config)
-#        t_index, p_index, _, _, _ = check_pt_index(df, r_index_dic, lead_config)
-#        r_index = r_index_dic['II'] if 'II' in r_index_dic else r_index_dic[available_leads[0]]
-#        # --- HRV Metrics Function ---
-#        def BPM(r_index):
-#
-#            rr_intervals = np.diff(r_index)
-#            hrv_diff = abs(np.diff(rr_intervals)).tolist()
-#            mean_rr = np.mean(rr_intervals)
-#            sdnn = np.std(rr_intervals)
-#
-#            return {
-#                "mean_rr": round(mean_rr, 2),
-#                "sdnn": round(sdnn, 2),
-#                "hrv_values": hrv_diff,
-#                "hrv_count": len(hrv_diff)
-#            }
-#        def hr_count(r_index, fs=200):
-#            if len(r_index) > 1:
-#                rr_intervals = np.diff(r_index)
-#                interval_ms = [(rr / fs) * 1000 for rr in rr_intervals]
-#                if sum(interval_ms) > 0:
-#                    hr = (len(interval_ms) * 60000) / sum(interval_ms)
-#                    return round(hr, 2)
-#            return 0
-# 
-#        # Compute HRV metrics
-#        hrv_info = BPM(r_index)
-#        hr_value = hr_count(r_index, frequency)
-#        response_data = {
-#            "status": "success",
-#            "R": {lead: [int(i) for i in r_index_dic[lead]] for lead in r_index_dic},
-#            "Q": {lead: [int(i) for i in q_index[lead]] for lead in q_index},
-#            "S": {lead: [int(i) for i in s_index[lead]] for lead in s_index},
-#            "P": {lead: [int(i) for i in p_index[lead]] for lead in p_index},
-#            "T": {lead: [int(i) for i in t_index[lead]] for lead in t_index},
-#            "HR": hr_value,
-#            "HRV": hrv_info["hrv_values"],
-#            "HRV_metrics": {
-#                "mean_rr": hrv_info["mean_rr"],
-#                "sdnn": hrv_info["sdnn"],
-#            }
-#        }
-#        return JsonResponse(response_data)
-#    except Exception as e:
-#        traceback.print_exc()
-#        return JsonResponse({"status": "error", "message": str(e)}, status=500)
-import math
-from subscription.templatetags.subscription_tags import has_feature
+
 @csrf_exempt
 def get_pqrst_data(request):
 
@@ -1082,7 +953,7 @@ def get_pqrst_data(request):
         record = None
 
         # SEARCH DBs
-        db_candidates = [client["ecgarrhythmias"], Morphology_data, Analysis_data]
+        db_candidates = [mongo_client["ecgarrhythmias"], Morphology_data, Analysis_data]
 
         for arr in arrhythmia_list:
             for candidate in db_candidates:
@@ -1192,11 +1063,79 @@ def get_pqrst_data(request):
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        
+def get_session_user(request):
+    """Return (email, role, error_response or None)."""
+    session = request.session.get("user_session", {})
+    email = session.get("email")
+    role  = session.get("role")   
+
+    if not email:
+        return None, None, JsonResponse({"error": "User not logged in"}, status=401)
+
+    user_doc = users_collection.find_one({"email": email})
+    if not user_doc:
+        return None, None, JsonResponse({"error": "User not found"}, status=404)
+
+    return email, role, None
+
+@csrf_exempt
+def deduct_wallet_before_download(request):
+    
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        file_type = data.get("file_type")   # CSV or Image
+        patient_id = data.get("patient_id")
+        Lead= data.get("lead_type")
+        arrhythmia = data.get("arrhythmia")
+        Data_ObjectId =data.get("objectId")
+        Collection=data.get("collection")
+        DownloadfileId =data.get("DownloadfileId")
+        if not file_type:
+            return JsonResponse({"error": "file_type is required"}, status=400)
+
+        # GET USER FROM SESSION (MongoDB user)
+        email, role, error_response = get_session_user(request)
+
+        if error_response:
+            return error_response
+
+        # Get user document from Mongo
+        user_doc = users_collection.find_one({"email": email})
+        if not user_doc:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+        # Convert to a mock object to pass to deduct_wallet_for_download
+        class TempUser:
+            pass
+
+        user = TempUser()
+        user.email = email
+        user.role = role
+
+        # Deduct wallet
+        success, message = deduct_wallet_for_download(user, file_type, Data_ObjectId,arrhythmia,Collection,Lead,patient_id,DownloadfileId)
+
+        if not success:
+            return JsonResponse({"error": message}, status=402)
+
+        return JsonResponse({"message": "OK"})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
 def selecteddownload(request):
     try:
-        data = json.loads(request.body)
+        # Just ensure user exists, DO NOT deduct again
+        email, role, error_response = get_session_user(request)
+        if error_response:
+            return error_response
+
+        data = json.loads(request.body or "{}")        
         if not data:
             return JsonResponse({'error': 'No data received'}, status=400)
 
@@ -1268,58 +1207,81 @@ def insert_db_Data(request):
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
-
 @csrf_exempt
 def upload_plot(request):
-    """
-    Handle ECG file uploads for sharing: plot PNG, raw data CSV, PQRST CSV.
-    """
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
     try:
         data = json.loads(request.body)
-        file_type = data.get("type")           # "plot_png", "raw_data", "pqrst_csv"
-        content = data.get("content")          # Base64 for images, CSV text for CSV
+        file_type = data.get("type")
+        content = data.get("content")
         patient_id = data.get("patientId", "unknown")
 
-        if not content or not file_type:
+        if not file_type or not content:
             return JsonResponse({"status": "error", "message": "Missing content or type"}, status=400)
 
-        # Determine directory & file extension
-        if file_type == "plot_png":
-            ext = "png"
-            subdir = "ecg_plots"
-        elif file_type in ["raw_data", "pqrst_csv",'selected_data']:
-            ext = "csv"
-            subdir = "ecg_csv"
-        else:
-            return JsonResponse({"status": "error", "message": f"Unsupported file type: {file_type}"}, status=400)
+        # Determine file extension
+        ext = "png" if file_type == "plot_png" else "csv"
 
-        # Create folder if not exists
-        dir_path = os.path.join(settings.MEDIA_ROOT, subdir)
-        os.makedirs(dir_path, exist_ok=True)
+        # Delete old shared file of same type for this patient
+        old_file = Files_db.shared_files.find_one({"patient_id": patient_id, "file_type": file_type})
+        if old_file:
+            fs.delete(old_file["file_id"])
+            Files_db.shared_files.delete_one({"_id": old_file["_id"]})
 
-        file_name = f"{file_type}_{patient_id}.{ext}"
-        file_path = os.path.join(dir_path, file_name)
-
-        # Save file
+        # ---------------------------
+        # Save NEW file into GridFS
+        # ---------------------------
         if ext == "png":
-            # Expecting Base64 string for image
-            format, imgstr = content.split(';base64,')
-            with open(file_path, "wb") as f:
-                f.write(base64.b64decode(imgstr))
+            # Base64 decoding
+            _, imgstr = content.split(';base64,')
+            file_bytes = base64.b64decode(imgstr)
         else:
-            # CSV text
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
+            file_bytes = content.encode("utf-8")
 
-        # Build public URL
-        file_url = request.build_absolute_uri(os.path.join(settings.MEDIA_URL, subdir, file_name))
-        return JsonResponse({"status": "success", "url": file_url})
+        filename = f"{file_type}_{patient_id}.{ext}"
+        file_id = fs.put(file_bytes, filename=filename, contentType=ext)
+
+        # --------------------------------------
+        # Save reference in shared_files
+        # --------------------------------------
+        Files_db.shared_files.insert_one({
+            "patient_id": patient_id,
+            "file_type": file_type,
+            "file_id": file_id,
+            "filename": filename
+        })
+
+        # Return a streaming URL
+        stream_url = request.build_absolute_uri(f"/ommecgdata/stream-file/{str(file_id)}/")
+
+        return JsonResponse({"status": "success", "url": stream_url})
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+def stream_file(request, file_id):
+    """
+    Stream ECG file stored in GridFS using /stream-file/<id> URL.
+    """
+    try:
+        file_id = ObjectId(file_id)
+        gridout = fs.get(file_id)
+
+        # Set correct content type
+        content_type = "application/octet-stream"
+        if gridout.filename.endswith(".png"):
+            content_type = "image/png"
+        elif gridout.filename.endswith(".csv"):
+            content_type = "text/csv"
+
+        response = HttpResponse(gridout.read(), content_type=content_type)
+        response["Content-Disposition"] = f'attachment; filename="{gridout.filename}"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"File not found or invalid ID: {str(e)}", status=404)
 
 @csrf_exempt
 @require_POST
@@ -1343,7 +1305,7 @@ def get_multiple_segments(request):
             "arrhythmiaData": arrhythmia_data,
             "raw_request": data,
             "status": "pending",
-            "created_at": datetime.now(timezone.utc),
+            "created_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
             "updated_at": None,
             "error_message": None
         }
@@ -1361,7 +1323,7 @@ def get_multiple_segments(request):
             # --- Update log on error ---
             logs_collection.update_one(
                 {"_id": log_id},
-                {"$set": {"status": "error", "error_message": "Invalid lead", "updated_at": datetime.now(timezone.utc)}}
+                {"$set": {"status": "error", "error_message": "Invalid lead", "updated_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")}}
             )
             return JsonResponse({"status": "error", "message": "Invalid lead", "data": []})
 
@@ -1471,7 +1433,7 @@ def get_multiple_segments(request):
             {"_id": log_id},
             {"$set": {
                 "status": "complete" if flattened_segments else "error",
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
                 "processed_segments": session_query_list,
                 "total_records": len(flattened_segments)
             }}
@@ -1494,7 +1456,7 @@ def get_multiple_segments(request):
             "user": username,
             "status": "error",
             "error_message": str(e),
-            "created_at": datetime.now(timezone.utc),
+            "created_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
             "raw_request": request.body.decode("utf-8", errors="ignore")
         })
         return JsonResponse({"status": "error", "message": str(e), "data": []})
@@ -1602,16 +1564,15 @@ def ecg_details(request, arrhythmia):
         "arrhythmia": arrhythmia,
         "card_name": card_name,
     })
+LIVE_mongo_uri=os.getenv("LIVE_HOST")
+LIVE_DB=os.getenv("LIVE_MONGO_DB")
 # ========= UTILITIES =========
 def get_ecg_collection(patient_id):
-    # MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin" # test
-    MONGO_URI = "mongodb://readonly_user:9ikJ4Qn1YmG1l1EVF1OQ@192.168.2.131:27017/?authSource=admin" #live
-    client = MongoClient(MONGO_URI)
-    # DB_NAME = "oom-ecg"
-    DB_NAME ="ecgs"
-    db1 = client[DB_NAME]
+
+    client = MongoClient(LIVE_mongo_uri)
+
+    db1 = client[LIVE_DB]
     patients_collection = db1["patients"]
-    """Get patient document and ECG collection handle."""
     patient = patients_collection.find_one({"patientId": patient_id})
     if not patient:
         return None, None
@@ -1620,12 +1581,8 @@ def get_ecg_collection(patient_id):
 
 # ========= API ENDPOINTS =========
 def check_patient(request):
-    # MONGO_URI = "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin"# test
-    MONGO_URI = "mongodb://readonly_user:9ikJ4Qn1YmG1l1EVF1OQ@192.168.2.131:27017/?authSource=admin" #live
-    client = MongoClient(MONGO_URI)
-    # DB_NAME = "oom-ecg"
-    DB_NAME ="ecgs"
-    db1 = client[DB_NAME]
+    client = MongoClient(LIVE_mongo_uri)
+    db1 = client[LIVE_DB]
     patients_collection = db1["patients"]
     patient_id = request.GET.get("patientId")
     if not patient_id:
@@ -1786,7 +1743,6 @@ def get_patient_hex_data(request):
                 agg_result = list(ecg_collection.aggregate(pipeline))
                 total_len = agg_result[0]["total_len"] if agg_result else 0
             except Exception as agg_err:
-                print("Aggregation failed, falling back:", agg_err)
                 total_len = 0
                 cursor_fallback = ecg_collection.find(
                     {"version": db_version},
@@ -1863,7 +1819,6 @@ def get_patient_hex_data(request):
         })
 
     except Exception as e:
-        print("Backend Error:", e)
         return JsonResponse({"status": "error", "message": str(e)})
 
 def patient_search_view(request):
@@ -1899,85 +1854,142 @@ def share_selected(request):
 
         if not items:
             return JsonResponse({"status": "error", "message": "No records provided."}, status=400)
-        
-        # Create unique shared folder
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        shared_dir = os.path.join(settings.MEDIA_ROOT, "shared_ecg", timestamp)
-        os.makedirs(shared_dir, exist_ok=True)
 
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_files = []
         valid_count = 0
 
-        for item in items:
-            collection_name = item.get("collection")
-            record_id = item.get("id")
+        in_memory_zip = io.BytesIO()
 
-            if not collection_name or not record_id:
-                continue
+        with zipfile.ZipFile(in_memory_zip, "w", zipfile.ZIP_DEFLATED) as zip_buffer:
 
-            collection = db[collection_name]
-            record = None
+            for item in items:
+                collection_name = item.get("collection")
+                record_id = item.get("id")
 
-            # Try ObjectId and string fallback
-            try:
-                record = collection.find_one({"_id": ObjectId(record_id)})
-            except Exception:
-                record = collection.find_one({"_id": record_id})
+                if not collection_name or not record_id:
+                    continue
 
-            if not record:
-                continue
+                collection = db[collection_name]
 
-            # Handle 2-lead ECG
-            if "x" in record and "y" in record:
-                df = pd.DataFrame({"TimeIndex": record["x"], "II": record["y"]})
-                df["LeadType"] = "2-lead"
+                # Fetch record
+                try:
+                    record = collection.find_one({"_id": ObjectId(record_id)})
+                except:
+                    record = collection.find_one({"_id": record_id})
 
-            elif "Data" in record:
-                data_dict = record["Data"]
-                leads = list(data_dict.keys())
-                df_data = {}
+                if not record:
+                    continue
 
-                # Determine length of first lead to create TimeIndex
-                first_lead = leads[0]
-                num_points = len(data_dict[first_lead])
-                df_data["Index"] = list(range(num_points))
+                # Convert ECG record → CSV dataframe
+                if "x" in record and "y" in record:
+                    df = pd.DataFrame({"TimeIndex": record["x"], "II": record["y"]})
+                elif "Data" in record:
+                    data_dict = record["Data"]
+                    leads = list(data_dict.keys())
+                    num_points = len(data_dict[leads[0]])
+                    df_data = {"Index": list(range(num_points))}
+                    for lead in leads:
+                        df_data[lead] = data_dict[lead]
+                    df = pd.DataFrame(df_data)
+                else:
+                    continue
 
-                # Add each lead�s signal
-                for lead in leads:
-                    df_data[lead] = data_dict[lead]
+                # Generate CSV content in memory
+                csv_buffer = io.StringIO()
+                df.to_csv(csv_buffer, index=False)
+                csv_bytes = csv_buffer.getvalue().encode("utf-8")
 
-                # Create final DataFrame with only TimeIndex and leads
-                df = pd.DataFrame(df_data)
-            else:
-                continue
+                csv_filename = f"{collection_name}_{record_id}.csv"
+                zip_buffer.writestr(csv_filename, csv_bytes)
 
-            # Save each CSV file
-            csv_name = f"{collection_name}_{record_id}.csv".replace(" ", "_")
-            csv_path = os.path.join(shared_dir, csv_name)
-            df.to_csv(csv_path, index=False, encoding="utf-8")
+                valid_count += 1
 
-            csv_files.append(csv_path)
-            valid_count += 1
+        if valid_count == 0:
+            return JsonResponse({"status": "error", "message": "No valid ECG data found."}, status=400)
 
+        # ---------------------------
+        # SAVE ZIP INTO GRIDFS
+        # ---------------------------
+        zip_filename = f"shared_ecg_{timestamp}.zip"
 
-        if not csv_files:
-            return JsonResponse({"status": "error", "message": "No valid ECG data found in selected records."}, status=400)
+        in_memory_zip.seek(0)
+        file_id = fs.put(in_memory_zip.read(), filename=zip_filename, contentType="application/zip")
 
-        # Create a ZIP archive of all CSVs
-        zip_name = f"shared_ecg_{timestamp}.zip"
-        zip_path = os.path.join(shared_dir, zip_name)
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            for file_path in csv_files:
-                zipf.write(file_path, os.path.basename(file_path))
+        # Save reference in DB
+        Files_db.shared_files.insert_one({
+            "file_id": file_id,
+            "filename": zip_filename,
+            "file_type": "shared_zip",
+            "count": valid_count,
+            "timestamp": timestamp
+        })
 
-        file_url = request.build_absolute_uri(
-            os.path.join(settings.MEDIA_URL, "shared_ecg", timestamp, zip_name)
+        # Build streaming URL
+        stream_url = request.build_absolute_uri(
+            f"/ommecgdata/stream-file/{str(file_id)}/"
         )
+
         return JsonResponse({
             "status": "success",
-            "message": f"{valid_count} ECG files saved.",
-            "download_url": file_url
+            "message": f"{valid_count} ECG files packed into ZIP.",
+            "download_url": stream_url
         })
 
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        
+@csrf_exempt
+@require_POST
+def save_download_file(request):
+    try:
+        f = request.FILES.get("file")
+        if not f:
+            return JsonResponse({"success": False, "error": "No file provided"}, status=400)
+
+        patient_id = request.POST.get("patientId")
+        download_type = request.POST.get("downloadType")
+        arrhythmia = request.POST.get("arrhythmia")
+        lead_type = request.POST.get("leadType")
+        DownloadfileId = request.POST.get("DownloadfileId")
+        
+        meta_raw = request.POST.get("meta", "{}")
+        try:
+            meta = json.loads(meta_raw)
+        except:
+            meta = {}
+
+        # ----- FIX: use f.read() instead of f.file -----
+        file_id = download_fs.put(
+            f.read(),
+            filename=f.name,
+            contentType=f.content_type,
+            patient_id=patient_id,
+            download_type=download_type,
+            arrhythmia=arrhythmia,
+            lead_type=lead_type,
+            DownloadfileId=DownloadfileId,
+            meta=meta,
+            length=f.size
+        )
+
+        # save history
+        history_id = download_logs.insert_one({
+            "DownloadfileId": DownloadfileId,
+            "patient_id": patient_id,
+            "file_id": file_id,
+            "download_type": download_type,
+            "arrhythmia": arrhythmia,
+            "lead_type": lead_type
+        }).inserted_id
+        
+        return JsonResponse({
+            "success": True,
+            "file_id": str(file_id),
+            "history_id": str(history_id),
+            "DownloadfileId": DownloadfileId
+        })
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return JsonResponse({"success": False, "error": str(e)}, status=500)

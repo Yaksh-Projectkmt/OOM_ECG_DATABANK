@@ -1,5 +1,6 @@
 body{
-    overflow: hidden;
+    overflow-x: hidden;   /* Prevent horizontal scroll only */
+    overflow-y: auto;  
 }
 /* ==========================
    Unified Modal Theming
@@ -114,9 +115,6 @@ body.light-mode .btn-close {
     border-bottom: 2px solid transparent;
     font-weight: 500;
     transition: all 0.3s ease;
-}
-.search-tabs .nav-link:hover {
-    color: var(--text-primary);
 }
 
 /* ECG Preview Area */

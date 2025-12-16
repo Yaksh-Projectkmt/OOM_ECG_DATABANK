@@ -1,5 +1,5 @@
 class ECGDBRouter:
-    route_app_labels = {'analysis_tool', 'morphology_drow', 'oom_ecg_data', 'report'}  # Keep subscription out
+    route_app_labels = {'analysis_tool', 'morphology_drow', 'oom_ecg_data', 'report'} 
 
     def db_for_read(self, model, **hints):
         if model._meta.app_label in self.route_app_labels:

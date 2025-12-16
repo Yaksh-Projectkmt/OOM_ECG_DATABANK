@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Session expired - Please log in again to access ECG Databank">
+  <title>Session Expired | ECG Databank</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #343021ff 50%, #ffe4e6 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background decorative elements */
+    body::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+      animation: float 20s ease-in-out infinite;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      bottom: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, transparent 50%);
+      animation: float 25s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(10%, 10%) rotate(5deg); }
+      50% { transform: translate(5%, -5%) rotate(-3deg); }
+      75% { transform: translate(-5%, 5%) rotate(2deg); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Logo Section */
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      animation: fadeIn 0.8s ease-out 0.2s both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .logo-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      border-radius: 0.875rem;
+      color: white;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); }
+      50% { box-shadow: 0 0 0 12px rgba(234, 88, 12, 0); }
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    /* Session Card */
+    .session-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 3rem 2.5rem;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .session-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #ea580c, #dc2626);
+    }
+
+    /* Lock Icon Container */
+    .icon-container {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #fef3c7, #fed7aa);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: iconBounce 0.6s ease-out 0.4s both;
+    }
+
+    @keyframes iconBounce {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .icon-container::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px dashed #f59e0b;
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .lock-icon {
+      width: 48px;
+      height: 48px;
+      color: #ea580c;
+    }
+
+    /* Text Content */
+    .session-card h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.75rem;
+    }
+
+    .session-card .subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Timer Badge */
+    .timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      border: 1px solid #fcd34d;
+    }
+
+    .timer-badge i {
+      animation: tick 1s ease-in-out infinite;
+    }
+
+    @keyframes tick {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* Login Button */
+    .btn-login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      color: white;
+      border: none;
+      border-radius: 0.875rem;
+      font-size: 1.125rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+    }
+
+    .btn-login:hover {
+      background: linear-gradient(135deg, #d97706, #b91c1c);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(234, 88, 12, 0.4);
+    }
+
+    .btn-login:active {
+      transform: translateY(-1px);
+    }
+
+    .btn-login i {
+      transition: transform 0.3s ease;
+    }
+
+    .btn-login:hover i {
+      transform: translateX(4px);
+    }
+
+    /* Security Note */
+    .security-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      color: #9ca3af;
+      font-size: 0.8125rem;
+    }
+
+    .security-note i {
+      color: #10b981;
+    }
+
+    /* Help Link */
+    .help-link {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f3f4f6;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .help-link a {
+      color: #ea580c;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .help-link a:hover {
+      color: #dc2626;
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    .footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid #f3f4f6;
+      margin-top: 2rem;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 0.8125rem;
+      animation: fadeIn 0.8s ease-out 0.6s both;
+    }
+
+    .footer a {
+        
+      color: #6b7280;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer a:hover {
+      color: #ea580c;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      body {
+        padding: 1rem;
+      }
+
+      .session-card {
+        padding: 2rem 1.5rem;
+      }
+
+      .session-card h1 {
+        font-size: 1.5rem;
+      }
+
+      .icon-container {
+        width: 80px;
+        height: 80px;
+      }
+
+      .lock-icon {
+        width: 36px;
+        height: 36px;
+      }
+
+      .logo-text {
+        font-size: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo -->
+    {% comment %} <div class="logo">
+      <div class="logo-icon">
+        <i class="fas fa-heartbeat"></i>
+      </div>
+      <span class="logo-text">OOM ECG Databank</span>
+    </div> {% endcomment %}
+
+    <!-- Session Card -->
+    <div class="session-card">
+      <!-- Lock Icon -->
+      <div class="icon-container">
+        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          <circle cx="12" cy="16" r="1"></circle>
+        </svg>
+      </div>
+
+      <!-- Timer Badge -->
+      <div class="timer-badge">
+        <i class="fas fa-clock"></i>
+        Session timed out for security
+      </div>
+
+      <h1>Session Expired</h1>
+      <p class="subtitle">
+        Your session has ended to protect your data. Please sign in again to continue accessing your ECG records.
+      </p>
+
+      <!-- Login Button -->
+      <a href="{% url 'logout' %}" class="btn-login">
+        <i class="fas fa-sign-in-alt"></i>
+        Sign In Again
+        <i class="fas fa-arrow-right"></i>
+      </a>
+
+      <!-- Security Note -->
+      <div class="security-note">
+        <i class="fas fa-shield-alt"></i>
+        <span>Your data remains secure and protected</span>
+      </div>
+
+      <!-- Help Link -->
+      {% comment %} <div class="help-link">
+        Having trouble? <a onclick="window.location.href='{% url 'help' %}'">Contact Support</a>
+      </div>
+    </div> {% endcomment %}
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>&copy; 2025–2026 Kali MedTech Pvt. Ltd. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

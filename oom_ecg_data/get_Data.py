@@ -5,41 +5,46 @@ import pymongo
 from bson import ObjectId
 from collections import Counter
 import warnings
-import time
+import time, os
 from pymongo import MongoClient
 warnings.filterwarnings("ignore")
 
+# Connect to MongoDB
+mongo_uri = os.getenv("MONGO_HOST")
+TEST_mongo_uri=os.getenv("TEST_HOST")
+DEV_mongo_uri=os.getenv("DEV_HOST")
+LIVE_mongo_uri=os.getenv("LIVE_HOST")
+
+# Create client
+mongo_client = MongoClient(mongo_uri)
+
+#database
+MONGO_DB=os.getenv("MONGO_DB")
+DEV_DB=os.getenv("DEV_MONGO_DB")
+TEST_DB=os.getenv("TEST_MONGO_DB")
+LIVE_DB=os.getenv("LIVE_MONGO_DB")
 
 class Mongodb_Get_Data_Fast:
-    def __init__(self, patientID, start_date, end_date,mongo_uri="mongodb://192.168.1.65:27017/"):
+    def __init__(self, patientID, start_date, end_date,mongo_uri):
         self.patientID = patientID
         self.start_date = start_date
         self.end_date = end_date
         self.db_local = None
         self.lead_2 = self.lead_7 = self.lead_12 = False
-        self.client = MongoClient(mongo_uri)  # <-- add this
+        self.client = MongoClient(mongo_uri)  
         self.db_local = self.client["Patients"]
     # ------------------ MongoDB Connection ------------------
     def _connect(self, source=2):
         if source == 1:
-            url, dbname = (
-                "mongodb://admin:KmtOom2023@191.169.1.6:27017/ecgs1?authSource=admin",
-                "oom-ecg"
-            )
+            url, dbname = (TEST_mongo_uri,TEST_DB)
         elif source == 2:
-            url, dbname = (
-                "mongodb://readonly_user:9ikJ4Qn1YmG1l1EVF1OQ@192.168.2.131:27017/?authSource=admin",
-                "ecgs"
-            )
+            url, dbname = (LIVE_mongo_uri,LIVE_DB)
         else:
-            url, dbname = (
-                "mongodb://admin:HopsSlk2023@191.169.1.10:27017/ecgs1?authSource=admin",
-                "oom-ecg-erp"
-            )
-
+            url, dbname = (DEV_mongo_uri,DEV_DB)
+            
         client = pymongo.MongoClient(url)
         # remote target DB (change if needed)
-        self.db_local = pymongo.MongoClient("mongodb://192.168.1.65:27017/")["ecgarrhythmias"]
+        self.db_local = pymongo.MongoClient(mongo_uri)[MONGO_DB]
         return client[dbname]
 
     # ------------------ Vectorized Hex Decode ------------------
@@ -132,7 +137,6 @@ class Mongodb_Get_Data_Fast:
         # -------------------- Drop DateTime --------------------
         df = df.drop(columns=["DateTime"], errors="ignore")
         if df.empty:
-            print(f"No data to insert for {arrhythmia_name}")
             return
 
         # -------------------- Determine lead count --------------------
@@ -172,8 +176,6 @@ class Mongodb_Get_Data_Fast:
             }
             collection.insert_one(record)
 
-        print(f"Inserted {arrhythmia_name} ({lead_value} leads) in {num_chunks} chunks")
-
         # -------------------- Update patient_db --------------------
         patient_db = self.client["Patients"]
         patient_collection = patient_db[parent]
@@ -188,7 +190,6 @@ class Mongodb_Get_Data_Fast:
             },
             upsert=True
         )
-        print(f"  Updated patient_db.{parent} for {self.patientID}")
 
     # ------------------ Main get_data ------------------
     def get_data(self, source=2, arrythmia=None, mi=None, lead_2=False, lead_7=True, lead_12=False):
@@ -199,7 +200,6 @@ class Mongodb_Get_Data_Fast:
 
         patient = patients.find_one({"patientId": self.patientID})
         if not patient:
-            print("Patient not found.")
             return None
         pid = str(patient["_id"])
         ecgcoll = db[f"{pid}_ecgs"]
@@ -214,7 +214,6 @@ class Mongodb_Get_Data_Fast:
         if not arr_list and not mi:
             all_data = list(ecgcoll.find({"dateTime": {"$gte": self.start_date, "$lte": self.end_date}}, projection={"_id": 0}))
             if not all_data:
-                print(" No ECG found.")
                 return None
             df = pd.DataFrame(all_data).sort_values("dateTime").reset_index(drop=True)
             return self._process_leads(df)
@@ -241,7 +240,6 @@ def get_the_data(patientID, starttime=None, endtime=None,
     sdt = datetime.datetime.strptime(starttime.strip(), fmt) - datetime.timedelta(hours=5, minutes=30)
     edt = datetime.datetime.strptime(endtime.strip(), fmt) - datetime.timedelta(hours=5, minutes=30)
 
-    print(f"\n[START] PatientID: {patientID}")
     start_timer = time.time()
 
     mongo = Mongodb_Get_Data_Fast(patientID, sdt, edt)
@@ -250,11 +248,9 @@ def get_the_data(patientID, starttime=None, endtime=None,
             df = mongo.get_data(source=source, arrythmia=arrythmia, mi=mi, **config)
             if df is not None:
                 elapsed = time.time() - start_timer
-                print(f"[DONE] PatientID: {patientID} | Time: {elapsed:.2f} sec")
                 return df
         except Exception as e:
             continue
 
     elapsed = time.time() - start_timer
-    print(f"[NO DATA] PatientID: {patientID} | Time: {elapsed:.2f} sec")
     return None

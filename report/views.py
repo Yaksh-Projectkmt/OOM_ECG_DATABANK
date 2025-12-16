@@ -19,13 +19,17 @@ import base64
 import os
 from oom_ecg_data.PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
 import traceback
+from subscription.templatetags.subscription_tags import has_feature
 # ======================== THREAD LOCK ========================
 refresh_lock = threading.Lock()
 
-# ======================== DB CONNECTIONS ========================
-client = MongoClient("mongodb://192.168.1.65:27017/")
-patient_db = client['Patients']
-ecg_db = client['ecgarrhythmias']
+# Connect to MongoDB
+mongo_uri = os.getenv("MONGO_HOST")
+
+# Create client
+mongo_client = MongoClient(mongo_uri)
+patient_db = mongo_client['Patients']
+ecg_db = mongo_client['ecgarrhythmias']
 
 # ECG DB collections (arrhythmia groups)
 collections = [
@@ -256,7 +260,15 @@ def get_parent_collection(subtype_name):
     return None
 
 def edit_data(request):
-    db = client["ecgarrhythmias"]
+     # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "edit_data"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include EDIT Functionality."
+        }, status=403)
+    # ---------------------------
 
     if request.method != "POST":
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
@@ -266,13 +278,14 @@ def edit_data(request):
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
    
-    
+    print(data)
     patient_id = data.get('PatientID')
     object_id = data.get('object_id')
     old_collection = get_parent_collection(data.get('old_collection'))
     new_collection = get_parent_collection(data.get('new_collection'))
     lead = data.get('lead')
-    if not all([object_id, old_collection, new_collection, lead]):
+    sub_arrhythmia = data.get('sub_arrhythmia')
+    if not all([object_id, old_collection, new_collection, lead,sub_arrhythmia]):
         return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
 
     try:
@@ -282,8 +295,8 @@ def edit_data(request):
         return JsonResponse({'status': 'error', 'message': f'Invalid parameters: {e}'}, status=400)
 
     # Actual Mongo collections (from dropdown value, not just display string)
-    find_collection = db[old_collection]
-    insert_collection = db[new_collection]
+    find_collection = ecg_db[old_collection]
+    insert_collection = ecg_db[new_collection]
     fetched_data = find_collection.find_one({'_id': obj_id})
     if not fetched_data:
         return JsonResponse({'status': 'error', 'message': 'Data not found in old collection'}, status=404)
@@ -303,7 +316,7 @@ def edit_data(request):
     # Build new document
     new_doc = {
         'PatientID': patient_id,
-        'Arrhythmia': new_collection,   # update arrhythmia label
+        'Arrhythmia': sub_arrhythmia,   # update arrhythmia label
         'Lead': lead,
         'Frequency': fetched_data.get('Frequency', 200),
         'Data': fetched_data.get('Data'),
@@ -384,7 +397,15 @@ def upload_plot(request):
         
 @csrf_exempt
 def get_pqrst_data(request):
-
+    # ---------------------------
+    # FEATURE CHECK (IMPORTANT)
+    # ---------------------------
+    if not has_feature(request.user, "pqrst"):
+        return JsonResponse({
+            "status": "error",
+            "message": "Your subscription does not include PQRST detection."
+        }, status=403)
+    # ---------------------------
     if request.method != 'POST':
         return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
@@ -407,11 +428,9 @@ def get_pqrst_data(request):
 
         record = None
 
-        db = client["ecgarrhythmias"]
-
         for arr in arrhythmia_list:
-            if arr in db.list_collection_names():
-                collection = db[arr]
+            if arr in ecg_db.list_collection_names():
+                collection = ecg_db[arr]
                 doc = collection.find_one({"_id": ObjectId(object_id)})
                 if doc and "Data" in doc:
                     record = doc

@@ -46,6 +46,7 @@ body.dark-mode {
     --ecg-opacity-hover: 0.2;
     --border-color: #b7b3b3;
     --sidebar-accent: #0ff; /* cyan glow-like accent for dark mode */
+    --history-border:rgba(255,255,255,0.22);
 
 }
 
@@ -87,6 +88,7 @@ body.light-mode {
     --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
     --border-color: #b7b3b3;
     --sidebar-accent: #1e40af; /* deep blue for light mode */
+    --history-border:rgba(73, 73, 73, 0.22);
 
 }
 
@@ -484,7 +486,7 @@ body {
     gap: 12px;
 }
 
-.icon-btn {
+.icon-btn1 {
     padding: 10px;
     border-radius: 12px;
     border: none;
@@ -495,7 +497,7 @@ body {
     position: relative;
 }
 
-.icon-btn:hover {
+.icon-btn1:hover {
     background: var(--button-hover);
     transform: scale(1.1);
 }
@@ -1373,4 +1375,149 @@ color:white;
     transform: translateY(-50%);
     font-size: 14px;
     color: #ff4d4d;
+}
+/* ============================
+   Download History Dropdown
+   ============================ */
+
+/* Dropdown Container (glass + smooth) */
+.history-dropdown {
+    position: fixed !important;
+    top: 70px !important;
+    right: 20px !important;
+    width: 360px;
+    max-height: 420px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+
+    color: var(--text-primary);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+    padding: 0;
+
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+
+    transition: opacity .26s ease, transform .26s ease;
+    z-index: 3000 !important;
+}
+
+/* Show animation */
+.history-dropdown.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Header */
+.history-header {
+    padding: 14px 18px;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--history-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Items */
+.history-item {
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    border-bottom: 1px solid var(--history-border);
+
+    animation: fadeSlide .25s ease;
+}
+
+/* Hover effect */
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+}
+
+/* Left side */
+.history-left {
+    width: 72%;
+}
+
+.history-item strong {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.history-meta {
+    font-size: 12px;
+    opacity: 0.8;
+    line-height: 1.4;
+}
+
+/* Badge (premium rounded pill) */
+.price-badge {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 50px;
+    color: white;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    text-align: center;
+}
+
+/* Success = Green */
+.price-green {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
+}
+
+/* Failed = Red */
+.price-red {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.4);
+}
+
+/* Empty state */
+.empty-msg {
+    padding: 40px 10px;
+    text-align: center;
+    opacity: 0.7;
+    font-size: 14px;
+}
+
+/* Smooth scroll */
+.history-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.history-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+}
+#downloadHistoryBox{
+    position: absolute !important;
+    z-index: 1000 !important;
+}
+.history-header .view-all {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4b7bec;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.history-header .view-all:hover {
+    color: #3867d6;
 }

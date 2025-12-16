@@ -182,6 +182,7 @@ body{
     align-items: center;
     justify-content: space-between;
     animation: fadeIn 0.5s;
+    height: 50px;
 }
 
 .file-info-content {
@@ -210,6 +211,7 @@ body{
     font-size: 0.875rem;
     font-weight: 500;
     color: #e5e7eb;
+    margin:auto;
 }
 
 .file-status {
@@ -493,7 +495,7 @@ body{
     color: #f3f4f6;
 }
 
-.close-btn {
+.analysis_close-btn {
     font-size: 0.875rem;
     color: #9ca3af;
     background: transparent;
@@ -895,58 +897,81 @@ body{
 }
 
 /* Close button */
-.close-btn {
+.analysis_close-btn {
     cursor: pointer;
     font-size: 24px;
     font-weight: bold;
 }
-.close-btn:hover {
+.analysis_close-btn:hover {
     color: red;
 }
-         #page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(249, 250, 251, 0.66); /* Light background */
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        }
+    #page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(249, 250, 251, 0.66); /* Light background */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
 
-        .ecg-loader {
-            width: 150px; /* Increased width */
-            height: 60px;
-            position: relative;
-        }
+.ecg-loader {
+    width: 150px; /* Increased width */
+    height: 60px;
+    position: relative;
+}
 
-        .ecg-loader svg {
-            width: 100%;
-            height: 100%;
-        }
+.ecg-loader svg {
+    width: 100%;
+    height: 100%;
+}
 
-        .ecg-line {
-            fill: none;
-            stroke:rgb(227, 6, 6);
-            stroke-width: 3;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            animation: pulse 1.5s infinite;
-        }
+.ecg-line {
+    fill: none;
+    stroke:rgb(227, 6, 6);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: pulse 1.5s infinite;
+}
 
-        @keyframes pulse {
-            0% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: 0;
-            }
-            50% {
-                stroke-dasharray: 50 50;
-                stroke-dashoffset: -25;
-            }
-            100% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: -50;
-            }
-        }
+@keyframes pulse {
+    0% {
+        stroke-dasharray: 0 100;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 50 50;
+        stroke-dashoffset: -25;
+    }
+    100% {
+        stroke-dasharray: 0 100;
+        stroke-dashoffset: -50;
+    }
+}
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+}
+.header {
+  display: flex;
+  align-items: center;      /* Vertically center the items */
+  gap: 10px;         /* Space between arrow and header */
+  margin-bottom: 20px;       
+}
+
+.header h2 {
+  margin: 0;                /* Remove default margin */
+}
+
+.header p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}

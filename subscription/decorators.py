@@ -1,6 +1,8 @@
 
 from django.http import HttpResponseForbidden
 from django.contrib.auth import get_user_model
+from functools import wraps
+from subscription.utils import sync_subscription_from_mongo
 
 def feature_required(feature_code):
     def decorator(view_func):
@@ -14,9 +16,6 @@ def feature_required(feature_code):
             return HttpResponseForbidden("Feature not available in your subscription plan.")
         return _wrapped_view
     return decorator
-
-from functools import wraps
-from subscription.utils import sync_subscription_from_mongo
 
 def sync_subscription(view_func):
     @wraps(view_func)

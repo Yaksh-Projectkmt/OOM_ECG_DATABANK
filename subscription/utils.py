@@ -1,19 +1,17 @@
+from subscription.models import Plan, UserSubscription
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import datetime
+from subscription.models import DownloadPrice
+from authuser.models import Wallet
+import uuid
+
 def user_has_feature(user, code):
-    """
-    Checks if the user's current subscription includes a specific feature.
-    """
     try:
         subscription = user.usersubscription
         return subscription.plan.features.filter(code=code).exists()
     except:
         return False
-
-
-from subscription.models import Plan, UserSubscription
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from datetime import datetime
-
 
 def sync_subscription_from_mongo(user):
     from authuser.views import users_collection
@@ -56,3 +54,33 @@ def sync_subscription_from_mongo(user):
 
     sub.save()
     return sub
+    
+def get_download_price(user, file_type):
+    try:
+        return DownloadPrice.objects.get(
+            role=user.role,
+            file_type=file_type,
+        ).price
+    except DownloadPrice.DoesNotExist:
+        return 0
+
+
+def create_download_history(user, file_type,DownloadfileId,Data_ObjectId,Arrhythmia,Collection,PatientID,Lead,price, wallet_before, wallet_after, status):
+    from authuser.views import users_collection, Download_history_collection
+
+    transaction_id = str(abs(hash(uuid.uuid4())))[:12]
+    Download_history_collection.insert_one({
+        "transaction_id": transaction_id,
+        "DownloadfileId":DownloadfileId,
+        "email": user.email,
+        "role": user.role,
+        "file_type": file_type,
+        "Data_ObjectID":Data_ObjectId,
+        "Arrhythmia": Arrhythmia,
+        "Collection":Collection,
+        "PatientID": PatientID,
+        "Lead": Lead,
+        "amount": float(price),
+        "status": status, 
+        "download_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
+    })
