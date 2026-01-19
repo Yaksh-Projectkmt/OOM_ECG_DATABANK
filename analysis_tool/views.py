@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import JsonResponse,FileResponse,Http404
+from django.http import JsonResponse,FileResponse,Http404,StreamingHttpResponse
 import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
@@ -19,19 +19,32 @@ from django.conf import settings
 from django.http import FileResponse, HttpResponse
 from gridfs import GridFS
 from bson.objectid import ObjectId
-
+from threading import Lock
+import gc
+from io import BytesIO
+from pdf2image import convert_from_bytes
+import uuid
+from bson import ObjectId
+from PIL import Image as PILImage
+from PIL import ImageDraw
+from datetime import datetime
 # Ai Models
-from .Scripts import afib_alf_model_check
-from .Scripts import block_model_check
-from .Scripts import mi_model_check
-from .Scripts import pac_model_check
-from .Scripts import pac_junc_model_check
-from .Scripts import pvc_model_check
-from .Scripts import vifib_vfl_model_check 
-from .Scripts import ALL_Arrhythmia
-from .oea.OEA_arrhy_mi_detection import predict_grid_type
-from .oea.OEA_arrhy_mi_detection import check_noise  
-from .oea import OEA_arrhy_mi_detection
+from Scripts_Models.Scripts import afib_alf_model_check
+from Scripts_Models.Scripts import block_model_check
+from Scripts_Models.Scripts import mi_model_check
+from Scripts_Models.Scripts import pac_model_check
+from Scripts_Models.Scripts import pac_junc_model_check
+from Scripts_Models.Scripts import pvc_model_check
+from Scripts_Models.Scripts import vifib_vfl_model_check 
+from Scripts_Models.Scripts import ALL_Arrhythmia
+from Scripts_Models.Scripts import OEA_arrhy_mi_detection
+from Scripts_Models.Scripts.OEA_arrhy_mi_detection import predict_grid_type
+from Scripts_Models.Scripts.OEA_arrhy_mi_detection import check_noise  
+
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,10 +55,12 @@ mongo_uri = os.getenv("MONGO_HOST")
 # Create client
 mongo_client = MongoClient(mongo_uri)
 media_db = mongo_client["Download_files"]
-admin_db = mongo_client["admin"]
+Queues = mongo_client["Queue"]
+
+analysis_tasks=Queues['analysis_tasks']
 
 download_fs = GridFS(media_db, collection="downloads")
-download_logs = admin_db["download_logs"]
+download_logs = media_db["download_logs"]
 
 #database
 db=mongo_client['Analysis_data']
@@ -60,285 +75,205 @@ def api_ecg_data(request):
     data = {"message": "ECG data API response"}
     return JsonResponse(data)
 
-def analysis_img_data_insert_db(patient_id, arrhythmia, datalength,frequency=240):
-    patient_col = analysis_csv_patient[arrhythmia]
-    # time in minutes
-    time_minutes = (datalength / int(frequency)) / 60
-
-    # increment if exists, else insert
-    patient_col.update_one(
-        {"PatientID": patient_id},
-        {
-            "$inc": {
-                "total_records": 1,
-                "total_time": time_minutes
-            },
-            "$setOnInsert": {
-                "PatientID": patient_id
-            }
-        },
-        upsert=True
+def analyzing_history(request):
+    history = list(
+        analysis_tasks.find(
+            {"user": request.user.username if request.user.is_authenticated else "anonymous"}
+        ).sort("created_at", -1)
     )
-
-def image_data_insert_db(upload_file_path, arrhythmia_for, title_lines, metrics):
-    # Always use 12-Lead collection
-    data_collection = db[arrhythmia_for]
-
-    Csvname = os.path.basename(upload_file_path)
-    patient_id = Csvname.split('.')[0]
-
-    # Load CSV
-    all_lead_data = pd.read_csv(upload_file_path).fillna(0)
-
-    # Map for 12-lead
-    col_map = {
-        0: 'I', 1: 'II', 2: 'III', 3: 'aVR', 4: 'aVL', 5: 'aVF',
-        6: 'V1', 7: 'V2', 8: 'V3', 9: 'V4', 10: 'V5', 11: 'V6'
-    }
-
-    # If CSV already has headers
-    if any(str(_).isalpha() for _ in all_lead_data.columns):
-        available_leads = [lead for lead in col_map.values() if lead in all_lead_data.columns]
-        all_lead_data = all_lead_data[available_leads].fillna(0)
-    else:
-        # If CSV has numeric columns
-        available_indices = [i for i in col_map.keys() if i in all_lead_data.columns]
-        selected_col_map = {i: col_map[i] for i in available_indices}
-        all_lead_data = all_lead_data[available_indices].rename(columns=selected_col_map)
-
-    datalength = len(all_lead_data)
-
-    # Always 12-lead  frequency 240
-    ecg_data_dic = {
-        'PatientID': patient_id,
-        'Arrhythmia': arrhythmia_for,
-        'Lead': 12,
-        'Frequency': 240,
-        'server': "local",
-        'title_lines': title_lines,   # stored as array
-        **metrics,                   #  flattened HR, RRInterval, etc.
-        'datalength': datalength,
-        'created_At': timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
-        'Data': {}
-    }
-
-    # Insert image analysis helper (if you need it)
-    analysis_img_data_insert_db(patient_id, arrhythmia_for, datalength)
-
-    # Add ECG signals
-    for lead in all_lead_data.columns:
-        ecg_data_dic['Data'][lead] = all_lead_data[lead].tolist()
-
-    data_collection.insert_one(ecg_data_dic)
-    return "Data inserted in db."
-
-def analysis_csv_data_insert_db(patient_id, arrhythmia, datalength,lead):
-    frequency = 200 if lead in [2,7] else 240
-    patient_col = analysis_csv_patient[arrhythmia]
-    # time in minutes
-    time_minutes = (datalength / int(frequency)) / 60
-
-    # increment if exists, else insert
-    patient_col.update_one(
-        {"PatientID": patient_id},
-        {
-            "$inc": {
-                "total_records": 1,
-                "total_time": time_minutes
-            },
-            "$setOnInsert": {
-                "PatientID": patient_id
-            }
-        },
-        upsert=True
-    )
+    return render(request, 'analysis_tool/analyzing_history.html', {
+        "history": history
+    })
 
 def uploads_file(request):
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
         file_extension = uploaded_file.name.split('.')[-1].lower()
 
-        # Save original full CSV to media/uploads
-        media_upload_folder = os.path.join(settings.MEDIA_ROOT, 'analysis_tool', 'uploads')
-        os.makedirs(media_upload_folder, exist_ok=True)
+        task_id = None
 
-        file_path = os.path.join(media_upload_folder, uploaded_file.name)
+        # ONLY IMAGES → temp/<task_id>/
+        if file_extension in ['jpg', 'jpeg', 'png']:
+            task_id = f"IMG-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+            base_dir = os.path.join(
+                settings.MEDIA_ROOT,
+                'analysis_tool',
+                'temp',
+                task_id
+            )
+            os.makedirs(base_dir, exist_ok=True)
+            file_path = os.path.join(base_dir, uploaded_file.name)
+
+        # CSV + PDF → normal uploads
+        else:
+            media_upload_folder = os.path.join(
+                settings.MEDIA_ROOT,
+                'analysis_tool',
+                'uploads'
+            )
+            os.makedirs(media_upload_folder, exist_ok=True)
+            file_path = os.path.join(media_upload_folder, uploaded_file.name)
+
+        # Save file
         with open(file_path, 'wb+') as destination:
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
 
+        # ================= IMAGE =================
         if file_extension in ['jpg', 'jpeg', 'png']:
-            return JsonResponse({'message': 'Image uploaded successfully', 'filename': 'uploads/' + uploaded_file.name})
+            return JsonResponse({
+                'message': 'Image uploaded successfully',
+                'filename': uploaded_file.name,
+                'task_id': task_id,
+                'file_type': 'image'
+            })
+
+        # ================= CSV =================
+        if file_extension == 'csv':
+            try:
+                df = pd.read_csv(file_path)
+                lead_names = [col for col in df.columns if col != 'Index']
+                lead_count = len(lead_names)
+
+                return JsonResponse({
+                    'message': 'CSV uploaded successfully',
+                    'filename': 'uploads/' + uploaded_file.name,
+                    'lead_count': lead_count,
+                    'file_type': 'csv'
+                })
+
+            except Exception as e:
+                return JsonResponse(
+                    {'error': f'Error reading CSV: {str(e)}'},
+                    status=500
+                )
+
+        # ================= PDF =================
         if file_extension == 'pdf':
             return JsonResponse({
                 'message': 'PDF uploaded successfully',
                 'filename': 'uploads/' + uploaded_file.name,
                 'file_type': 'pdf'
             })
-        elif file_extension == 'csv':
-            try:
-                df = pd.read_csv(file_path)
-                lead_names = [col for col in df.columns if col != 'Index']
-                lead_count = len(lead_names)
-
-                # Standard supported ECG leads
-                standard_leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF',
-                                'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
-
-                # Mapping lowercase ? canonical lead names
-                lead_mapping = {lead.lower(): lead for lead in standard_leads}
-
-                # Add special mapping: ECG ? II
-                lead_mapping['ecg'] = 'II'
-
-                normalized_columns = {}
-
-                for col in lead_names:
-                    col_clean = str(col).lower().strip()
-
-                    # If column is "ecg" ? convert to "II"
-                    if col_clean == "ecg":
-                        normalized_columns[col] = "II"
-                        continue
-
-                    # If column maps to any standard lead
-                    if col_clean in lead_mapping:
-                        normalized_columns[col] = lead_mapping[col_clean]
-                    else:
-                        # Keep original name if no match
-                        normalized_columns[col] = col
-
-                # Rename DataFrame columns
-                df.rename(columns=normalized_columns, inplace=True)
-
-
-                # Handle supported ECG formats
-                if lead_count in [2, 7, 12]:
-                    # Extract data for all available standard leads (up to 2000 points)
-                    extracted = {
-                        lead: df[lead].dropna().iloc[:2000].tolist()
-                        for lead in standard_leads if lead in df.columns
-                    }
-                    if not extracted:
-                        return JsonResponse({'error': f'No valid leads found for {lead_count}-lead ECG'}, status=404)
-
-                    # Find the minimum length of extracted leads to ensure uniform x-values
-                    data_lengths = [len(data) for data in extracted.values()]
-                    if not data_lengths:
-                        return JsonResponse({'error': 'No valid data found for any leads'}, status=404)
-                    data_length = min(data_lengths)
-                    x_values = list(range(data_length))
-
-                    return JsonResponse({
-                        'message': 'CSV uploaded',
-                        'show_cards': True,
-                        'filename': 'uploads/' + uploaded_file.name,
-                        'lead_count': lead_count,
-                        'ecgData': extracted,
-                        'x': x_values
-                    })
-
-                return JsonResponse({
-                    'message': 'CSV uploaded',
-                    'show_cards': True,
-                    'filename': 'uploads/' + uploaded_file.name,
-                    'lead_count': lead_count
-                })
-
-            except Exception as e:
-                return JsonResponse({'error': f'Error reading CSV: {str(e)}'}, status=500)
 
         return JsonResponse({'error': 'Invalid file type'}, status=400)
 
     return render(request, 'analysis_tool/analysis_index.html')
-
 # run oea analysis
-def process_img(request, img):
-    return check_oea_analysis(img)
+def process_img(request, img,task_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=405)
 
-# oea analysis
-def check_oea_analysis(img):
-    image_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', img)
-    file_name = os.path.basename(image_path)
-    img_new = file_name.split('.')[0]
-    # 1. Check if image exists
+    analysis_tasks.insert_one({
+        "task_id": task_id,
+        "user": request.user.username if request.user.is_authenticated else "anonymous",
+        "file_name": img,
+        "file_type": "image",
+        "lead_type":12,
+        "status": "pending",
+        "file_id": None,
+        "created_at": timezone.now(),
+        "completed_at": None,
+        "error": None
+    })
+
+    try:
+        result = check_oea_analysis(request, img, task_id)
+
+        #  ERROR PATH — only JsonResponse has status_code
+        if isinstance(result, JsonResponse):
+            analysis_tasks.update_one(
+                {"task_id": task_id},
+                {"$set": {
+                    "status": "failed",
+                    "error": result.content.decode(),
+                    "completed_at": timezone.now()
+                }}
+            )
+            return result
+
+        # SUCCESS PATH — result is a tuple
+        oea_result, image_file_id = result
+        file_id = str(image_file_id)
+
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "success",
+                "file_id": file_id,
+                "completed_at": timezone.now()
+            }}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "task_id": task_id,
+            "file_id": file_id,
+            "arrhythmia": oea_result.get("final_arrhythmia", "Unknown")
+        })
+
+    except Exception as e:
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": timezone.now()
+            }}
+        )
+        return JsonResponse({"error": str(e)}, status=500)
+
+def check_oea_analysis(request, img, task_id):
+    temp_dir = os.path.join(settings.MEDIA_ROOT,'analysis_tool','temp',task_id)
+
+    image_path = os.path.join(temp_dir, img)
+
+    print("TEMP DIR:", temp_dir)
+    print("IMAGE PATH:", image_path)
+
     if not os.path.exists(image_path):
-        return JsonResponse({'error': f'File {img} not found in uploads.'}, status=404)
+        return JsonResponse(
+            {'error': f'File {img} not found in temp folder.'},
+            status=404
+        )
 
-    # 2. Predict grid type to detect "No ECG"
     _, grid_type = predict_grid_type(image_path)
     if grid_type == "No ECG":
-        return JsonResponse({'error': 'No ECG detected in the uploaded image.'}, status=400)
+        return JsonResponse(
+            {'error': 'No ECG detected.'},
+            status=400
+        )
 
-    # 3. Run arrhythmia detection
-    oea_result = OEA_arrhy_mi_detection.signal_extraction_and_arrhy_detection(image_path)
+    oea_result, image_file_id = (
+        OEA_arrhy_mi_detection.signal_extraction_and_arrhy_detection(
+            image_path=image_path,
+            task_id=task_id
+        )
+    )
 
-    # 4. Convert NumPy to JSON-safe formats
     def convert_numpy(obj):
-        if isinstance(obj, (np.ndarray, list)):
-            return list(obj)
-        elif isinstance(obj, (np.integer, np.int32, np.int64)):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.integer, np.int64)):
             return int(obj)
-        elif isinstance(obj, (np.floating, np.float32, np.float64)):
+        if isinstance(obj, (np.floating, np.float64)):
             return float(obj)
-        elif isinstance(obj, dict):
+        if isinstance(obj, dict):
             return {k: convert_numpy(v) for k, v in obj.items()}
-        else:
-            return obj
+        if isinstance(obj, list):
+            return [convert_numpy(v) for v in obj]
+        return obj
 
     oea_result = convert_numpy(oea_result)
 
-    # 5. Artifact detection from OEA result
-    detections = oea_result.get("detections", [])
-    for d in detections:
-        if d.get("detect", "").strip().upper() == "ARTIFACTS":
-            return JsonResponse({'error': 'Artifacts detected in the ECG.'}, status=400)
+    for d in oea_result.get("detections", []):
+        if d.get("detect", "").upper() == "ARTIFACTS":
+            return JsonResponse(
+                {'error': 'Artifacts detected.'},
+                status=400
+            )
 
-    # 6. Prepare result ZIP
-    processed_image_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', img_new +".jpg")
-    csv_filename = f"{os.path.splitext(img)[0]}.csv"
-    csv_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', csv_filename)
-
-    files_to_zip = [] 
-    summary = oea_result.get("summary_text", {})
-    title_lines = summary.get("title_lines", [])
-    bottom_label = summary.get("bottom_label", "")
-
-    # extract arrhythmia from title_lines
-    arrhythmia_for = "Unknown"
-    for line in title_lines:
-        if "Arrhythmia:" in line:
-            arrhythmia_for = line.replace("Arrhythmia:", "").strip().strip(",")
-            break
-
-    # parse bottom_label into dictionary
-    def parse_bottom_label(label):
-        metrics = {}
-        parts = label.replace('"', '').split(',')
-        for part in parts:
-            if ':' in part:
-                k, v = part.split(':', 1)
-                k = k.strip()
-                v = v.strip()
-                try:
-                    v = float(v) if '.' in v else int(v)
-                except ValueError:
-                    pass
-                metrics[k] = v
-        return metrics
-
-    metrics = parse_bottom_label(bottom_label)
-
-    if os.path.exists(processed_image_path):
-        files_to_zip.append(processed_image_path)
-
-    if os.path.exists(csv_path):
-        image_data_insert_db(
-            upload_file_path=csv_path,
-            arrhythmia_for=arrhythmia_for,
-            title_lines=title_lines,
-            metrics=metrics
-        )
+    return oea_result, image_file_id
 
 def lowpass(signal_data):
     b, a = signal.butter(3, 0.4, btype='lowpass', analog=False)
@@ -414,76 +349,9 @@ def plot_csv_view(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-
-def data_insert_db(is_lead_for, upload_file_path, arrhythmia_for, filename):
-    data_collection = db[arrhythmia_for]
-    Csvname = os.path.basename(upload_file_path)
-    patient_id= Csvname.split('.')[0]
-    all_lead_data = pd.read_csv(upload_file_path).fillna(0)
-
-    # Define expected leads for each type
-    expected_leads = {
-        "2_Lead": ['II'],
-        "7_Lead": ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'v5'],
-        "12_Lead": ['I', 'II', '(III', 'aVR', 'aVL', 'aVF', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6']
-    }
-
-    all_lead_data = pd.read_csv(upload_file_path).fillna(0)
-    # Ensure numeric columns are integers
-    all_lead_data.columns = [int(c) if str(c).isdigit() else c for c in all_lead_data.columns]
-    
-    if any(isinstance(_, str) and _.isalpha() for _ in all_lead_data.columns):
-        if "ECG" in all_lead_data.columns:
-            all_lead_data = all_lead_data.rename(columns={"ECG": "II"})
-            available_leads = ["II"]
-        else:
-            available_leads = [lead for lead in expected_leads[is_lead_for] if lead in all_lead_data.columns]
-        all_lead_data = all_lead_data[available_leads].fillna(0)
-
-    else:
-        col_map = {
-            "2_Lead": {0:'II'},
-            "7_Lead": {0:'I',1:'II',2:'III',3:'aVR',4:'aVL',5:'aVF',6:'v5'},
-            "12_Lead": {0:'I',1:'II',2:'III',3:'aVR',4:'aVL',5:'aVF',6:'v1',7:'v2',8:'v3',9:'v4',10:'v5',11:'v6'}
-        }
-        available_indices = [i for i in col_map[is_lead_for].keys() if i in all_lead_data.columns]
-        selected_col_map = {i: col_map[is_lead_for][i] for i in available_indices}
-        all_lead_data = all_lead_data[available_indices].rename(columns=selected_col_map)
-
-    datalength = len(all_lead_data)
-
-    # Decide frequency properly
-    if is_lead_for == '2_Lead':
-        lead=2
-        frequency = 200
-    elif is_lead_for == '7_Lead':
-        lead=7
-        frequency = 200
-    else:  # 12 lead
-        lead=12
-        frequency = 240
-
-    ecg_data_dic = {
-        'PatientID': patient_id,
-        'Arrhythmia': arrhythmia_for,
-        'Lead': lead,
-        'Frequency': frequency,
-        "server": "local",
-        "Version":filename,
-        'datalength': datalength,
-        "created_At": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
-        'Data': {}
-    }
-    analysis_csv_data_insert_db(patient_id,arrhythmia_for,datalength,lead)
-    for lead in all_lead_data.columns:
-        ecg_data_dic['Data'][lead] = all_lead_data[lead].tolist()
-
-    data_collection.insert_one(ecg_data_dic)
-    return "Data inserted in db."
-
 # Process arrhythmia
 @csrf_exempt
-def run_model_arrhythmia(request,category,filename):
+def run_model_arrhythmia(request, category, filename):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request"}, status=405)
 
@@ -498,15 +366,72 @@ def run_model_arrhythmia(request,category,filename):
 
     if not os.path.exists(upload_file_path):
         return JsonResponse({"error": f"{csv_name} not found"}, status=404)
-    # Run model
-    result = check_arrhythmia_model(
-        category,
-        upload_file_path,
-        is_lead,
-        filename,
-    )
 
-    return JsonResponse({"result": result})
+    # -----------------------------
+    # CREATE TASK (PENDING)
+    # -----------------------------
+    task_id = f"CSV-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+    is_lead = is_lead.split('_')[0]
+    analysis_tasks.insert_one({
+        "task_id": task_id,
+        "user": request.user.username if request.user.is_authenticated else "anonymous",
+        "file_name": csv_name,
+        "file_type": "csv",
+        "arrhythmia": category,
+        "lead_type": is_lead,
+        "status": "pending",
+        "file_id": None,
+        "created_at": timezone.now(),
+        "completed_at": None
+    })
+
+    try:
+        # -----------------------------
+        # RUN MODEL (MODEL STORES PDF IN GRIDFS)
+        # -----------------------------
+        grid_file_id = check_arrhythmia_model(
+            category,
+            upload_file_path,
+            is_lead,
+            filename
+        )
+
+        if not grid_file_id:
+            raise Exception("Result PDF not generated")
+
+        # -----------------------------
+        # UPDATE TASK → SUCCESS
+        # -----------------------------
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "success",
+                "file_id": str(grid_file_id),
+                "completed_at": timezone.now()
+            }}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "task_id": task_id,
+            "file_id": str(grid_file_id),
+            "message": "Analysis completed successfully"
+        })
+
+    except Exception as e:
+        # -----------------------------
+        # UPDATE TASK → FAILED
+        # -----------------------------
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": timezone.now()
+            }}
+        )
+        return JsonResponse({"error": str(e)}, status=500)
+
 # Check arrhythmia model
 def check_arrhythmia_model(category, upload_file_path, is_lead_for, filename):
 
@@ -519,46 +444,46 @@ def check_arrhythmia_model(category, upload_file_path, is_lead_for, filename):
             is_lead_for
         )
         # AFIB handled via PDF → no result_dic
-        return "AFIB & Flutter Result generated successfully"
+        return file_id
 
     elif category == 'block':
         file_id = block_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "Block Result generated successfully"
+        return file_id
 
     elif category == 'mi':
         file_id = mi_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "MI Result generated successfully"
+        return file_id
 
     elif category == 'pvc':
         file_id = pvc_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "PVC Result generated successfully"
+        return file_id
     elif category == 'pac':
         file_id = pac_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "PAC Result generated successfully"
+        return file_id
 
     elif category == 'pac_jn':
         file_id = pac_junc_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "JUNCTIONAL Result generated successfully"
+        return file_id
     elif category == 'all_arrhythmia':
         file_id = ALL_Arrhythmia.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "ALL Result generated successfully"
+        return file_id
     elif category == 'vifib_vfl':
         file_id = vifib_vfl_model_check.model_check_for_ecg_data(
             upload_file_path, is_lead_for
         )
-        return "VIFIB Result generated successfully"
+        return file_id
     # ---------------------------
     # FINAL SAFETY CHECK
     # ---------------------------
@@ -569,148 +494,237 @@ def check_arrhythmia_model(category, upload_file_path, is_lead_for, filename):
         return "Something went wrong"
 
     return msg
+    
+def check_tmt_full_analysis(pdf_name, task_id):
+    pdf_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool', 'uploads', pdf_name)
+    if not os.path.exists(pdf_path):
+        raise FileNotFoundError("TMT PDF not found")
 
+    temp_dir = os.path.join(settings.MEDIA_ROOT, 'analysis_tool', 'temp', task_id)
+    os.makedirs(temp_dir, exist_ok=True)
 
+    #TMT range: pages 6 to 15
+    pages = convert_from_path(
+        pdf_path,
+        dpi=300,
+        first_page=6,
+        last_page=7
+    )
 
-def check_tmt_analysis(img):
+    pdf_images = []
 
-    image_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', img)
+    for idx, page in enumerate(pages, start=6):  # start=6 keeps real page number
+        img_path = os.path.join(temp_dir, f"page_{idx}.jpg")
+        page.save(img_path, "JPEG")
 
-    if not os.path.exists(image_path):
-        return []
+        #Call OEA
+        _, image_file_id = OEA_arrhy_mi_detection.signal_extraction_and_arrhy_detection(
+            image_path=img_path,
+            task_id=f"{task_id}"
+        )
 
-    oea_result = OEA_arrhy_mi_detection.signal_extraction_and_arrhy_detection(image_path)
+        # #Read output from GridFS
+        img_bytes = download_fs.get(image_file_id).read()
+        pil_img = PILImage.open(BytesIO(img_bytes)).convert("RGB")
+        pdf_images.append(pil_img)
 
-    def convert_numpy(obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, dict):
-            return {k: convert_numpy(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [convert_numpy(i) for i in obj]
-        else:
-            return obj
+    if not pdf_images:
+        raise Exception("No TMT outputs generated")
 
-    oea_result = convert_numpy(oea_result)
+    final_pdf = os.path.join(temp_dir, f"{task_id}.pdf")
+    pdf_images[0].save(
+        final_pdf,
+        save_all=True,
+        append_images=pdf_images[1:]
+    )
 
-    processed_image_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', img)
-    csv_filename = f"{os.path.splitext(img)[0]}.csv"
-    csv_path = os.path.join(os.path.dirname(__file__), "analysis_result", csv_filename)
+    with open(final_pdf, "rb") as f:
+        pdf_file_id = download_fs.put(
+            f,
+            filename=f"{task_id}.pdf",
+            contentType="application/pdf",
+            metadata={
+                "task_id": task_id,
+                "type": "tmt",
+                "page_range": "6-7",
+                "created_at": datetime.utcnow()
+            }
+        )
 
-    files_to_return = []
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
-    if os.path.exists(processed_image_path):
-        files_to_return.append(processed_image_path)
-
-    if os.path.exists(csv_path):
-        all_lead_data = pd.read_csv(csv_path).fillna(0)
-        ecg_data_dict = {col: all_lead_data[col].tolist() for col in all_lead_data.columns}
-#        data_insert_db(is_lead_for="12_Lead", upload_file_path=csv_path, arrhythmia_for="IMAGE")
-        files_to_return.append(csv_path)
-
-    additional_files_path = os.path.join(settings.MEDIA_ROOT, "additional_files")
-    if os.path.exists(additional_files_path):
-        for file_name in os.listdir(additional_files_path):
-            file_path = os.path.join(additional_files_path, file_name)
-            if os.path.isfile(file_path):
-                files_to_return.append(file_path)
-
-    return files_to_return
+    return {
+        "pages_processed": len(pdf_images),
+        "range": "6-7"
+    }, pdf_file_id
     
 @csrf_exempt
-def download_tmt_file(request, filename):
-    #filename = unquote(filename)  # decode %20 into spaces
-    file_path = os.path.join(settings.MEDIA_ROOT, 'analysis_tool','uploads', filename)
-    if os.path.exists(file_path):
-        return FileResponse(open(file_path, 'rb'), as_attachment=True)
-    else:
-        raise Http404("File not found.")
-
+def process_tmt_pdf(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=405)
+        
+    uploaded_pdf = request.FILES["file"]
+    pdf_name = uploaded_pdf.name
     
-@csrf_exempt
-def upload_tmt_pdf(request):
-    
-    if request.method == 'POST' and request.FILES.get('file'):
-        pdf_file = request.FILES['file']
-        pdf_name_without_ext = os.path.splitext(pdf_file.name)[0]
+    task_id = f"TMT-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
 
-        # Create folder
-        pdf_folder = os.path.join(settings.MEDIA_ROOT, 'analysis_tool', 'uploads')
-        os.makedirs(pdf_folder, exist_ok=True)
-
-        # FULL PDF PATH
-        pdf_path = os.path.join(pdf_folder, pdf_file.name)
-
-        # SAVE PDF CORRECTLY
-        with open(pdf_path, 'wb') as destination:
-            for chunk in pdf_file.chunks():
-                destination.write(chunk)
-
-        # Convert pages 6�15
-        images = convert_from_path(pdf_path, first_page=6, last_page=15)
-
-        result_files = []
-        image_filenames = []
-
-        for idx, img in enumerate(images, start=6):
-            image_filename = f"{pdf_name_without_ext}_page_{idx}.jpg"
-            image_path = os.path.join(pdf_folder, image_filename)
-
-            img.save(image_path, "JPEG")
-            image_filenames.append(image_filename)
-
-            # Your processing
-            files = check_tmt_analysis(image_filename)
-            result_files.extend(files)
-
-        # Create ZIP
-        zip_filename = f"{pdf_name_without_ext}_tmt_analysis.zip"
-        zip_path = os.path.join(pdf_folder, zip_filename)
-
-        with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for f in result_files:
-                if os.path.exists(f):
-                    zipf.write(f, arcname=os.path.basename(f))
-
-        # Return JSON
-        return JsonResponse({
-            "zip_file": zip_filename,
-            "images": image_filenames   # send ALL preview images
-        })
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
-
-def download_patient_pdf(request):
-    raw_patient_id = request.GET.get("patient_id")
-    patient_id, _ = os.path.splitext(raw_patient_id)
-    print(patient_id)
-    grid_file = download_fs.find_one({
-        "meta.patient_id": patient_id
+    analysis_tasks.insert_one({
+        "task_id": task_id,
+        "user": request.user.username if request.user.is_authenticated else "anonymous",
+        "file_name": pdf_name,
+        "file_type": "tmt",
+        "lead_type": 12,
+        "status": "pending",
+        "file_id": None,
+        "created_at": timezone.now(),
+        "completed_at": None,
+        "error": None
     })
 
-    if not grid_file:
-        return HttpResponse("PDF not found", status=404)
+    try:
+        result, pdf_file_id = check_tmt_full_analysis(pdf_name, task_id)
 
-    # LOG DOWNLOAD HERE (BEST PLACE)
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "success",
+                "file_id": str(pdf_file_id),
+                "completed_at": timezone.now()
+            }}
+        )
+
+        return JsonResponse({
+            "status": "success",
+            "task_id": task_id,
+            "file_id": str(pdf_file_id)
+        })
+
+    except Exception as e:
+        analysis_tasks.update_one(
+            {"task_id": task_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": timezone.now()
+            }}
+        )
+        return JsonResponse({"error": str(e)}, status=500)
+from django.http import StreamingHttpResponse, HttpResponse
+from bson import ObjectId
+
+CHUNK_SIZE = 8192  # 8KB
+
+def gridfs_iterator(grid_file):
+    while True:
+        chunk = grid_file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        yield chunk
+
+
+def download_by_file_id(request, file_id):
+    try:
+        grid_file = download_fs.get(ObjectId(file_id))
+    except Exception:
+        return HttpResponse("File not found", status=404)
+
+    # log download
     download_logs.insert_one({
-        "patient_id": patient_id,
         "file_id": grid_file._id,
-        "file_type": "PDF",
         "downloaded_by": request.user.username if request.user.is_authenticated else "anonymous",
         "downloaded_at": timezone.now()
     })
 
-    response = HttpResponse(
-        grid_file.read(),
-        content_type="application/pdf"
+    content_type = grid_file.content_type or "application/octet-stream"
+
+    response = StreamingHttpResponse(
+        gridfs_iterator(grid_file),
+        content_type=content_type
     )
+
     response["Content-Disposition"] = (
         f'attachment; filename="{grid_file.filename}"'
     )
+    response["Content-Length"] = grid_file.length
 
+    return response
+
+def get_analysis_history(request):
+    history = list(
+        analysis_tasks.find(
+            {"user": request.user.username}
+        ).sort("created_at", -1)
+    )
+
+    for h in history:
+        h["_id"] = str(h["_id"])
+        if "file_id" in h and h["file_id"]:
+            h["file_id"] = str(h["file_id"])
+        if "created_at" in h:
+            h["created_at"] = h["created_at"].strftime("%Y-%m-%d %H:%M")
+    return JsonResponse({"history": history})
+def download_all_receipt(request):
+    user = request.user
+    history = list(
+        analysis_tasks.find(
+            {"user": user.username}
+        ).sort("created_at", -1)
+    )
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="All_Download_Files_Report.pdf"'
+
+    p = canvas.Canvas(response, pagesize=A4)
+    width, height = A4
+    y = height - 50
+
+    # ---------- HEADER ----------
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, "Download History Report")
+    y -= 30
+
+    p.setFont("Helvetica", 10)
+    p.drawString(50, y, f"User: {user.username}")
+    y -= 15
+    p.drawString(50, y, f"Generated On: {datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    y -= 25
+
+    # ---------- TABLE HEADER ----------
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(40, y, "Date")
+    p.drawString(100, y, "Task ID")
+    p.drawString(200, y, "File Name")
+    p.drawString(350, y, "Channel")
+    p.drawString(400, y, "Type")
+    p.drawString(450, y, "Status")
+    y -= 10
+    p.line(40, y, 550, y)
+    y -= 14
+
+    # ---------- TABLE DATA ----------
+    p.setFont("Helvetica", 9)
+
+    if not history:
+        p.drawString(50, y, "No download history found.")
+    else:
+        for item in history:
+            if y < 80:
+                p.showPage()
+                y = height - 50
+                p.setFont("Helvetica", 9)
+
+            created_at = item.get("created_at")
+            date_str = created_at.strftime("%d-%m-%Y") if created_at else "NA"
+
+            p.drawString(40, y, date_str)
+            p.drawString(100, y, item.get("task_id", "NA")[:16])
+            p.drawString(200, y, item.get("file_name", "NA")[:25])
+            p.drawString(350, y, str(item.get("lead_type", "NA")))
+            p.drawString(400, y, item.get("file_type", "NA"))
+            p.drawString(450, y, item.get("status", "NA"))
+
+            y -= 14
+
+    p.showPage()
+    p.save()
     return response

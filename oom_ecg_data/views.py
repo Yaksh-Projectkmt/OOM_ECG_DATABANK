@@ -14,20 +14,18 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import plotly.graph_objects as go
 import plotly.io as pio
-from .PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
+from Scripts_Models.Scripts.PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
-from .get_Data import get_the_data
+from Scripts_Models.Scripts.get_Data import get_the_data
 from django.core.files.base import ContentFile
 import datetime
 from django.utils import timezone  
-
 
 from scipy.signal import butter, filtfilt
 import json, base64, gridfs, zipfile, binascii, re, math, datetime, matplotlib, random, io, traceback, os, pymongo
 matplotlib.use('Agg')
 
-from subscription.decorators import feature_required
 from authuser.views import deduct_wallet_for_download, users_collection
 from subscription.templatetags.subscription_tags import has_feature
 from django.http import Http404
@@ -57,7 +55,7 @@ logs_collection = Queues["multiple_segments"]
 
 #chunks
 download_fs = GridFS(media_db, collection="downloads") 
-download_logs = admin_db["download_logs"]
+download_logs = media_db["download_logs"]
 
 Files_db = mongo_client['Files']
 fs = gridfs.GridFS(Files_db)
@@ -202,7 +200,7 @@ def new_insert_data(request):
             weight = request.POST.get("weight") or 0
             height = request.POST.get("height") or 0
             Medical_History = request.POST.get("Medical_History", "").strip()
-            print(patient_id,arrhythmia_mi,sub_arrhythmia,frequency,lead_type,lead, sex,age,weight,height,Medical_History)
+           
             if len(arrhythmia_mi) != len(sub_arrhythmia):
                 return JsonResponse({
                     "status": "error",
@@ -327,7 +325,6 @@ def new_insert_data(request):
                         "created_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S"),
                         "Data": data_dict
                     }
-                    print(db_insert_data)
                     db[coll_name].insert_one(db_insert_data)
                     # --- Update patient_db after insert ---
                     update_patient_db(patient_id, coll_name, frequency, datalength)
@@ -924,7 +921,7 @@ def get_pqrst_data(request):
         object_id = data.get("object_id")
         arrhythmia_raw = data.get("arrhythmia", "").strip()
         lead_config = data.get("lead_config")
-
+        print(data)
         if not object_id or not arrhythmia_raw or not lead_config:
             return JsonResponse({
                 "status": "error",
@@ -1092,7 +1089,6 @@ def deduct_wallet_before_download(request):
         Lead= data.get("lead_type")
         arrhythmia = data.get("arrhythmia")
         Data_ObjectId =data.get("objectId")
-        Collection=data.get("collection")
         DownloadfileId =data.get("DownloadfileId")
         if not file_type:
             return JsonResponse({"error": "file_type is required"}, status=400)
@@ -1117,7 +1113,7 @@ def deduct_wallet_before_download(request):
         user.role = role
 
         # Deduct wallet
-        success, message = deduct_wallet_for_download(user, file_type, Data_ObjectId,arrhythmia,Collection,Lead,patient_id,DownloadfileId)
+        success, message = deduct_wallet_for_download(user, file_type, Data_ObjectId,arrhythmia,Lead,patient_id,DownloadfileId)
 
         if not success:
             return JsonResponse({"error": message}, status=402)
@@ -1952,36 +1948,50 @@ def save_download_file(request):
         arrhythmia = request.POST.get("arrhythmia")
         lead_type = request.POST.get("leadType")
         DownloadfileId = request.POST.get("DownloadfileId")
-        
-        meta_raw = request.POST.get("meta", "{}")
-        try:
-            meta = json.loads(meta_raw)
-        except:
-            meta = {}
 
-        # ----- FIX: use f.read() instead of f.file -----
+        # ---------------------------
+        # USER INFO (SAFE)
+        # ---------------------------
+        user = request.user if request.user.is_authenticated else None
+
+        user_data = {
+            "username": user.username if user else None,
+            "email": user.email if user else None,
+        }
+
+        # ---------------------------
+        # STORE FILE IN GRIDFS
+        # ---------------------------
         file_id = download_fs.put(
             f.read(),
             filename=f.name,
             contentType=f.content_type,
             patient_id=patient_id,
+            DownloadfileId=DownloadfileId,
             download_type=download_type,
             arrhythmia=arrhythmia,
             lead_type=lead_type,
-            DownloadfileId=DownloadfileId,
-            meta=meta,
             length=f.size
         )
 
-        # save history
-        history_id = download_logs.insert_one({
+        # ---------------------------
+        # SAVE DOWNLOAD HISTORY LOG
+        # ---------------------------
+        history_doc = {
             "DownloadfileId": DownloadfileId,
             "patient_id": patient_id,
             "file_id": file_id,
             "download_type": download_type,
             "arrhythmia": arrhythmia,
-            "lead_type": lead_type
-        }).inserted_id
+            "lead_type": lead_type,
+
+            # USER LOGGING
+            "user": user_data,
+
+            "created_at": timezone.localtime(timezone.now()).strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        history_id = download_logs.insert_one(history_doc).inserted_id
         
         return JsonResponse({
             "success": True,

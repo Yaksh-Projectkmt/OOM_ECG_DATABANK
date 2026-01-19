@@ -17,7 +17,7 @@ import pandas as pd
 from django.conf import settings
 import base64
 import os
-from oom_ecg_data.PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
+from Scripts_Models.Scripts.PQRST_detection_model import check_r_index, check_qs_index, check_pt_index, r_index_model, pt_index_model
 import traceback
 from subscription.templatetags.subscription_tags import has_feature
 # ======================== THREAD LOCK ========================
@@ -263,7 +263,7 @@ def edit_data(request):
      # ---------------------------
     # FEATURE CHECK (IMPORTANT)
     # ---------------------------
-    if not has_feature(request.user, "edit_data"):
+    if not has_feature(request.user, "	edit_data"):
         return JsonResponse({
             "status": "error",
             "message": "Your subscription does not include EDIT Functionality."
@@ -278,14 +278,13 @@ def edit_data(request):
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
    
-    print(data)
+    
     patient_id = data.get('PatientID')
     object_id = data.get('object_id')
     old_collection = get_parent_collection(data.get('old_collection'))
     new_collection = get_parent_collection(data.get('new_collection'))
     lead = data.get('lead')
-    sub_arrhythmia = data.get('sub_arrhythmia')
-    if not all([object_id, old_collection, new_collection, lead,sub_arrhythmia]):
+    if not all([object_id, old_collection, new_collection, lead]):
         return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
 
     try:
@@ -316,7 +315,7 @@ def edit_data(request):
     # Build new document
     new_doc = {
         'PatientID': patient_id,
-        'Arrhythmia': sub_arrhythmia,   # update arrhythmia label
+        'Arrhythmia': new_collection,   # update arrhythmia label
         'Lead': lead,
         'Frequency': fetched_data.get('Frequency', 200),
         'Data': fetched_data.get('Data'),

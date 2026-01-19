@@ -191,7 +191,7 @@ ECG Data Management
   <div class="pagination-container">
     
 <div class="pagination-left">
-    <button id="shareSelectedBtn"
+       <button id="shareSelectedBtn"
         class="btn btn-primary {% if not user|has_feature:'share' %}disabled-feature{% endif %}"
         data-locked="{% if not user|has_feature:'share' %}true{% else %}false{% endif %}">
           <i class="fas fa-share-alt"></i>

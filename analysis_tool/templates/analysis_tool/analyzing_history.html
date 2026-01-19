@@ -1,0 +1,435 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% block title %}Analyzing Data History{% endblock %}
+{% block extra_css %}
+<style>
+/* ---------- Layout ---------- */
+.history-page-container {
+    padding: 30px;
+    font-family: "Inter", sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.history-page-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+}
+.back-btn,
+.refresh-btn {
+    color: var( --header-bg);
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 6px;
+}
+
+.back-btn:hover,
+.refresh-btn:hover {
+    opacity: 0.7;
+}
+.back-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* ---------- Summary Cards ---------- */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    background: var(--header-bg);
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.summary-card p {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.summary-card h3 {
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.summary-card.success h3 { color: #16a34a; }
+.summary-card.failed h3 { color: #dc2626; }
+
+/* ---------- Table ---------- */
+.history-table-container {
+    background: var(--header-bg);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    overflow-x: auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+}
+
+.history-table th, .history-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--header-border);
+    text-align: left;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+.status-success { background: #e8f8f0; color: #139a43; }
+.status-failed  { background: #fdecea; color: #d93025; }
+.status-pending { background: #fff4ce; color: #b58900; }
+
+.price-green1 { color: #16a34a; font-weight: 600; }
+.price-red1   { color: #dc2626; font-weight: 600; }
+
+.secondary-btn {
+    padding: 6px 14px;
+    background: #e8f8f0;
+    color: #139a43;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+/* ---------- Pagination ---------- */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.page-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--header-border);
+    background: var(--header-bg);
+    cursor: pointer;
+}
+
+.page-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+}
+
+.page-number {
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--header-border);
+}
+
+.page-number.active {
+    background: #16a34a;
+    color: #fff;
+    font-weight: 600;
+}
+#page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(249, 250, 251, 0.66); /* Light background */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.ecg-loader {
+    width: 150px; /* Increased width */
+    height: 60px;
+    position: relative;
+}
+
+.ecg-loader svg {
+    width: 100%;
+    height: 100%;
+}
+
+.ecg-line {
+    fill: none;
+    stroke:rgb(227, 6, 6);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        stroke-dasharray: 0 100;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 50 50;
+        stroke-dashoffset: -25;
+    }
+    100% {
+        stroke-dasharray: 0 100;
+        stroke-dashoffset: -50;
+    }
+}
+
+</style>
+{% endblock %}
+{% block page_title %}
+Analysis History
+{% endblock %}
+{% block content %}
+{% if user_session %}
+<div class="history-page-container">
+    <div class="header">
+        <!-- Left side -->
+        <div class="header-left">
+            <button class="back-btn" 
+                    onclick="window.location.href='/analysis/'" 
+                    aria-label="Go back">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 class="history-page-title">All Analysis History</h2>
+        </div>
+        <div class="header-right">
+        <button class="secondary-btn" onclick="downloadAllReceipt()">
+            Download All Spend Receipt (PDF)
+        </button>
+        <!-- Right side -->
+        
+            <button class="refresh-btn" onclick="refreshPage()" 
+                    aria-label="Refresh">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+    <!-- SUMMARY -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <p>Total Files</p>
+            <h3 id="totalUsed">0</h3>
+        </div>
+        <div class="summary-card success">
+            <p>Total Amount Spent</p>
+            <h3 id="totalAmount">0</h3>
+        </div>
+        <div class="summary-card success">
+            <p>Success Files</p>
+            <h3 id="totalSuccess">0</h3>
+        </div>
+        <div class="summary-card failed">
+            <p>Failed Files</p>
+            <h3 id="totalFailed">0</h3>
+        </div>
+    </div>
+      
+
+    <!-- Table Container -->
+    <div class="history-table-container">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Sr NO.</th>
+                    <th>Transaction ID</th>
+                    <th>File Name</th>
+                    <th>Arrhythmia</th>
+                    <th>Lead</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Download</th>
+                </tr>
+            </thead>
+
+            <tbody id="allHistoryBody">
+                <!-- JS will load records here -->
+            </tbody>
+        </table>
+    </div>
+     <div class="pagination-wrapper">
+        <button id="prevPage" class="page-btn">Prev</button>
+        <div id="pageNumbers" class="page-numbers"></div>
+        <button id="nextPage" class="page-btn">Next</button>
+    </div>
+</div>
+{% else %}
+<script>
+    window.location.href="{% url 'session_expired' %}";
+</script>
+
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+let allHistory = [];
+let currentPage = 1;
+const rowsPerPage = 10;
+    async function loadAllHistory() {
+    try {
+        const res = await fetch("/analysis/history/");
+        const data = await res.json();
+
+        const tbody = document.getElementById("allHistoryBody");
+        tbody.innerHTML = "";
+
+        if (!data.history || data.history.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;">No history found</td></tr>`;
+            allHistory = [];
+            calculateSummary();
+            return;
+        }
+        allHistory = data.history;
+
+        data.history.forEach((item, index) => {
+
+    let status = (item.status || "unknown").toLowerCase();
+    let statusClass = "status-unknown";
+
+    if (status === "success") statusClass = "status-success";
+    else if (status === "failed") statusClass = "status-failed";
+    else if (status === "pending") statusClass = "status-pending";
+
+    const statusBadge = `
+        <span class="status-badge ${statusClass}">
+            ${status}
+        </span>
+    `;
+
+    const canDownload = status === "success"
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${item.task_id || "NA"}</td>
+                <td>${(item.file_name || "").split(".")[0]}</td>
+                <td>${item.arrhythmia || "NA"}</td>
+                <td>${item.lead_type || "NA"}</td>
+                <td>${item.file_type || "CSV"}</td>
+                <td>${statusBadge}</td>
+                <td class="price-green1">&#8377;${item.amount || "0"}</td>
+                <td>${item.created_at || "NA"}</td>
+                <td>
+                    ${
+                        canDownload
+                        ? `<button class="secondary-btn" onclick="downloadHistory('${item.file_id}')">
+                            Download
+                        </button>`
+                        : `<button class="secondary-btn" disabled>
+                            Not Ready
+                        </button>`
+                    }
+                </td>
+            </tr>
+        `;
+    });
+    calculateSummary();
+    }
+    catch (error) {
+        console.log("Error loading full history:", error);
+    }
+}
+function renderPagination() {
+    const pages = Math.ceil(allHistory.length / rowsPerPage);
+    pageNumbers.innerHTML = "";
+
+    for (let i = 1; i <= pages; i++) {
+        const p = document.createElement("span");
+        p.className = `page-number ${i === currentPage ? "active" : ""}`;
+        p.innerText = i;
+        p.onclick = () => { currentPage = i; renderTable(); renderPagination(); };
+        pageNumbers.appendChild(p);
+    }
+
+    prevPage.disabled = currentPage === 1;
+    nextPage.disabled = currentPage === pages;
+}
+
+prevPage.onclick = () => { if (currentPage > 1) { currentPage--; renderTable(); renderPagination(); }};
+nextPage.onclick = () => { currentPage++; renderTable(); renderPagination(); };
+function downloadHistory(fileId) {
+    if (!fileId) {
+        alertSystem.info("Info", "File not ready yet");
+        return;
+    }
+    window.open(`/analysis/download/${fileId}/`, "_blank");
+}
+
+loadAllHistory();
+
+function refreshPage() {
+    const loader = document.getElementById("page-loader");
+    loader.style.display = "flex";
+
+    // Small delay so loader is visible before reload
+    setTimeout(() => {
+        location.reload();
+    }, 150);
+}
+/* ---------- SUMMARY ---------- */
+function calculateSummary() {
+    let totalFiles = allHistory.length;
+    let successFiles = 0;
+    let failedFiles = 0;
+    let totalAmount = 0;
+
+    allHistory.forEach(item => {
+        const status = (item.status || "").toLowerCase();
+        const amount = Number(item.amount) || 0;
+
+        if (status === "success" || status === "paid") {
+            successFiles++;
+            totalAmount += amount;
+        } 
+        else if (status === "failed" || status === "error") {
+            failedFiles++;
+        }
+    });
+
+    document.getElementById("totalUsed").innerText = totalFiles;
+    document.getElementById("totalSuccess").innerText = successFiles;
+    document.getElementById("totalFailed").innerText = failedFiles;
+    document.getElementById("totalAmount").innerText = `${totalAmount.toFixed(2)}`;
+}
+function downloadAllReceipt() {
+    window.open("/analysis/download-all-receipt/", "_blank");
+}
+</script>
+{% endblock %}

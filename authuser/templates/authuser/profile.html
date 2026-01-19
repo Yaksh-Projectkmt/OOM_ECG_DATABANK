@@ -376,8 +376,8 @@ User Settings
                                     <td>{{ payment.order_id }}</td>
                                     <td>{{ payment.plan_name }}</td>
                                     <td>{{ payment.amount }}</td>
-                                    <td>{{ payment.date}}</td>
-                                    <td>{{ payment.Expiry}}</td>
+                                    <td>{{ payment.date|default:"-" }}</td>
+                                    <td>{{ payment.Expiry|default:"-"}}</td>
                                     <td>
                                         {% if payment.status|lower == 'paid' %}
                                             <span class="status-badge paid">Paid</span>

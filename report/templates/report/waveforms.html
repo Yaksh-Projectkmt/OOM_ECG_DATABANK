@@ -476,13 +476,23 @@
     }
     
 }
-.form-control {
+    .form-control {
+    padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid;
     border-radius: var(--radius-md);
     font-size: 0.875rem;
     transition: all var(--transition-fast);
+    margin-right: var(--spacing-md);
 }
 
+    .modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
     .btn-warning {
     background-color: var(--warning);
     color: white;
@@ -709,9 +719,9 @@ ECG Waveform Analysis
                 <div id="ecgPlot"></div>
             </div>
 
-            <div class="controls d-flex flex-wrap gap-2 justify-content-end align-items-center">   
+            <div class="modal-footer">
               <div class="arrhythmia-label" id="arrhythmiaContainer" >
-                <select class="form-control" id="Arrhythmia" name="ArrhythmiaType"  data-original="" data-collection="">
+                <select class="form-control" id="Arrhythmia" name="ArrhythmiaType">
                   <option value=" " selected>Select Arrhythmia Type</option>
                   <option value="Premature Ventricular Contraction">Premature Ventricular Contraction</option>
                   <option value="Premature Atrial Contraction">Premature Atrial Contraction</option>
@@ -732,11 +742,7 @@ ECG Waveform Analysis
                   <option value="Normal">Normal</option>
                 </select>
               </div>
-              <div>
-              <select class="form-control" id="SubArrhythmia" style="display:none;">
-                        <option value="">Select Sub Arrhythmia</option>
-                    </select>
-                </div>
+
               <div class="download-label" id="downloadContainer">
                 <select class="form-control" id="downloadType" name="downloadType">
                   <option value="" disabled selected>Download Type</option>
@@ -773,32 +779,6 @@ ECG Waveform Analysis
 {% block scripts %}
 <script> 
     //Basic js 
-    const arrhythmiaDict = {
-    'Myocardial Infarction': ['T-wave abnormalities', 'Inferior MI', 'Lateral MI'],
-    'Atrial Fibrillation & Atrial Flutter': ['AFIB', 'Aflutter', 'AFL'],
-    'HeartBlock': ['I DEGREE', 'MOBITZ-I', 'MOBITZ-II', 'III Degree'],
-    'Junctional Rhythm': ['Junctional Bradycardia', 'Junctional Rhythm'],
-    'Premature Atrial Contraction': [
-        'PAC-Isolated','PAC-Bigeminy','PAC-Couplet','PAC-Triplet',
-        'SVT','PAC-Trigeminy','PAC-Quadrigeminy'
-    ],
-    'Premature Ventricular Contraction': [
-        'AIVR','PVC-Bigeminy','PVC-Couplet','PVC-Isolated',
-        'PVC-Quadrigeminy','NSVT','PVC-Trigeminy',
-        'PVC-Triplet','IVR','VT'
-    ],
-    'Ventricular Fibrillation and Asystole': ['VFIB','VFL','ASYSTOLE'],
-    'Noise': ['Noise'],
-    'LBBB': ['LBBB','RBBB'],
-    'Artifacts': ['Artifacts'],
-    'SINUS-ARR': ['SINUS-ARR'],
-    'ShortPause': ['Short Pause','Long Pause'],
-    'TC': ['TC'],
-    'WIDE-QRS': ['WIDE-QRS'],
-    'Abnormal': ['ABNORMAL'],
-    'Normal': ['Normal'],
-    'Others': ['Others']
-    };
   // CSRF Token Utility
   const getCSRFToken = () => {
     const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
@@ -826,7 +806,7 @@ ECG Waveform Analysis
         clearTimeout(timeout);
         timeout = setTimeout(() => func(...args), wait);
     };
-    };
+};
 
     const selectors = {
         ecgTableBody: '#ecgTableBody',
@@ -841,7 +821,7 @@ ECG Waveform Analysis
     const leadNumeric = "{{ lead }}" === "II" ? 2 : "{{ lead }}"; 
 
     // ---- CSV helper ----
-    function downloadCSV(csvContent, filename) {
+function downloadCSV(csvContent, filename) {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -850,7 +830,18 @@ ECG Waveform Analysis
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    }
+}
+function downloadPNG(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
     //Data plotting logic
     window.ecgSignal = {{ ecg_signal|safe }};
     let currentPlot = null;
@@ -1068,32 +1059,12 @@ ECG Waveform Analysis
     let arrhythmiaContainer = document.getElementById(`arrhythmiaContainer`);
     let arrhythmiaSelect = document.getElementById(`Arrhythmia`);
     let downloadTypeSelect = document.getElementById(`downloadType`);
-    const subArrhythmiaSelect = document.getElementById("SubArrhythmia");
 
     if (!closeBtn) {
         console.warn(`Close button closeBtn not found in DOM.`);
     }
     // Reset button states when opening the plot
     resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect,closeBtn);
-    arrhythmiaSelect.addEventListener("change", function () {
-        const selected = this.value.trim();
-
-        // Clear old items
-        subArrhythmiaSelect.innerHTML = `<option value="">Select Sub Arrhythmia</option>`;
-
-        if (arrhythmiaDict[selected] && arrhythmiaDict[selected].length > 0) {
-            arrhythmiaDict[selected].forEach(sub => {
-                const opt = document.createElement("option");
-                opt.value = sub;
-                opt.textContent = sub;
-                subArrhythmiaSelect.appendChild(opt);
-            });
-
-            subArrhythmiaSelect.style.display = "block";
-        } else {
-            subArrhythmiaSelect.style.display = "none";
-        }
-    });
 
     //Edit data logic
     if (editButton) {
@@ -1125,15 +1096,7 @@ ECG Waveform Analysis
         // Set default to current arrhythmia
         const currentArrhythmia = sessionStorage.getItem('selectedArrhythmia') || '{{ arrhythmia }}';
         arrhythmiaSelect.value = currentArrhythmia;
-
-        arrhythmiaSelect.dataset.original = currentArrhythmia;
-
-        // set collection name
-        const currentCollection = sessionStorage.getItem('record_collection') || '{{ collection_name }}';
-        arrhythmiaSelect.dataset.collection = currentCollection;
-
-        console.log("Original arrhythmia:", arrhythmiaSelect.dataset.original);
-        console.log("Original collection:", arrhythmiaSelect.dataset.collection);
+        arrhythmiaSelect.setAttribute('data-original', currentArrhythmia);
 
         // Reset old listeners
         const newConfirmEditBtn = confirmEditBtn.cloneNode(true);
@@ -1147,9 +1110,7 @@ ECG Waveform Analysis
         // Confirm button
         confirmEditBtn.addEventListener('click', debounce(async () => {
         const newArrhythmia = arrhythmiaSelect.value.trim();
-        const newSubArrhythmia = subArrhythmiaSelect.value.trim();  // <-- NEW
-        const originalArrhythmia = arrhythmiaSelect.dataset.original || '';
-        const originalCollection = arrhythmiaSelect.dataset.collection || '';
+        const originalArrhythmia = (arrhythmiaSelect.getAttribute('data-original') || '').trim();
         
     if (!newArrhythmia) {
         alertSystem.info('Info','Invalid arrhythmia selection.');
@@ -1157,53 +1118,68 @@ ECG Waveform Analysis
         return;
     }
 
+    if (newArrhythmia === originalArrhythmia) {
+        alertSystem.info('Info','No changes made.');
+        resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+        return;
+    }
+
+    try {
         const requestData = {
             object_id: record_id,
-            old_collection: originalCollection,
+            old_collection: originalArrhythmia,
             new_collection: newArrhythmia,
-            sub_arrhythmia: newSubArrhythmia, 
             lead: leadNumeric,
             PatientID: patient_id
         };
-        try {
-            const data = await safeFetch('/report/edit_data/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify(requestData)
-            });
+        
+        const data = await safeFetch('/report/edit_data/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(requestData)
+        });
 
-            if (data.status === 'success') {
-            alertSystem.success('Success','ECG data updated successfully!');
+        if (data.status === 'success') {
+        alertSystem.success('Success','ECG data updated successfully!');
 
-            const badge = document.querySelector('.meta-item .meta-value .alert-badge');
-            if (badge) {
-                badge.innerHTML = `<i class="fas fa-circle"></i> ${newArrhythmia} (${newSubArrhythmia || "None"})`;
-            }
-
-            sessionStorage.setItem('selectedArrhythmia', newArrhythmia);
-            sessionStorage.setItem('selectedSubArrhythmia', newSubArrhythmia);
-            window.location.href = "/report/";
-            } else {
-            alertSystem.error('Error', data.message || 'Failed to update data.');
-            }
-        } catch (error) {
-            alertSystem.error('Error','Duplicate ECG data found.');
+        const arrhythmiaBadge = document.querySelector('.meta-item .meta-value .alert-badge');
+        if (arrhythmiaBadge) {
+            arrhythmiaBadge.innerHTML = `<i class="fas fa-circle"></i> ${newArrhythmia}`;
         }
-        }, 100));
 
-            // Close button
-            closeBtn.addEventListener('click', debounce(() => {
-            resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
-            }, 100));
+        sessionStorage.setItem('selectedArrhythmia', newArrhythmia);
+        window.location.href = "/report/";
+        } else {
+        alertSystem.error('Error', data.message || 'Failed to update data.');
+        }
+    } catch (error) {
+        alertSystem.error('Error','Duplicate ECG data found.');
+    }
+    }, 100));
+
+        // Close button
+        closeBtn.addEventListener('click', debounce(() => {
+        resetEditState(arrhythmiaContainer, editButton, saveButton, confirmEditBtn, arrhythmiaSelect, downloadTypeSelect, closeBtn);
+        }, 100));
 
     }, 100));
     }
 
     // Download logic
-
+    function generate10DigitID() {
+            return Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    }
+    function updateWalletBalance() {
+        fetch("/auth/get-balance/")
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("walletBalance").textContent =
+                    data.balance || "0.00";
+            });
+    }
     // ---- Download logic ----
     if (saveButton && downloadTypeSelect) {
 
@@ -1211,6 +1187,7 @@ ECG Waveform Analysis
         const newSaveButton = saveButton.cloneNode(true);
         saveButton.parentNode.replaceChild(newSaveButton, saveButton);
         saveButton = newSaveButton;
+        const DownloadfileId=generate10DigitID();
 
         saveButton.addEventListener('click', async () => {
             const downloadType = downloadTypeSelect.value;
@@ -1234,21 +1211,33 @@ ECG Waveform Analysis
             try {
                 switch (downloadType) {
                     case 'raw_data':
-                        // Deduct wallet BEFORE allowing download
-                            const okRaw = await deductWallet("csv", patient_id, arrhythmia, leadType);
-                            if (!okRaw) return;
-                        let csv = `Index,Lead_${leadNumeric}\n`;
+                        
+                        let csvContent = `Index,Lead_${leadNumeric}\n`;
                         for (let i = 0; i < ecgSignal.length; i++) {
-                            csv += `${i},${ecgSignal[i]}\n`;
+                            csvContent += `${i},${ecgSignal[i]}\n`;
                         }
-                        downloadCSV(csv, `raw_ecg_data_${patient_id}_lead${leadNumeric}.csv`);
+                        const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+                        const filename = `raw_ecg_data_${patient_id}.csv`;
+                        // Deduct wallet BEFORE allowing download
+                        const okRaw = await deductWallet("csv", patient_id, arrhythmia, leadType);
+                            if (!okRaw) return;
+                        await uploadFileToDB({
+                        fileBlob: csvBlob,
+                        filename,
+                        patient_id,
+                        DownloadfileId,
+                        downloadType: 'raw_data',
+                        arrhythmia,
+                        leadType
+                        });
+                        
+                        downloadCSV(csvContent, filename);
                         updateWalletBalance();
                         break;
 
-                    case 'plot_png':
-                        const okPng = await deductWallet("image", patient_id, arrhythmia, leadType);
-                            if (!okPng) return;
-                        const plotDiv = document.getElementById('ecgPlot'); // correct ID
+                    case 'plot_png': {
+
+                        const plotDiv = document.getElementById('ecgPlot');
                         if (!plotDiv || plotDiv.children.length === 0) {
                             alertSystem.error("ECG plot not loaded yet.");
                             return;
@@ -1258,20 +1247,45 @@ ECG Waveform Analysis
                         if (leadNumeric == 2) { width = 1000; height = 400; }
                         else if (leadNumeric == 7) { width = 1200; height = 1000; }
 
-                        Plotly.downloadImage(plotDiv, {
+                        // Convert plot to image
+                        const pngDataUrl = await Plotly.toImage(plotDiv, {
                             format: 'png',
-                            filename: `ecg_plot_${patient_id}_lead${leadNumeric}`,
-                            width: width,
-                            height: height,
+                            width,
+                            height,
                             scale: 2
                         });
+
+                        // Convert DataURL → Blob
+                        const pngBlob = await (await fetch(pngDataUrl)).blob();
+                        const filename = `ecg_plot_${patient_id}_lead${leadNumeric}.png`;
+
+                        //  Deduct wallet FIRST
+                        const okPng = await deductWallet("image", patient_id, arrhythmia, leadType);
+                        if (!okPng) return;
+
+                        // Upload to DB
+                        await uploadFileToDB({
+                            fileBlob: pngBlob,
+                            filename,
+                            patientId: patient_id,   
+                            DownloadfileId,
+                            downloadType: "plot_png",
+                            arrhythmia,
+                            leadType
+                        });
+
+                        // DOWNLOAD TO USER DEVICE (THIS WAS MISSING)
+                        downloadPNG(pngBlob, filename);
+
+                        // Update wallet UI
+                        updateWalletBalance();
                         break;
+                    }
 
                     case 'selected_data': {
 
                     // Deduct wallet
-                    const okSel = await deductWallet("csv", patient_id, arrhythmia, leadType);
-                    if (!okSel) return;
+                
 
                     const plotDivSel = document.getElementById('ecgPlot');
                     if (!plotDivSel || !plotDivSel.data || !plotDivSel.data[0]) {
@@ -1304,9 +1318,21 @@ ECG Waveform Analysis
                     visibleData.forEach(p => {
                         csvContent += `${p.x},${p.y}\n`;
                     });
-
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const filename = `selected_ecg_data_${patient_id}.csv`;
+                    await uploadFileToDB({
+                        fileBlob: blob,
+                        filename,
+                        patient_id,
+                        DownloadfileId,
+                        downloadType: 'selected_data',
+                        arrhythmia,
+                        leadType
+                        });
                     //  Download CSV
-                    downloadCSV(csvContent,`selected_data_${patient_id}_lead${leadNumeric}_${x0}-${x1}.csv`);
+                    const okSel = await deductWallet("csv", patient_id, arrhythmia, leadType);
+                        if (!okSel) return;
+                    downloadCSV(csvContent,filename);
                     updateWalletBalance();
 
                     break;
@@ -1434,7 +1460,7 @@ ECG Waveform Analysis
             }
         }
     });
-    async function deductWallet(fileType, patientId, arrhythmia, leadType) {
+    async function deductWallet(fileType, patient_id, arrhythmia, leadType) {
 
     const response = await fetch('/ommecgdata/deduct_wallet_before_download/', {
         method: 'POST',
@@ -1445,7 +1471,7 @@ ECG Waveform Analysis
         },
         body: JSON.stringify({
         file_type: fileType,
-        patient_id: patientId,
+        patient_id: patient_id,
         arrhythmia: arrhythmia,
         lead_type: leadType
         })
@@ -1471,5 +1497,23 @@ ECG Waveform Analysis
         e.stopImmediatePropagation();  // stops Bootstrap, jQuery, SweetAlert
         showUpgradeToast();
     }, true); 
+
+    async function uploadFileToDB({ fileBlob, filename, patient_id, DownloadfileId, downloadType, arrhythmia, leadType }) {
+        const formData = new FormData();
+        formData.append("file", fileBlob, filename);   // IMPORTANT
+        formData.append("patientId", patient_id);
+        formData.append("downloadType", downloadType);
+        formData.append("arrhythmia", arrhythmia);
+        formData.append("leadType", leadType);
+        formData.append("DownloadfileId", DownloadfileId);
+
+        const resp = await fetch("/ommecgdata/save_download_file/", {
+            method: "POST",
+            body: formData
+        });
+
+        return await resp.json();
+    }
+
 </script>
  {% endblock %}

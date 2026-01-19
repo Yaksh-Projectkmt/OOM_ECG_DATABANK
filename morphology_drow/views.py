@@ -4,7 +4,7 @@ from django.core.files.storage import default_storage
 import pandas as pd
 from django.conf import settings
 from django.http import JsonResponse
-from morphology_drow.img_to_extract_signal import process_images
+from Scripts_Models.Scripts.img_to_extract_signal import process_images
 import subprocess, os, pymongo, json 
 from django.views.decorators.csrf import csrf_exempt
 from pymongo import MongoClient

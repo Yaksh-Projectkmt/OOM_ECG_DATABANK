@@ -24,6 +24,10 @@ from subscription.models import Plan
 from .models import Wallet, CustomUser  
 from .utils import save_to_gridfs, generate_session_token
 from subscription.utils import get_download_price, create_download_history
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from datetime import datetime
 
 # Connect to MongoDB
 mongo_uri = os.getenv("MONGO_HOST")
@@ -352,8 +356,8 @@ def update_registration_status(request):
         if user_doc:
             username = user_doc.get("username", "User")
             receiver_email = user_doc.get("email")
-            
-            # Compose email based on status
+           
+           # Compose email based on status
             if status == "approved":
                 send_approved_email(username,receiver_email)
             else:  # rejected
@@ -881,57 +885,82 @@ def payment_status_add_money(request):
 
     return redirect('profile')
     
-def deduct_wallet_for_download(user, file_type,Data_ObjectId,arrhythmia,Collection,Lead,patient_id,DownloadfileId):
-    # 1. Get price from Django admin
-    price = get_download_price(user, file_type)
-    # 2. Get wallet from MongoDB
-    wallet_doc = users_collection.find_one({"email": user.email})
-    if not wallet_doc:
-        return False, "User wallet not found"
+def has_successful_download(email, Data_ObjectID):
+    return Download_history_collection.find_one({
+        "email": email,
+        "Data_ObjectID": Data_ObjectID,
+        "status": "Success"
+    }) is not None
 
-    wallet_before = float(wallet_doc.get("wallet_balance", 0))
-     # Check sufficient balance
-    if wallet_before < price:
-        # Log failed attempt
+def deduct_wallet_for_download(
+    user,
+    file_type,
+    Data_ObjectId,
+    arrhythmia,
+    Lead,
+    patient_id,
+    DownloadfileId
+):
+    #STEP 0: Check free download
+    if has_successful_download(user.email, Data_ObjectId):
         create_download_history(
             user=user,
             file_type=file_type,
             DownloadfileId=DownloadfileId,
             Data_ObjectId=Data_ObjectId,
             Arrhythmia=arrhythmia,
-            Collection=Collection,
+            PatientID=patient_id,
+            Lead=Lead,
+            price=0,
+            status="Success"
+        )
+        return True, "Free download (already purchased)"
+
+    # STEP 1: Get price
+    price = get_download_price(user, file_type)
+
+    # STEP 2: Get wallet
+    wallet_doc = users_collection.find_one({"email": user.email})
+    if not wallet_doc:
+        return False, "User wallet not found"
+
+    wallet_before = float(wallet_doc.get("wallet_balance", 0))
+
+    # STEP 3: Check balance
+    if wallet_before < price:
+        create_download_history(
+            user=user,
+            file_type=file_type,
+            DownloadfileId=DownloadfileId,
+            Data_ObjectId=Data_ObjectId,
+            Arrhythmia=arrhythmia,
             PatientID=patient_id,
             Lead=Lead,
             price=price,
-            wallet_before=wallet_before,
-            wallet_after=wallet_before,   # wallet unchanged on failure
             status="Insufficient Balance"
         )
         return False, "Insufficient wallet balance"
 
-    # 3. Deduct wallet
+    # STEP 4: Deduct wallet
     users_collection.update_one(
         {"email": user.email},
         {"$inc": {"wallet_balance": -price}}
     )
 
     wallet_after = wallet_before - price
-    # 4. Insert success log
+
+    # STEP 5: Log success
     create_download_history(
         user=user,
         file_type=file_type,
         DownloadfileId=DownloadfileId,
         Data_ObjectId=Data_ObjectId,
         Arrhythmia=arrhythmia,
-        Collection=Collection,
         PatientID=patient_id,
         Lead=Lead,
         price=price,
-        wallet_before=wallet_before,
-        wallet_after=wallet_after,
         status="Success"
     )
-
 
     return True, "Wallet deduction successful"
 
@@ -954,38 +983,31 @@ def get_download_history(request):
         )
     )
 
+    # Convert string dates -> datetime for proper sorting
     history = []
-
     for h in raw_history:
+        dt = h.get("download_at")
 
-        # ⛔ Skip if DownloadfileId NOT present or empty
-        if not h.get("DownloadfileId"):
-            continue
-
-        dt = h.get("download_at") or h.get("updated_at")
-
-        # Convert to datetime
         if isinstance(dt, str) and dt.strip():
             try:
                 h["download_at_dt"] = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
             except:
-                h["download_at_dt"] = datetime.min
+                h["download_at_dt"] = datetime.min  # fallback
         elif isinstance(dt, datetime):
             h["download_at_dt"] = dt
         else:
-            h["download_at_dt"] = datetime.min
+            h["download_at_dt"] = datetime.min  # fallback for None or invalid
 
         history.append(h)
 
-    # Sort newest first
+    # Sort properly by actual datetime
     history.sort(key=lambda x: x["download_at_dt"], reverse=True)
 
-    # Remove temp field
+    # Remove temporary field
     for h in history:
         h.pop("download_at_dt", None)
 
     return JsonResponse({"history": history})
-
 #profile details show Backend
 def profile(request):
     # -------------------------------
@@ -1031,32 +1053,23 @@ def profile(request):
 
     wallet_transactions = []
     for w in wallet_cursor:
-
         txn_type = "credit" if w.get("status") == "success" else "Faild"
+        download_at_raw = w.get("download_at")
 
-        # Pick the best time field (priority: download_at → updated_at)
-        raw_time = w.get("download_at") or w.get("updated_at")
-
-        # Convert to datetime safely
-        if isinstance(raw_time, str):
+        if isinstance(download_at_raw, str):
             try:
-                parsed_time = datetime.strptime(raw_time, "%Y-%m-%d %H:%M:%S")
-            except Exception:
-                parsed_time = timezone.now()   # fallback if parsing fails
-        elif isinstance(raw_time, datetime):
-            parsed_time = raw_time
+                download_at = datetime.strptime(download_at_raw, "%Y-%m-%d %H:%M:%S")
+            except:
+                download_at = timezone.now()  # fallback
         else:
-            parsed_time = timezone.now()       # fallback if no timestamp found
-
-        # Build final structure
+            download_at = download_at_raw  # already datetime
         wallet_transactions.append({
             "txn_id": str(w.get("_id")),
-            "date": parsed_time,
+            "date": download_at,
             "amount": float(w.get("amount", 0)),
             "type": txn_type,
             "status": w.get("status", "Faild")
         })
-    print(wallet_transactions)
     # -------------------------------
     # Context
     # -------------------------------
@@ -1084,7 +1097,7 @@ def change_password(request):
         data = json.loads(request.body.decode('utf-8'))
         current_password = data.get('currentPassword', '').strip()
         new_password = data.get('newPassword', '').strip()
-        print(data)
+
         if not current_password or not new_password:
             return JsonResponse({"error": "All password fields are required."}, status=400)
 
@@ -1092,7 +1105,6 @@ def change_password(request):
         user = users_collection.find_one({"username": user_session['username']})
         email=user.get('email')
         username=user.get('username')
-        print(user)
         if not user or not check_password(current_password, user['password']):
             return JsonResponse({"error": "Current password is incorrect."}, status=400)
 
@@ -1119,7 +1131,6 @@ def change_password(request):
         )
         send_password_change_email(username,email)
         return JsonResponse({"message": "Password changed successfully."}, status=200)
-
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON data."}, status=400)
@@ -1252,4 +1263,88 @@ def download_file(media_db, download_fs, DownloadfileId):
 
     response = HttpResponse(file_obj.read(), content_type=content_type)
     response["Content-Disposition"] = f"attachment; filename={filename}"
+    return response
+@login_required
+@csrf_exempt
+def check_paid_status(request):
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=405)
+
+    data = json.loads(request.body)
+    object_id = data.get("object_id")
+
+    if not object_id:
+        return JsonResponse({"error": "Missing object_id"}, status=400)
+
+    paid = Download_history_collection.find_one({
+        "Data_ObjectID": object_id,
+        "email": request.user.email,
+        "status": "Success"         
+    })
+    return JsonResponse({
+        "is_paid": bool(paid)
+    })
+def download_all_receipt(request):
+    user = request.user
+
+    history = list(Download_history_collection.find({
+        "email": user.email
+    }).sort("download_at", -1))
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="All_Download_Files_Report.pdf"'
+
+    p = canvas.Canvas(response, pagesize=A4)
+    width, height = A4
+    y = height - 50
+
+    # ---------- HEADER ----------
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, "Download History Report")
+    y -= 30
+
+    p.setFont("Helvetica", 10)
+    p.drawString(50, y, f"User Email: {user.email}")
+    y -= 15
+    p.drawString(50, y, f"Generated On: {datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    y -= 25
+
+    # ---------- TABLE HEADER ----------
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(40, y, "Date")
+    p.drawString(110, y, "Transaction ID")
+    p.drawString(230, y, "Patient ID")
+    p.drawString(310, y, "Arrhythmia")
+    p.drawString(400, y, "Channel")
+    p.drawString(440, y, "Type")
+    p.drawString(500, y, "Status")
+    y -= 10
+    p.line(40, y, 550, y)
+    y -= 14
+
+    # ---------- TABLE DATA ----------
+    p.setFont("Helvetica", 9)
+
+    if not history:
+        p.drawString(50, y, "No download history found.")
+    else:
+        for item in history:
+            if y < 80:
+                p.showPage()
+                y = height - 50
+                p.setFont("Helvetica", 9)
+
+            p.drawString(40, y, str(item.get("download_at", "NA"))[:10])
+            p.drawString(110, y, str(item.get("transaction_id", "NA"))[:14])
+            p.drawString(230, y, str(item.get("PatientID", "NA")))
+            p.drawString(310, y, str(item.get("Arrhythmia", "NA"))[:18])
+            p.drawString(400, y, str(item.get("Lead", "NA")))
+            p.drawString(440, y, str(item.get("file_type", "NA")))
+            p.drawString(500, y, str(item.get("status", "NA")))
+
+            y -= 14
+
+    p.showPage()
+    p.save()
     return response

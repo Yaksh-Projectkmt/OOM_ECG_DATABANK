@@ -1,0 +1,604 @@
+{% extends 'ecgdatabank/base.html' %}
+{% load static %}
+{% load subscription_tags %}
+
+{% block title %}ECG Pattern Search{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<style>
+:root {
+  --radius: 16px;
+  --soft-shadow: 0 10px 25px rgba(0,0,0,.08);
+  --soft-border: #e2e8f0;
+}
+
+/* Page */
+.ecg-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: auto;
+}
+
+/* Header */
+.ecg-header {
+  margin-bottom: 20px;
+}
+
+.ecg-header h4 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* Cards */
+.ecg-card {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--soft-border);
+  box-shadow: var(--soft-shadow);
+  transition: all .25s ease;
+}
+
+.ecg-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 35px rgba(0,0,0,.1);
+}
+
+/* Titles */
+.ecg-title {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: .3px;
+}
+
+/* Plot containers */
+.ecg-plot {
+  height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Inputs */
+.form-control, .form-select {
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+/* Status pill */
+.status-pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(6px);
+}
+
+.dot1 {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill.processing .dot1 {
+  animation: pulse 1.2s infinite;
+}
+
+/* Loader */
+.loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-box {
+  padding: 30px 40px;
+  background: #fff;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,.3);
+  animation: popIn .4s ease;
+}
+
+@keyframes popIn {
+  from { transform: scale(.8); opacity: 0 }
+  to { transform: scale(1); opacity: 1 }
+}
+
+/* Image viewer */
+#resultImage {
+  max-height: 340px;
+  border-radius: 18px;
+  box-shadow: var(--soft-shadow);
+  transition: transform .25s;
+}
+
+#resultImage:hover {
+  transform: scale(1.02);
+}
+
+.fullscreen-img {
+  backdrop-filter: blur(6px);
+  animation: fadeIn .3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0 }
+  to { opacity: 1 }
+}
+
+/* Dark mode */
+body.dark-mode .ecg-card {
+  background: #020617;
+  border-color: #1e293b;
+  box-shadow: none;
+}
+
+body.dark-mode .loader-box {
+  background: #020617;
+}
+#page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(249, 250, 251, 0.66); /* Light background */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .ecg-loader {
+            width: 150px; /* Increased width */
+            height: 60px;
+            position: relative;
+        }
+
+        .ecg-loader svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ecg-line {
+            fill: none;
+            stroke:rgb(227, 6, 6);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 50 50;
+                stroke-dashoffset: -25;
+            }
+            100% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: -50;
+            }
+        }
+</style>
+{% endblock %}
+
+{% block page_title %}ECG Pattern Search{% endblock %}
+
+{% block content %}
+<div class="ecg-page">
+
+  <!-- HEADER -->
+  <div class="ecg-header">
+    <div>
+      <h4>ECG Pattern Search</h4>
+      <p class="text-muted mb-0">Upload ECG data and find matching beats</p>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <span class="dot1"></span>
+      <span id="statusText">Idle</span>
+    </div>  
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="ecg-card mb-3">
+    <div class="row g-3 align-items-end">
+
+      <div class="col-md-4">
+        <label class="form-label">Batch CSV Folder</label>
+        <input type="file" id="folderInput" class="form-control" webkitdirectory>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Reference CSV</label>
+        <input type="file" id="csvFile" class="form-control" accept=".csv">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Lead</label>
+        <select id="leadSelect" class="form-select">
+          <option value="" disabled selected>Select Lead</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-primary" onclick="startBatch()">
+          <i class="fa fa-play"></i> Start Batch
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ECG PLOTS -->
+  <div class="row g-3">
+
+    <div class="col-md-6">
+      <div class="ecg-card">
+        <div class="ecg-title">Reference ECG (Drag to Select)</div>
+        <div id="refPlot" class="ecg-plot"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="ecg-card">
+        <div class="ecg-title">Selected Pattern</div>
+        <div id="matchPlot" class="ecg-plot"></div>
+      </div>
+    </div>
+
+  </div>
+
+<!-- RESULTS -->
+<div class="ecg-card mt-3 d-none" id="resultPlot">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="ecg-title mb-0">Match Results</div>
+  </div>
+
+  <!-- SINGLE VIEW -->
+  <div id="singleView" class="text-center">
+    <img id="resultImage" class="img-fluid rounded mb-2">
+    <div id="resultMeta" class="small text-muted"></div>
+
+    <div class="d-flex justify-content-center gap-2 mt-3">
+      <button class="btn btn-outline-secondary" onclick="prevImg()">Prev</button>
+      <button class="btn btn-outline-secondary" onclick="nextImg()">Next</button>
+      <button class="btn btn-success" onclick="downloadPDF()">
+        <i class="fa fa-file-pdf"></i> Download PDF
+      </button>
+    </div>
+  </div>
+</div>
+<div id="globalLoader" class="loader-overlay d-none">
+  <div class="loader-box">
+    <div class="spinner-border text-primary"></div>
+    <div class="mt-2 fw-semibold" id="loaderText">Processing ECG Batch…</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+let csvData = null;
+let currentLead = null;
+let signal = [];
+let selectedPattern = null;
+let selectedRange = null;
+let batchResults = [];
+let images = [];
+let idx = 0;
+let batchId = null;
+
+/* CSV LOAD */
+document.getElementById("csvFile").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+  header: true,
+  dynamicTyping: true,
+  skipEmptyLines: true,
+  complete: res => {
+    csvData = res.data;
+    detectLeads(csvData);
+    setStatus("success", "CSV Loaded");
+  }
+});
+});
+
+/* DETECT LEADS */
+function detectLeads(rows) {
+  const leads = Object.keys(rows[0]).filter(k => typeof rows[0][k] === "number");
+  const sel = document.getElementById("leadSelect");
+  sel.innerHTML = "";
+
+  leads.forEach(l => {
+    const o = document.createElement("option");
+    o.value = l;
+    o.textContent = l;
+    sel.appendChild(o);
+  });
+
+  if (leads.length) {
+    currentLead = leads[0];
+    plotECG();
+  }
+}
+
+document.getElementById("leadSelect").addEventListener("change", e => {
+  currentLead = e.target.value;
+  plotECG();
+});
+
+/* PLOT ECG */
+function plotECG() {
+  if (!csvData || !currentLead) return;
+
+  signal = csvData.map(r => r[currentLead] ?? null);
+
+  const cleanSignal = signal.filter(v => typeof v === "number" && !isNaN(v));
+
+
+  
+  Plotly.newPlot("refPlot", [{
+  x: [...signal.keys()],
+  y: signal,
+  mode: "lines",
+  line: { width: 2 }
+}], {
+  dragmode: "select",
+  margin: { t: 30, l: 40, r: 10, b: 30 },
+  paper_bgcolor: "transparent",
+  plot_bgcolor: "transparent",
+  xaxis: { gridcolor: "#e5e7eb" },
+  yaxis: { gridcolor: "#e5e7eb" },
+  font: { size: 12 }
+}, { responsive: true });
+
+  document.getElementById("refPlot").on("plotly_selected", onPatternSelect);
+}
+
+/* SELECT PATTERN */
+function onPatternSelect(e) {
+  if (!e || !e.range) return;
+
+  const x0 = Math.floor(e.range.x[0]);
+  const x1 = Math.floor(e.range.x[1]);
+  const rawSignal = csvData.map(r => r[currentLead] ?? null);
+  const cleanSignal = rawSignal.filter(v => typeof v === "number" && !isNaN(v));
+  if (x1 - x0 < 50) return alertSystem.warning("Warning","Selection too small");
+
+  selectedRange = [x0, x1];
+  selectedPattern = signal.slice(x0, x1);
+
+  fetch("/Beat_Search/save-reference/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCSRFToken()
+    },
+
+    body: JSON.stringify({
+      reference_beat: cleanSignal.slice(x0, x1),
+      reference_range: [x0, x1],
+      reference_raw_full: rawSignal
+    })
+  }).then(r => r.json()).then(d => {
+    plotSelectedPattern();
+    setStatus("success", "Reference Pattern Saved");
+  });
+}
+
+function plotSelectedPattern() {
+  Plotly.newPlot("matchPlot", [{
+    y: selectedPattern,
+    mode: "lines",
+    line: { color: "#16a34a" }
+  }], { margin: { t: 40 } });
+}
+
+/* START BATCH */
+function startBatch() {
+  const folderInput = document.getElementById("folderInput");
+
+  if (!selectedPattern) {
+    alertSystem.info("info","Select reference pattern first");
+    return;
+  }
+
+  if (!folderInput.files.length) {
+    alertSystem.info("info","Select CSV folder first");
+    return;
+  }
+
+  const formData = new FormData();
+  for (const file of folderInput.files) {
+    if (file.name.endsWith(".csv")) {
+      formData.append("files", file);
+    }
+  }
+
+  setStatus("processing", "Processing Batch…");
+  showLoader(true);
+  document.getElementById("resultPlot").classList.add("d-none");
+
+  fetch("/Beat_Search/start-batch/", {
+    method: "POST",
+    headers: { "X-CSRFToken": getCSRFToken() },
+    body: formData
+  })
+  .then(r => r.json())
+  .then(d => {
+    pollForResults(d.batch_id);
+  })
+  .catch(() => {
+    showLoader(false);
+    setStatus("error", "Batch Failed");
+  });
+}
+
+function pollForResults(batchId) {
+  fetch(`/Beat_Search/check-status/${batchId}/`)
+    .then(r => r.json())
+    .then(status => {
+      if (!status.completed) {
+        setTimeout(() => pollForResults(batchId), 3000);
+        return;
+      }
+
+      // Batch REALLY completed
+      fetch(`/Beat_Search/get-images/${batchId}/`)
+        .then(r => r.json())
+        .then(d => {
+          showLoader(false);
+          setStatus("success", "ECG Batch Completed");
+          renderResults(d.images, batchId);
+        });
+    });
+}
+
+function renderResults(imgs, bid) {
+  images = imgs;   // imgs is ARRAY OF OBJECTS
+  batchId = bid;
+  idx = 0;
+
+  showImage();
+  document.getElementById("resultPlot").classList.remove("d-none");
+}
+
+let GRID_BATCH = 100;
+let gridIndex = 0;
+
+
+function loadNextGridBatch() {
+  const grid = document.getElementById("gridView");
+
+  for (let i = 0; i < GRID_BATCH && gridIndex < images.length; i++, gridIndex++) {
+    const imgObj = images[gridIndex];
+
+    const col = document.createElement("div");
+    col.className = "col-md-3";
+
+    const imgUrl = `/Beat_Search/image/${imgObj.id}/`;
+
+    col.innerHTML = `
+      <img loading="lazy"
+           src="${imgUrl}"
+           class="img-fluid rounded shadow"
+           onclick="openImage('${imgUrl}')">
+    `;
+
+    grid.appendChild(col);
+  }
+
+  if (gridIndex < images.length) {
+    setTimeout(loadNextGridBatch, 50);
+  }
+} 
+
+function openImage(src) {
+  const div = document.createElement("div");
+  div.className = "fullscreen-img";
+  div.innerHTML = `<img src="${src}" onclick="this.parentElement.remove()">`;
+  document.body.appendChild(div);
+}
+/* IMAGE VIEWER */
+function loadImages(bid) {
+  batchId = bid;
+  fetch(`/Beat_Search/get-images/${bid}/`)
+    .then(r => r.json())
+    .then(d => {
+      images = d.images;
+      idx = 0;
+      showImage();
+      document.getElementById("resultPlot").style.display = "block";
+    });
+}
+
+function showImage() {
+  if (!images.length) return;
+  document.getElementById("resultImage").src =`/Beat_Search/image/${images[idx].id}/`;
+  document.getElementById("resultMeta").innerText =
+    `Result ${idx + 1} of ${images.length}`;
+}
+
+function nextImg() { if (idx < images.length - 1) { idx++; showImage(); } }
+function prevImg() { if (idx > 0) { idx--; showImage(); } }
+
+async function downloadPDF(show=true) {
+  const loader = document.getElementById("globalLoader").classList.toggle("d-none", !show);
+  const text = document.getElementById("loaderText");
+  console.log(loader, text);
+  if (loader) loader.style.display = "flex";
+  if (text) text.innerText = "Downloading PDF...";
+
+  try {
+    const res = await fetch(`/Beat_Search/download-pdf/${batchId}/`);
+    const blob = await res.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${batchId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    showLoader(false);
+    loader.style.display = "none";
+    text.innerText = "Processing ECG Batch…";
+  }
+}
+
+function getCSRFToken() {
+  return document.cookie.split("; ")
+    .find(r => r.startsWith("csrftoken="))
+    ?.split("=")[1];
+}
+function setStatus(type, text) {
+  const pill = document.getElementById("statusPill");
+  pill.className = "status-pill " + type;
+  document.getElementById("statusText").innerText = text;
+}
+
+function showLoader(show) {
+  document.getElementById("globalLoader")
+    .classList.toggle("d-none", !show);
+}
+
+</script>
+{% endblock %}

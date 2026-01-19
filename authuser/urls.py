@@ -30,6 +30,8 @@ urlpatterns = [
     path('change_password/',views.change_password,name='change_password'),
     path('update-profile/',views.update_profile, name='update_profile'), 
     path("history-data/<str:DownloadfileId>/",views.download_history_file,name="download_history_file"),
+    path("check_paid_status/",views.check_paid_status,name="check_paid_status"),
+    path("download-all-receipt/",views.download_all_receipt, name="download_all_receipt")
 
 ]
 

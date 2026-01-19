@@ -60,6 +60,9 @@ INSTALLED_APPS = [
     'morphology_drow', 
     'oom_ecg_data',
     'report',
+    'Beat_Search',
+    'St_Segment',
+    'Scripts_Models.apps.Script_ModelsConfig',
 ]
 
 MIDDLEWARE = [

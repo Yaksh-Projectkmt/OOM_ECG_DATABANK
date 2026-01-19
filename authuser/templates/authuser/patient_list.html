@@ -220,6 +220,25 @@ Patient Arrhythmia Records
 
   <div id="patientContainer"></div>
 </div>
+
+<div id="downloadModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999;">
+  <div style="background:var(--card-bg); width:400px; margin:10% auto; padding:20px; border-radius:12px;">
+    <h3>Select Arrhythmias to Download</h3>
+
+    <div>
+      <label>
+        <input type="checkbox" id="selectAllArrhythmias"> Select All
+      </label>
+    </div>
+
+    <div id="arrhythmiaOptions" style="max-height:250px; overflow:auto; margin-top:10px;"></div>
+
+    <div style="margin-top:15px; text-align:right;">
+      <button onclick="closeDownloadModal()">Cancel</button>
+      <button onclick="startDownloadJob()">Download</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -272,6 +291,10 @@ function renderPatients(list) {
         <div class="patient-stats">
           <span><i class="fa-regular fa-clock"></i> ${formatTime(p.total_time)}</span>
           <span><i class="fa-regular fa-file-lines"></i> ${p.total_records}</span>
+          <span class="download-btn" data-patient-id="${p.patient_id}" style="cursor:pointer;"><svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 15v2a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-2m-8 1V4m0 12-4-4m4 4 4-4"/>
+            </svg>
+          </span>
         </div>
       </div>
       <div class="patient-body">
@@ -435,5 +458,95 @@ async function fetchPatients() {
 
 /* === Init === */
 fetchPatients();
+
+let selectedPatientForDownload = null;
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".download-btn");
+  if (!btn) return;
+
+  const patientId = btn.dataset.patientId;
+  const patient = patients.find(p => p.patient_id === patientId);
+
+  if (!patient) return;
+
+  selectedPatientForDownload = patient;
+
+  openDownloadModal(patient);
+});
+
+function openDownloadModal(patient) {
+  const modal = document.getElementById("downloadModal");
+  const list = document.getElementById("arrhythmiaOptions");
+  const selectAll = document.getElementById("selectAllArrhythmias");
+
+  list.innerHTML = "";
+
+  patient.arrhythmias.forEach(a => {
+    list.innerHTML += `
+      <div>
+        <label>
+          <input type="checkbox" class="arr-check" value="${a.type}">
+          ${a.type} (${a.records} records)
+        </label>
+      </div>
+    `;
+  });
+
+  selectAll.checked = false;
+
+  selectAll.onchange = () => {
+    document.querySelectorAll(".arr-check").forEach(cb => {
+      cb.checked = selectAll.checked;
+    });
+  };
+
+  modal.style.display = "block";
+}
+
+function closeDownloadModal() {
+  document.getElementById("downloadModal").style.display = "none";
+}
+
+async function startDownloadJob() {
+  const selected = [...document.querySelectorAll(".arr-check:checked")]
+                    .map(cb => cb.value);
+
+  if (!selected.length) {
+    alert("Select at least one arrhythmia");
+    return;
+  }
+
+  closeDownloadModal();
+
+  const payload = {
+    patient_id: selectedPatientForDownload.patient_id,
+    arrhythmias: selected
+  };
+
+  try {
+    const res = await fetch("/ommecgdata/start-download-job/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (data.status === "success") {
+      alertSystem.success("Success", "Your file is being prepared and will be emailed shortly.");
+    } else {
+      alertSystem.error("Error", data.message || "Failed");
+    }
+
+  } catch (err) {
+    console.error(err);
+    alertSystem.error("Error", "Server error");
+  }
+}
+
 </script>
 {% endblock %}

@@ -659,7 +659,6 @@ Arrhythmias & MI
 {% endblock %}
 {% block scripts %}
 <script>
-    const hasDelFeature ={{user|has_feature:"delete_data"|yesno:"true,false"}};
     const hasShareFeature = {{ user|has_feature:"share"|yesno:"true,false" }};
 </script>
 

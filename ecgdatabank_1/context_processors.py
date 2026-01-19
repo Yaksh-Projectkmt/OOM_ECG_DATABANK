@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.conf import settings
-
+import os
 def user_session(request):
     return {
         'user_session': request.session.get('user_session', None)
@@ -12,7 +12,7 @@ class MaintenanceModeMiddleware:
 
     def __call__(self, request):
         # Your developer/desktop IP(s)
-        DEV_IPS = ['192.168.1.16']  # replace with your desktop IP
+        DEV_IPS = [os.getenv("DEV_IPS")]  # replace with your desktop IP
 
         # Get client IP
         client_ip = request.META.get('REMOTE_ADDR')

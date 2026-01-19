@@ -65,7 +65,7 @@ def get_download_price(user, file_type):
         return 0
 
 
-def create_download_history(user, file_type,DownloadfileId,Data_ObjectId,Arrhythmia,Collection,PatientID,Lead,price, wallet_before, wallet_after, status):
+def create_download_history(user, file_type,DownloadfileId,Data_ObjectId,Arrhythmia,PatientID,Lead,price,status):
     from authuser.views import users_collection, Download_history_collection
 
     transaction_id = str(abs(hash(uuid.uuid4())))[:12]
@@ -77,7 +77,6 @@ def create_download_history(user, file_type,DownloadfileId,Data_ObjectId,Arrhyth
         "file_type": file_type,
         "Data_ObjectID":Data_ObjectId,
         "Arrhythmia": Arrhythmia,
-        "Collection":Collection,
         "PatientID": PatientID,
         "Lead": Lead,
         "amount": float(price),

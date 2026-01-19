@@ -107,8 +107,32 @@
                     
                 </button>
             </a>
-
-
+            
+             <a href="{% url 'Beat_Search' %}" class="nav-link">
+                <button class="nav-item" data-page="Beat_Search">
+                    <div class="nav-shimmer"></div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span class="nav-label">Beat_Search</span>
+                </button>
+            </a>
+            
+            <a href="{% url 'St_Segment' %}" class="nav-link">
+                <button class="nav-item" data-page="St_Segment">
+                    <div class="nav-shimmer"></div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span class="nav-label">ST Segment</span>
+                </button>
+            </a>
             <!-- Dashboard (Always Available) -->
             <a href="{% url 'report_index' %}" class="nav-link">
                 <button class="nav-item" data-page="Dashboard">
@@ -239,7 +263,7 @@
                     <p class="price">1500 INR<span>/ month</span></p>
                      <button class="upgrade-btn" data-plan="basic" data-amount="1500">
                         <span class="btn-text">Upgrade</span>
-                        <span class="lock-icon" style="display:none;">??</span>
+                        <span class="lock-icon" style="display:none;">&#x1F512</span>
                     </button>
                      <ul>
                         <li>Access to ECG Data</li>
@@ -255,7 +279,7 @@
                     <p class="price">3000 INR<span>/ month</span></p>
                     <button class="upgrade-btn" data-plan="pro" data-amount="3000">
                         <span class="btn-text">Upgrade</span>
-                        <span class="lock-icon" style="display:none;">??</span>
+                        <span class="lock-icon" style="display:none;">&#x1F512</span>
                     </button>
                     <ul>
                         <li>Access to ECG Data</li>
@@ -274,7 +298,7 @@
                     <p class="price">5000 INR<span>/ month</span></p>
                    <button class="upgrade-btn" data-plan="premium" data-amount="5000">
                       <span class="btn-text">Upgrade</span>
-                      <span class="lock-icon" style="display:none;">??</span>
+                      <span class="lock-icon" style="display:none;">&#x1F512</span>
                   </button>
                   <ul>
                     <li>Morphology Tool</li>
@@ -844,7 +868,7 @@ class TaskManager {
         }
 
         const taskElement = this.createTaskElement(task);
-        taskList.appendChild(taskElement);
+        taskList.prepend(taskElement);
     }
 
     createTaskElement(task) {
@@ -1058,6 +1082,7 @@ class TaskManager {
             if (saved) {
                 try {
                     const tasksArray = JSON.parse(saved);
+                    tasksArray.sort((a, b) => b.createdAt - a.createdAt);
                     tasksArray.forEach(taskData => {
                         taskData.createdAt = new Date(taskData.createdAt);
                         this.tasks.set(taskData.id, taskData);
@@ -1084,9 +1109,11 @@ class TaskManager {
     });
 
     window.taskManager = new TaskManager(); 
+    
 function showUpgradeToast() {
     alertSystem.error("Error", "This feature is locked. Upgrade your plan.");
 }
+
 document.addEventListener("click", function (event) {
     const link = event.target.closest("a[data-locked='1']");
 
@@ -1497,7 +1524,9 @@ document.getElementById("usernotificationBtn").onclick = async () => {
         latestFive.forEach(item => {
             if (!item.Arrhythmia || !item.Lead || !item.PatientID) return;
 
-            const cls = item.status === "Success" ? "price-green" : "price-red";
+          const cls = ["Success", "Paid"].includes(item.status)
+            ? "price-green"
+            : "price-red";
 
             content.innerHTML += `
                 <div class="history-item">

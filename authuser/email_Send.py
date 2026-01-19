@@ -2,8 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-from dotenv import load_dotenv
-load_dotenv()
+
 # Email configuration
 EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
@@ -169,7 +168,6 @@ def send_rejected_email(username, receiver_email, comment=""):
     )
 
     send_email(receiver_email, subject, html)
-
 def send_password_change_email(username, receiver_email):
     subject = "Your Password Was Successfully Updated"
 

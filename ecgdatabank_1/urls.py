@@ -11,6 +11,8 @@ urlpatterns = [
     path('analysis/', include('analysis_tool.urls')),
     path('morphology/', include('morphology_drow.urls')),
     path('ommecgdata/', include('oom_ecg_data.urls')),
+    path('Beat_Search/',include('Beat_Search.urls')),
+    path("St_Segment/", include("St_Segment.urls")),    
     path('report/', include('report.urls')),
     path('admin-a92bf71c01e24f5bb8f8/', admin.site.urls),
     path('registration-requests/', auth_views.registration_requests_admin, name='registration_requests_admin'),
