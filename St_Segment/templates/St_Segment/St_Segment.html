@@ -8,20 +8,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-body {
-  background: linear-gradient(135deg, #f8fafc, #eef2ff);
-  font-family: "Inter", system-ui, sans-serif;
-}
-
 /* Layout */
 .ecg-page {
   margin: auto;
   padding: 32px 20px;
+  color: var(--text-primary);
 }
-
+.page-title{
+color:var(--action-primary-bg)
+}
 /* Card */
 .ecg-card {
-  background: rgba(255,255,255,0.9);
+  background: var(--card-bg);
   backdrop-filter: blur(12px);
   border-radius: 22px;
   padding: 24px;
@@ -33,42 +31,10 @@ body {
   transform: translateY(-2px);
 }
 
-/* Header */
-.header-title {
-  font-weight: 700;
-  letter-spacing: -.3px;
-}
-
 .subtext {
   color: #64748b;
 }
 
-/* Status */
-.status-pill {
-  padding: 8px 18px;
-  border-radius: 999px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f1f5f9;
-}
-
-.dot1 {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #94a3b8;
-}
-
-.processing .dot1 {
-  background: #facc15;
-  animation: pulse 1s infinite;
-}
-
-.done .dot1 {
-  background: #22c55e;
-}
 /* Inputs */
 input[type="file"], select {
   padding: 14px;
@@ -137,12 +103,59 @@ input[type="file"], select {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+#page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(249, 250, 251, 0.66); /* Light background */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  .ecg-loader {
+      width: 150px; /* Increased width */
+      height: 60px;
+      position: relative;
+  }
+
+  .ecg-loader svg {
+      width: 100%;
+      height: 100%;
+  }
+
+  .ecg-line {
+      fill: none;
+      stroke:rgb(227, 6, 6);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+      0% {
+          stroke-dasharray: 0 100;
+          stroke-dashoffset: 0;
+      }
+      50% {
+          stroke-dasharray: 50 50;
+          stroke-dashoffset: -25;
+      }
+      100% {
+          stroke-dasharray: 0 100;
+          stroke-dashoffset: -50;
+      }
+  }
 </style>
 {% endblock %}
 {% block page_title %}ECG ST Segment{% endblock %}
 {% block content %}
 <div class="ecg-page">
-
+  
   <!-- HEADER -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>

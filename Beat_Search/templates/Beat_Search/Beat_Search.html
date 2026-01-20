@@ -9,32 +9,18 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
 <style>
-:root {
-  --radius: 16px;
-  --soft-shadow: 0 10px 25px rgba(0,0,0,.08);
-  --soft-border: #e2e8f0;
-}
-
 /* Page */
-.ecg-page {
-  padding: 24px;
-  max-width: 1400px;
+.content {
   margin: auto;
+  padding: 32px 20px;
+  color: var(--text-primary);
 }
-
-/* Header */
-.ecg-header {
-  margin-bottom: 20px;
+.form-label {
+  color: var(--text-secondary);
 }
-
-.ecg-header h4 {
-  font-size: 28px;
-  font-weight: 700;
-}
-
 /* Cards */
 .ecg-card {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: var(--radius);
   padding: 20px;
   border: 1px solid var(--soft-border);
@@ -52,6 +38,7 @@
   font-weight: 600;
   font-size: 15px;
   letter-spacing: .3px;
+  color: var(--text-primary);
 }
 
 /* Plot containers */
@@ -59,6 +46,7 @@
   height: 320px;
   border-radius: 12px;
   overflow: hidden;
+  background: var(--plot-bg);
 }
 
 /* Inputs */
@@ -80,29 +68,6 @@
 
 .btn-primary:hover {
   transform: translateY(-1px);
-}
-
-/* Status pill */
-.status-pill {
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  backdrop-filter: blur(6px);
-}
-
-.dot1 {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.status-pill.processing .dot1 {
-  animation: pulse 1.2s infinite;
 }
 
 /* Loader */
@@ -164,71 +129,72 @@ body.dark-mode .loader-box {
   background: #020617;
 }
 #page-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(249, 250, 251, 0.66); /* Light background */
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(249, 250, 251, 0.66); /* Light background */
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
 
-        .ecg-loader {
-            width: 150px; /* Increased width */
-            height: 60px;
-            position: relative;
-        }
+.ecg-loader {
+  width: 150px; /* Increased width */
+  height: 60px;
+  position: relative;
+}
 
-        .ecg-loader svg {
-            width: 100%;
-            height: 100%;
-        }
+.ecg-loader svg {
+  width: 100%;
+  height: 100%;
+}
 
-        .ecg-line {
-            fill: none;
-            stroke:rgb(227, 6, 6);
-            stroke-width: 3;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            animation: pulse 1.5s infinite;
-        }
+.ecg-line {
+  fill: none;
+  stroke:rgb(227, 6, 6);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: pulse 1.5s infinite;
+}
 
-        @keyframes pulse {
-            0% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: 0;
-            }
-            50% {
-                stroke-dasharray: 50 50;
-                stroke-dashoffset: -25;
-            }
-            100% {
-                stroke-dasharray: 0 100;
-                stroke-dashoffset: -50;
-            }
-        }
+@keyframes pulse {
+  0% {
+      stroke-dasharray: 0 100;
+      stroke-dashoffset: 0;
+  }
+  50% {
+      stroke-dasharray: 50 50;
+      stroke-dashoffset: -25;
+  }
+  100% {
+      stroke-dasharray: 0 100;
+      stroke-dashoffset: -50;
+  }
+}
+.page-title{
+color:var(--action-primary-bg)
+}
 </style>
 {% endblock %}
 
 {% block page_title %}ECG Pattern Search{% endblock %}
 
 {% block content %}
-<div class="ecg-page">
-
+<div class="content">
+  {% if user_session %}
   <!-- HEADER -->
-  <div class="ecg-header">
-    <div>
-      <h4>ECG Pattern Search</h4>
-      <p class="text-muted mb-0">Upload ECG data and find matching beats</p>
+  <div class="header">
+    <div class="header-text">
+        <h2>ECG Pattern Search</h2>
+        <p >Upload ECG data and find matching beats</p>
+      </div>
     </div>
-    <div class="status-pill" id="statusPill">
-      <span class="dot1"></span>
-      <span id="statusText">Idle</span>
-    </div>  
   </div>
+
 
   <!-- CONTROLS -->
   <div class="ecg-card mb-3">
@@ -305,7 +271,11 @@ body.dark-mode .loader-box {
     <div class="mt-2 fw-semibold" id="loaderText">Processing ECG Batch…</div>
   </div>
 </div>
-
+{% else %}
+<script>
+    window.location.href="{% url 'session_expired' %}";
+</script>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -335,7 +305,6 @@ document.getElementById("csvFile").addEventListener("change", e => {
   complete: res => {
     csvData = res.data;
     detectLeads(csvData);
-    setStatus("success", "CSV Loaded");
   }
 });
 });
@@ -368,29 +337,39 @@ document.getElementById("leadSelect").addEventListener("change", e => {
 function plotECG() {
   if (!csvData || !currentLead) return;
 
-  signal = csvData.map(r => r[currentLead] ?? null);
+  const signal = csvData.map(r => r[currentLead] ?? null);
 
-  const cleanSignal = signal.filter(v => typeof v === "number" && !isNaN(v));
+  const config = { 
+    displayModeBar: false,
+    responsive: true
+  };
 
+  Plotly.newPlot(
+    "refPlot",
+    [{
+      x: [...signal.keys()],
+      y: signal,
+      mode: "lines",
+      line: { width: 2 }
+    }],
+    {
+      dragmode: "select",
+      selectdirection: "h",
+      margin: { t: 30, l: 40, r: 10, b: 30 },
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+      xaxis: { gridcolor: "#e5e7eb" },
+      yaxis: { gridcolor: "#e5e7eb" },
+      font: { size: 12 }
+    },
+    config
+  );
 
-  
-  Plotly.newPlot("refPlot", [{
-  x: [...signal.keys()],
-  y: signal,
-  mode: "lines",
-  line: { width: 2 }
-}], {
-  dragmode: "select",
-  margin: { t: 30, l: 40, r: 10, b: 30 },
-  paper_bgcolor: "transparent",
-  plot_bgcolor: "transparent",
-  xaxis: { gridcolor: "#e5e7eb" },
-  yaxis: { gridcolor: "#e5e7eb" },
-  font: { size: 12 }
-}, { responsive: true });
-
-  document.getElementById("refPlot").on("plotly_selected", onPatternSelect);
+  document
+    .getElementById("refPlot")
+    .on("plotly_selected", onPatternSelect);
 }
+
 
 /* SELECT PATTERN */
 function onPatternSelect(e) {
@@ -403,7 +382,7 @@ function onPatternSelect(e) {
   if (x1 - x0 < 50) return alertSystem.warning("Warning","Selection too small");
 
   selectedRange = [x0, x1];
-  selectedPattern = signal.slice(x0, x1);
+  selectedPattern = rawSignal.slice(x0, x1);
 
   fetch("/Beat_Search/save-reference/", {
     method: "POST",
@@ -419,16 +398,27 @@ function onPatternSelect(e) {
     })
   }).then(r => r.json()).then(d => {
     plotSelectedPattern();
-    setStatus("success", "Reference Pattern Saved");
   });
 }
 
 function plotSelectedPattern() {
-  Plotly.newPlot("matchPlot", [{
-    y: selectedPattern,
-    mode: "lines",
-    line: { color: "#16a34a" }
-  }], { margin: { t: 40 } });
+  const config = {
+    displayModeBar: false,
+    responsive: true
+  };
+
+  Plotly.newPlot(
+    "matchPlot",
+    [{
+      y: selectedPattern,
+      mode: "lines",
+      line: { color: "#16a34a" }
+    }],
+    {
+      margin: { t: 40 }
+    },
+    config
+  );
 }
 
 /* START BATCH */
@@ -452,7 +442,6 @@ function startBatch() {
     }
   }
 
-  setStatus("processing", "Processing Batch…");
   showLoader(true);
   document.getElementById("resultPlot").classList.add("d-none");
 
@@ -467,7 +456,6 @@ function startBatch() {
   })
   .catch(() => {
     showLoader(false);
-    setStatus("error", "Batch Failed");
   });
 }
 
@@ -485,7 +473,6 @@ function pollForResults(batchId) {
         .then(r => r.json())
         .then(d => {
           showLoader(false);
-          setStatus("success", "ECG Batch Completed");
           renderResults(d.images, batchId);
         });
     });
@@ -588,11 +575,6 @@ function getCSRFToken() {
   return document.cookie.split("; ")
     .find(r => r.startsWith("csrftoken="))
     ?.split("=")[1];
-}
-function setStatus(type, text) {
-  const pill = document.getElementById("statusPill");
-  pill.className = "status-pill " + type;
-  document.getElementById("statusText").innerText = text;
 }
 
 function showLoader(show) {

@@ -1027,7 +1027,7 @@ def get_pqrst_data(request):
             return round((len(rr) * 60000) / ms_total, 2) if ms_total > 0 else 0
 
         hrv_info = BPM(r_index)
-        hr_value = heart_rate(r_index, frequency)
+        hr_value = int(heart_rate(r_index, frequency))
 
         # CLEAN INDEX
         def clean_index_dict(idx_dict):
@@ -1851,7 +1851,7 @@ def share_selected(request):
         if not items:
             return JsonResponse({"status": "error", "message": "No records provided."}, status=400)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_files = []
         valid_count = 0
 
