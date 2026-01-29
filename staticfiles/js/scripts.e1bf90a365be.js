@@ -1839,7 +1839,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
       const config = {
         responsive: true,
         displaylogo: false,
-        modeBarButtonsToAdd: [ 'pan2d', 'zoom2d', 'select2d', 'autoScale2d', 'resetScale2d', 'zoomIn2d', 'zoomOut2d', 'toImage']
+        displayModeBar: false
       };
 
       Plotly.newPlot(plotElement, traces, layout, config).then(() => {
@@ -2140,7 +2140,7 @@ const fetchAndPlotECG = async (ecgData, leadType, patientId, objectId, leadConfi
   const config = {
     responsive: true,
     displaylogo: false,
-    modeBarButtonsToAdd: ['pan2d', 'zoom2d', 'select2d', 'autoScale2d', 'resetScale2d']
+    displayModeBar: false
   };
 
   // --- Draw main waveform first, then add markers ---

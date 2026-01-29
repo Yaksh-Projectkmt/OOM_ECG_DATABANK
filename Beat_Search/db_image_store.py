@@ -1,37 +1,95 @@
-# db_image_store.py
-import gridfs
 from pymongo import MongoClient
-from django.conf import settings
+from datetime import datetime
 import os 
-
 mongo_uri = os.getenv("MONGO_HOST")
 mongo_client = MongoClient(mongo_uri)
 db = mongo_client["Beat_search"]
 
-fs = gridfs.GridFS(db)
+
+# ---------------------------
+# Get label collection
+# ---------------------------
+def get_label_collection(label: str):
+    if not label or not isinstance(label, str):
+        raise ValueError("terminology is required")
+
+    safe_label = label.strip()
+    if not safe_label:
+        raise ValueError("terminology cannot be blank")
+
+    return db[safe_label]
 
 
-def save_image_to_db(
-    image_path,
+# ---------------------------
+# Create base CSV document
+# ---------------------------
+def create_csv_document(batch_id, csv_name, terminology, hex_payload=None):
+    collection = get_label_collection(terminology)
+
+    update_doc = {
+        "$setOnInsert": {
+            "batch_id": batch_id,
+            "csv_name": csv_name,
+            "uploaded_at": datetime.utcnow(),
+            "leads": []
+        }
+    }
+
+    if hex_payload:
+        update_doc["$set"] = hex_payload
+
+    collection.update_one(
+        {
+            "batch_id": batch_id,
+            "csv_name": csv_name
+        },
+        update_doc,
+        upsert=True
+    )
+
+
+# ---------------------------
+# Save one lead result (NEW)
+# ---------------------------
+def save_lead_result(
     batch_id,
     csv_name,
     lead,
-    meta=None
+    terminology,
+    payload   # ← this is exactly your result_payload
 ):
-    with open(image_path, "rb") as f:
-        return fs.put(
-            f,
-            image_path=image_path.split("\\")[-1],
-            batch_id=batch_id,
-            csv_name=csv_name,
-            lead=lead,
-            metadata=meta or {}
-        )
+    collection = get_label_collection(terminology)
+
+    collection.update_one(
+        {
+            "batch_id": batch_id,
+            "csv_name": csv_name
+        },
+        {
+            "$push": {
+                "leads": {
+                    "lead": lead,
+                    **payload,
+                    "created_at": datetime.utcnow()
+                }
+            }
+        },
+        upsert=True
+    )
 
 
-def get_images_by_batch(batch_id):
-    return fs.find({"batch_id": batch_id})
+# ---------------------------
+# Fetch all leads for CSV
+# ---------------------------
+def get_csv_results(batch_id, csv_name, terminology):
+    collection = get_label_collection(terminology)
 
+    doc = collection.find_one(
+        {"batch_id": batch_id, "csv_name": csv_name},
+        {"_id": 0}
+    )
 
-def get_image(image_id):
-    return fs.get(image_id)
+    if not doc:
+        return None
+
+    return doc

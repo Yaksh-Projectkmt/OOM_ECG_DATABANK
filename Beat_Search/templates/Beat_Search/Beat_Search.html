@@ -7,134 +7,356 @@
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-/* Page */
-.content {
-  margin: auto;
-  padding: 32px 20px;
+/* ========================================
+   BASE STYLES
+======================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-primary);
   color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background var(--transition-speed), color var(--transition-speed);
+  line-height: 1.6;
 }
-.form-label {
+
+/* ========================================
+   LAYOUT
+======================================== */
+.content {
+  margin: 0 auto;
+  padding: 40px 24px;
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================
+   HEADER
+======================================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--border-primary);
+}
+
+.header-text h2 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  background: var(--action-primary-bg);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-text p {
   color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0;
 }
-/* Cards */
+
+/* ========================================
+   CARDS
+======================================== */
 .ecg-card {
-  background: var(--card-bg);
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 1px solid var(--soft-border);
-  box-shadow: var(--soft-shadow);
-  transition: all .25s ease;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-speed);
+  position: relative;
+  overflow: hidden;
+}
+
+.ecg-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity var(--transition-speed);
 }
 
 .ecg-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(0,0,0,.1);
+  transform: var(--card-hover-transform);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent-primary);
 }
 
-/* Titles */
+.ecg-card:hover::before {
+  opacity: 1;
+}
+
 .ecg-title {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.3px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ecg-title i {
+  color: var(--accent-primary);
+  font-size: 18px;
+}
+
+/* ========================================
+   FORM ELEMENTS
+======================================== */
+.form-label {
+  color: var(--text-secondary);
   font-weight: 600;
-  font-size: 15px;
-  letter-spacing: .3px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.form-control,
+.form-select {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all var(--transition-speed);
+  width: 100%;
+}
+
+.form-control:focus,
+.form-select:focus {
+  {% comment %} background: var(--bg-secondary); {% endcomment %}
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.form-control::file-selector-button {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: transform 0.2s;
+}
+
+.form-control::file-selector-button:hover {
+  transform: scale(1.05);
+}
+
+/* ========================================
+   BUTTONS
+======================================== */
+.btn {
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px 24px;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn i {
+  position: relative;
+  z-index: 1;
+}
+
+.btn span {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-success {
+  background: var(--gradient-success);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  border: 2px solid var(--border-primary);
   color: var(--text-primary);
 }
 
-/* Plot containers */
+.btn-outline-secondary:hover {
+  {% comment %} background: var(--bg-tertiary); {% endcomment %}
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   ECG PLOT CONTAINER
+======================================== */
 .ecg-plot {
   height: 320px;
   border-radius: 12px;
   overflow: hidden;
   background: var(--plot-bg);
+  border: 1px solid var(--border-primary);
+  position: relative;
+  transition: all var(--transition-speed);
 }
 
-/* Inputs */
-.form-control, .form-select {
+.ecg-plot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 12px;
-  padding: 10px 14px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  pointer-events: none;
 }
 
-/* Buttons */
-.btn {
-  border-radius: 14px;
-  font-weight: 600;
+/* ========================================
+   RESULTS SECTION
+======================================== */
+#resultPlot {
+  animation: slideUp 0.5s ease-out;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  border: none;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.btn-primary:hover {
-  transform: translateY(-1px);
+#resultChart {
+  height: 450px;
+  border-radius: 12px;
+  background: var(--plot-bg);
+  border: 1px solid var(--border-primary);
 }
 
-/* Loader */
+#resultMeta {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid var(--border-primary);
+}
+
+/* ========================================
+   LOADER
+======================================== */
 .loader-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.5);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
+  animation: fadeIn 0.3s ease;
 }
 
 .loader-box {
-  padding: 30px 40px;
-  background: #fff;
+  padding: 40px 50px;
+  background: var(--bg-secondary);
   border-radius: 24px;
   text-align: center;
-  box-shadow: 0 20px 50px rgba(0,0,0,.3);
-  animation: popIn .4s ease;
+  box-shadow: var(--shadow-xl);
+  animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  border: 1px solid var(--border-primary);
+  min-width: 300px;
 }
 
 @keyframes popIn {
-  from { transform: scale(.8); opacity: 0 }
-  to { transform: scale(1); opacity: 1 }
+  0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
+  50% { transform: scale(1.05) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-/* Image viewer */
-#resultImage {
-  max-height: 340px;
-  border-radius: 18px;
-  box-shadow: var(--soft-shadow);
-  transition: transform .25s;
+.loader-box .spinner-border {
+  width: 3rem;
+  height: 3rem;
+  border-width: 4px;
+  border-color: var(--accent-primary);
+  border-right-color: transparent;
 }
 
-#resultImage:hover {
-  transform: scale(1.02);
+.loader-box .fw-semibold {
+  margin-top: 20px;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.fullscreen-img {
-  backdrop-filter: blur(6px);
-  animation: fadeIn .3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0 }
-  to { opacity: 1 }
-}
-
-/* Dark mode */
-body.dark-mode .ecg-card {
-  background: #020617;
-  border-color: #1e293b;
-  box-shadow: none;
-}
-
-body.dark-mode .loader-box {
-  background: #020617;
-}
+/* ECG Loader Animation */
 #page-loader {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(249, 250, 251, 0.66); /* Light background */
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
   display: none;
   justify-content: center;
   align-items: center;
@@ -142,41 +364,198 @@ body.dark-mode .loader-box {
 }
 
 .ecg-loader {
-  width: 150px; /* Increased width */
-  height: 60px;
+  width: 200px;
+  height: 80px;
   position: relative;
 }
 
 .ecg-loader svg {
   width: 100%;
   height: 100%;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5));
 }
 
 .ecg-line {
   fill: none;
-  stroke:rgb(227, 6, 6);
+  stroke: #ef4444;
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  animation: pulse 1.5s infinite;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0% {
-      stroke-dasharray: 0 100;
-      stroke-dashoffset: 0;
+  0%, 100% {
+    stroke-dasharray: 0 300;
+    stroke-dashoffset: 0;
   }
   50% {
-      stroke-dasharray: 50 50;
-      stroke-dashoffset: -25;
-  }
-  100% {
-      stroke-dasharray: 0 100;
-      stroke-dashoffset: -50;
+    stroke-dasharray: 150 150;
+    stroke-dashoffset: -75;
   }
 }
-.page-title{
-color:var(--action-primary-bg)
+
+/* ========================================
+   FULLSCREEN IMAGE VIEWER
+======================================== */
+.fullscreen-img {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  animation: fadeIn 0.3s ease;
+}
+
+.fullscreen-img img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  animation: zoomIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ========================================
+   NAVIGATION CONTROLS
+======================================== */
+.nav-controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* ========================================
+   UTILITY CLASSES
+======================================== */
+.d-none {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 1rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+======================================== */
+@media (max-width: 768px) {
+  .content {
+    padding: 20px 16px;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .header-text h2 {
+    font-size: 24px;
+  }
+  
+  .ecg-card {
+    padding: 20px;
+  }
+  
+  .ecg-plot {
+    height: 250px;
+  }
+  
+  #resultChart {
+    height: 300px;
+  }
+  
+  .nav-controls {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+======================================== */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
+
+/* ========================================
+   SELECTION STYLING
+======================================== */
+::selection {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* ========================================
+   ACCESSIBILITY
+======================================== */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ========================================
+   PRINT STYLES
+======================================== */
+@media print {
+  .header,
+  .nav-controls
+  
+  .ecg-card {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
 }
 </style>
 {% endblock %}
@@ -186,96 +565,159 @@ color:var(--action-primary-bg)
 {% block content %}
 <div class="content">
   {% if user_session %}
+  
   <!-- HEADER -->
   <div class="header">
     <div class="header-text">
-        <h2>ECG Pattern Search</h2>
-        <p >Upload ECG data and find matching beats</p>
-      </div>
+      <h2>ECG Pattern Search</h2>
+      <p>Upload ECG data and find matching beats with advanced pattern recognition</p>
     </div>
   </div>
 
-
-  <!-- CONTROLS -->
+  <!-- CONTROLS CARD -->
   <div class="ecg-card mb-3">
+    <div class="ecg-title">
+      <i class="fas fa-sliders-h"></i>
+      Configuration Panel
+    </div>
+    
     <div class="row g-3 align-items-end">
-
       <div class="col-md-4">
-        <label class="form-label">Batch CSV Folder</label>
-        <input type="file" id="folderInput" class="form-control" webkitdirectory>
+        <label class="form-label">
+          <i class="fas fa-folder-open"></i> Batch CSV Folder
+        </label>
+        <input 
+          type="file" 
+          id="folderInput" 
+          class="form-control" 
+          webkitdirectory 
+          multiple
+        >
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Reference CSV</label>
-        <input type="file" id="csvFile" class="form-control" accept=".csv">
+      <div class="col-md-2">
+        <label class="form-label">
+          <i class="fas fa-file-csv"></i> Reference CSV
+        </label>
+        <input 
+          type="file" 
+          id="csvFile" 
+          class="form-control" 
+          accept=".csv"
+        >
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Lead</label>
+      <div class="col-md-2">
+        <label class="form-label">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" 
+               fill="none" stroke="currentColor" stroke-width="2" 
+               stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg> Lead
+        </label>
         <select id="leadSelect" class="form-select">
           <option value="" disabled selected>Select Lead</option>
         </select>
       </div>
-
+      
+      <div class="col-md-2">
+        <label class="form-label">
+          <i class="fas fa-tags"></i> Terminology
+        </label>
+        <select id="termenologySelect" class="form-select">
+          <option value="" disabled selected>Select Terminology</option>
+          <option value="standard">Standard</option>
+          <option value="PVC">V (PVC)</option>
+          <option value="Normal">N (Normal)</option>
+          <option value="PAC">S (PAC)</option>
+          <option value="AFIB">AF (AFIB)</option>
+          <option value="AFLUTEER">AFL (AFLUTTER)</option>
+          <option value="Junctional">J (Junctional)</option>
+          <option value="VFIB">VF (VFIB)</option>
+          <option value="ASYSTOLE">ASY (ASYSTOLE)</option>
+        </select>
+      </div>
+      
       <div class="col-md-2 d-grid">
         <button class="btn btn-primary" onclick="startBatch()">
-          <i class="fa fa-play"></i> Start Batch
+          <i class="fas fa-play"></i>
+          <span>Start Batch</span>
         </button>
       </div>
-
     </div>
   </div>
 
   <!-- ECG PLOTS -->
   <div class="row g-3">
-
     <div class="col-md-6">
       <div class="ecg-card">
-        <div class="ecg-title">Reference ECG (Drag to Select)</div>
+        <div class="ecg-title">
+          <i class="fas fa-chart-line"></i>
+          Reference ECG (Drag to Select Pattern)
+        </div>
         <div id="refPlot" class="ecg-plot"></div>
       </div>
     </div>
 
     <div class="col-md-6">
       <div class="ecg-card">
-        <div class="ecg-title">Selected Pattern</div>
+        <div class="ecg-title">
+          <i class="fas fa-crosshairs"></i>
+          Selected Pattern
+        </div>
         <div id="matchPlot" class="ecg-plot"></div>
       </div>
     </div>
-
   </div>
 
-<!-- RESULTS -->
-<div class="ecg-card mt-3 d-none" id="resultPlot">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="ecg-title mb-0">Match Results</div>
-  </div>
-
-  <!-- SINGLE VIEW -->
-  <div id="singleView" class="text-center">
-    <img id="resultImage" class="img-fluid rounded mb-2">
-    <div id="resultMeta" class="small text-muted"></div>
-
-    <div class="d-flex justify-content-center gap-2 mt-3">
-      <button class="btn btn-outline-secondary" onclick="prevImg()">Prev</button>
-      <button class="btn btn-outline-secondary" onclick="nextImg()">Next</button>
-      <button class="btn btn-success" onclick="downloadPDF()">
-        <i class="fa fa-file-pdf"></i> Download PDF
+  <!-- RESULTS CARD -->
+  <div class="ecg-card mt-3 d-none" id="resultPlot">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="ecg-title mb-0">
+        <i class="fas fa-chart-area"></i>
+        Match Results
+      </div>
+      <button id="downloadBtn" class="btn btn-success d-none" onclick="downloadPDF()">
+        <i class="fas fa-file-pdf"></i>
+        <span>Download PDF Report</span>
       </button>
     </div>
+    
+    <hr style="border-color: var(--border-primary); margin: 16px 0;">
+
+    <!-- SINGLE VIEW -->
+    <div id="singleView" class="text-center">
+      <div id="resultChart"></div>
+      <div id="resultMeta"></div>
+
+      <div class="nav-controls">
+        <button class="btn btn-outline-secondary" onclick="prevImg()">
+          <i class="fas fa-chevron-left"></i>
+          <span>Previous</span>
+        </button>
+        
+        <button class="btn btn-outline-secondary" onclick="nextImg()" id="nextBtn">
+          <i class="fas fa-chevron-right"></i>
+          <span>Next</span>
+        </button>
+      </div>
+    </div>
   </div>
-</div>
-<div id="globalLoader" class="loader-overlay d-none">
-  <div class="loader-box">
-    <div class="spinner-border text-primary"></div>
-    <div class="mt-2 fw-semibold" id="loaderText">Processing ECG Batch…</div>
+
+  <!-- GLOBAL LOADER -->
+  <div id="globalLoader" class="loader-overlay d-none">
+    <div class="loader-box">
+      <div class="spinner-border text-primary"></div>
+      <div class="fw-semibold" id="loaderText">Processing ECG Batch…</div>
+    </div>
   </div>
+
+  {% else %}
+  <script>
+    window.location.href = "{% url 'session_expired' %}";
+  </script>
+  {% endif %}
 </div>
-{% else %}
-<script>
-    window.location.href="{% url 'session_expired' %}";
-</script>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -283,33 +725,42 @@ color:var(--action-primary-bg)
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
+// ========================================
+// GLOBAL VARIABLES
+// ========================================
 let csvData = null;
 let currentLead = null;
 let signal = [];
 let selectedPattern = null;
 let selectedRange = null;
-let batchResults = [];
-let images = [];
+let results = [];
 let idx = 0;
 let batchId = null;
+let waitingForNext = false;
+let es = null;
+let streamFinished = false;
 
-/* CSV LOAD */
+// ========================================
+// CSV LOADING
+// ========================================
 document.getElementById("csvFile").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
 
   Papa.parse(file, {
-  header: true,
-  dynamicTyping: true,
-  skipEmptyLines: true,
-  complete: res => {
-    csvData = res.data;
-    detectLeads(csvData);
-  }
-});
+    header: true,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    complete: res => {
+      csvData = res.data;
+      detectLeads(csvData);
+    }
+  });
 });
 
-/* DETECT LEADS */
+// ========================================
+// LEAD DETECTION
+// ========================================
 function detectLeads(rows) {
   const leads = Object.keys(rows[0]).filter(k => typeof rows[0][k] === "number");
   const sel = document.getElementById("leadSelect");
@@ -333,11 +784,14 @@ document.getElementById("leadSelect").addEventListener("change", e => {
   plotECG();
 });
 
-/* PLOT ECG */
+// ========================================
+// PLOT ECG REFERENCE
+// ========================================
 function plotECG() {
   if (!csvData || !currentLead) return;
 
   const signal = csvData.map(r => r[currentLead] ?? null);
+  const theme = document.documentElement.getAttribute('data-theme');
 
   const config = { 
     displayModeBar: false,
@@ -350,17 +804,35 @@ function plotECG() {
       x: [...signal.keys()],
       y: signal,
       mode: "lines",
-      line: { width: 2 }
+      line: { 
+        width: 2,
+        color: theme === 'dark' ? '#60a5fa' : '#3b82f6'
+      }
     }],
     {
       dragmode: "select",
       selectdirection: "h",
-      margin: { t: 30, l: 40, r: 10, b: 30 },
+      margin: { t: 30, l: 50, r: 20, b: 40 },
       paper_bgcolor: "transparent",
       plot_bgcolor: "transparent",
-      xaxis: { gridcolor: "#e5e7eb" },
-      yaxis: { gridcolor: "#e5e7eb" },
-      font: { size: 12 }
+      
+      xaxis: { 
+        zeroline: false,
+          showline: false,
+  showgrid: false,
+       // gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+        title: { text: 'Sample Index', font: { size: 12 } },
+        color: theme === 'dark' ? '#cbd5e1' : '#475569'
+      },
+      yaxis: { 
+        zeroline: false,
+          showline: false,
+  showgrid: false,
+      //  gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+        title: { text: 'Amplitude', font: { size: 12 } },
+        color: theme === 'dark' ? '#cbd5e1' : '#475569'
+      },
+      font: { size: 12, color: theme === 'dark' ? '#cbd5e1' : '#475569' }
     },
     config
   );
@@ -370,8 +842,9 @@ function plotECG() {
     .on("plotly_selected", onPatternSelect);
 }
 
-
-/* SELECT PATTERN */
+// ========================================
+// PATTERN SELECTION
+// ========================================
 function onPatternSelect(e) {
   if (!e || !e.range) return;
 
@@ -379,7 +852,11 @@ function onPatternSelect(e) {
   const x1 = Math.floor(e.range.x[1]);
   const rawSignal = csvData.map(r => r[currentLead] ?? null);
   const cleanSignal = rawSignal.filter(v => typeof v === "number" && !isNaN(v));
-  if (x1 - x0 < 50) return alertSystem.warning("Warning","Selection too small");
+  
+  if (x1 - x0 < 50) {
+    showNotification('Selection too small (minimum 50 samples)', 'warning');
+    return;
+  }
 
   selectedRange = [x0, x1];
   selectedPattern = rawSignal.slice(x0, x1);
@@ -390,18 +867,28 @@ function onPatternSelect(e) {
       "Content-Type": "application/json",
       "X-CSRFToken": getCSRFToken()
     },
-
     body: JSON.stringify({
       reference_beat: cleanSignal.slice(x0, x1),
       reference_range: [x0, x1],
       reference_raw_full: rawSignal
     })
-  }).then(r => r.json()).then(d => {
+  })
+  .then(r => r.json())
+  .then(d => {
     plotSelectedPattern();
+    showNotification('Pattern selected successfully', 'success');
+  })
+  .catch(err => {
+    showNotification('Failed to save reference pattern', 'error');
   });
 }
 
+// ========================================
+// PLOT SELECTED PATTERN
+// ========================================
 function plotSelectedPattern() {
+  const theme = document.documentElement.getAttribute('data-theme');
+  
   const config = {
     displayModeBar: false,
     responsive: true
@@ -412,39 +899,88 @@ function plotSelectedPattern() {
     [{
       y: selectedPattern,
       mode: "lines",
-      line: { color: "#16a34a" }
+      line: { 
+        color: theme === 'dark' ? '#34d399' : '#10b981',
+        width: 2
+      }
     }],
     {
-      margin: { t: 40 }
+      margin: { t: 30, l: 50, r: 20, b: 40 },
+      paper_bgcolor: "transparent",
+      plot_bgcolor: "transparent",
+      
+      xaxis: { 
+         zeroline: false,
+          showline: false,
+  showgrid: false,
+      //  gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+        title: { text: 'Sample Index', font: { size: 12 } },
+        color: theme === 'dark' ? '#cbd5e1' : '#475569'
+      },
+      yaxis: { 
+         zeroline: false,
+          showline: false,
+  showgrid: false,
+     //   gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+        title: { text: 'Amplitude', font: { size: 12 } },
+        color: theme === 'dark' ? '#cbd5e1' : '#475569'
+      },
+      font: { size: 12, color: theme === 'dark' ? '#cbd5e1' : '#475569' }
     },
     config
   );
 }
 
-/* START BATCH */
+// ========================================
+// START BATCH PROCESSING
+// ========================================
 function startBatch() {
-  const folderInput = document.getElementById("folderInput");
-
-  if (!selectedPattern) {
-    alertSystem.info("info","Select reference pattern first");
-    return;
-  }
-
-  if (!folderInput.files.length) {
-    alertSystem.info("info","Select CSV folder first");
-    return;
-  }
-
-  const formData = new FormData();
-  for (const file of folderInput.files) {
-    if (file.name.endsWith(".csv")) {
-      formData.append("files", file);
-    }
-  }
-
   showLoader(true);
-  document.getElementById("resultPlot").classList.add("d-none");
 
+  const folderInput = document.getElementById("folderInput");
+  const terminology = document.getElementById("termenologySelect").value;
+
+  // Validations
+  if (!selectedPattern) {
+    showLoader(false);
+    showNotification('Please select a reference pattern first', 'info');
+    return;
+  }
+
+  if (!terminology || terminology.trim() === "") {
+    showLoader(false);
+    showNotification('Please select terminology', 'info');
+    return;
+  }
+
+  if (!folderInput.files || folderInput.files.length === 0) {
+    showLoader(false);
+    showNotification('Please select at least one CSV file', 'info');
+    return;
+  }
+
+  const csvFiles = Array.from(folderInput.files).filter(f => f.name.endsWith(".csv"));
+  if (csvFiles.length === 0) {
+    showLoader(false);
+    showNotification('Only CSV files are allowed', 'warning');
+    return;
+  }
+
+  // Reset state
+  results = [];
+  idx = 0;
+  waitingForNext = false;
+  streamFinished = false;
+
+  document.getElementById("resultPlot").classList.remove("d-none");
+  document.getElementById("resultMeta").innerText = "";
+
+  // Prepare form data
+  const formData = new FormData();
+  csvFiles.forEach(file => formData.append("files", file));
+  formData.append("terminology", terminology);
+
+  // Send request
   fetch("/Beat_Search/start-batch/", {
     method: "POST",
     headers: { "X-CSRFToken": getCSRFToken() },
@@ -452,125 +988,299 @@ function startBatch() {
   })
   .then(r => r.json())
   .then(d => {
-    pollForResults(d.batch_id);
+    batchId = d.batch_id;
+    console.log("Batch ID:", batchId);
+    streamResults(batchId, terminology);
   })
-  .catch(() => {
+  .catch(err => {
     showLoader(false);
+    console.error(err);
+    showNotification('Batch processing failed', 'error');
   });
 }
 
-function pollForResults(batchId) {
-  fetch(`/Beat_Search/check-status/${batchId}/`)
-    .then(r => r.json())
-    .then(status => {
-      if (!status.completed) {
-        setTimeout(() => pollForResults(batchId), 3000);
-        return;
+// ========================================
+// STREAM RESULTS
+// ========================================
+function streamResults(batchId, terminology) {
+  const es = new EventSource(`/Beat_Search/stream/${batchId}/?terminology=${terminology}`);
+
+  es.onmessage = e => {
+    const data = JSON.parse(e.data);
+    console.log("SSE:", data);
+
+    if (data.done) {
+      streamFinished = true;
+      showLoader(false);
+      es.close();
+      showNotification(`Processing complete! Found ${results.length} results`, 'success');
+      document.getElementById("downloadBtn").classList.remove("d-none");
+      return;
+    }
+
+    results.push(data);
+
+    // Render first result immediately
+    if (results.length === 1) {
+      renderResult(results[0]);
+      showLoader(false);
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    showLoader(false);
+    showNotification('Connection error during streaming', 'error');
+  };
+}
+
+function getTerminologyChar(value) {
+  const map = {
+    "PVC": "V",
+    "Normal": "N",
+    "PAC": "S",
+    "AFIB": "AF",
+    "AFLUTEER": "AFL",
+    "Junctional": "J",
+    "VFIB": "VF",
+    "ASYSTOLE": "ASY",
+    "standard": "STD"
+  };
+  return map[value] || "";
+}
+// ========================================
+// RENDER RESULT
+// ========================================
+function renderResult(result) {
+  const { signal, fs, r_peaks, q_points, s_points, matches, csv, lead, meta } = result;
+  const theme = document.documentElement.getAttribute('data-theme');
+
+  if (!signal || !signal.length) {
+    console.warn("No signal found in result", result);
+    return;
+  }
+
+  const x = signal.map((_, i) => i / fs);
+
+  const traces = [
+    {
+      x,
+      y: signal,
+      mode: "lines",
+      name: "ECG Signal",
+      line: { 
+        width: 1.5,
+        color: theme === 'dark' ? '#60a5fa' : '#3b82f6'
       }
+    }
+  ];
 
-      // Batch REALLY completed
-      fetch(`/Beat_Search/get-images/${batchId}/`)
-        .then(r => r.json())
-        .then(d => {
-          showLoader(false);
-          renderResults(d.images, batchId);
-        });
+  if (r_peaks?.length) {
+    traces.push({
+      x: r_peaks.map(i => i / fs),
+      y: r_peaks.map(i => signal[i]),
+      mode: "markers",
+      name: "R Peaks",
+      marker: { 
+        size: 8, 
+        color: theme === 'dark' ? '#f87171' : '#ef4444'
+      }
     });
-}
-
-function renderResults(imgs, bid) {
-  images = imgs;   // imgs is ARRAY OF OBJECTS
-  batchId = bid;
-  idx = 0;
-
-  showImage();
-  document.getElementById("resultPlot").classList.remove("d-none");
-}
-
-let GRID_BATCH = 100;
-let gridIndex = 0;
-
-
-function loadNextGridBatch() {
-  const grid = document.getElementById("gridView");
-
-  for (let i = 0; i < GRID_BATCH && gridIndex < images.length; i++, gridIndex++) {
-    const imgObj = images[gridIndex];
-
-    const col = document.createElement("div");
-    col.className = "col-md-3";
-
-    const imgUrl = `/Beat_Search/image/${imgObj.id}/`;
-
-    col.innerHTML = `
-      <img loading="lazy"
-           src="${imgUrl}"
-           class="img-fluid rounded shadow"
-           onclick="openImage('${imgUrl}')">
-    `;
-
-    grid.appendChild(col);
   }
 
-  if (gridIndex < images.length) {
-    setTimeout(loadNextGridBatch, 50);
-  }
-} 
-
-function openImage(src) {
-  const div = document.createElement("div");
-  div.className = "fullscreen-img";
-  div.innerHTML = `<img src="${src}" onclick="this.parentElement.remove()">`;
-  document.body.appendChild(div);
-}
-/* IMAGE VIEWER */
-function loadImages(bid) {
-  batchId = bid;
-  fetch(`/Beat_Search/get-images/${bid}/`)
-    .then(r => r.json())
-    .then(d => {
-      images = d.images;
-      idx = 0;
-      showImage();
-      document.getElementById("resultPlot").style.display = "block";
+  if (q_points?.length) {
+    traces.push({
+      x: q_points.map(i => i / fs),
+      y: q_points.map(i => signal[i]),
+      mode: "markers",
+      name: "Q Points",
+      marker: { 
+        size: 6, 
+        color: theme === 'dark' ? '#fbbf24' : '#f59e0b'
+      }
     });
+  }
+
+  if (s_points?.length) {
+    traces.push({
+      x: s_points.map(i => i / fs),
+      y: s_points.map(i => signal[i]),
+      mode: "markers",
+      name: "S Points",
+      marker: { 
+        size: 6, 
+        color: theme === 'dark' ? '#34d399' : '#10b981'
+      }
+    });
+  }
+
+  const shapes = (matches || []).map(m => ({
+  
+    type: "rect",
+    x0: m.start / fs,
+    x1: m.end / fs,
+    y0: 0,
+    y1: 1,
+    yref: "paper",
+    fillcolor: theme === 'dark' ? 'rgba(96, 165, 250, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+    line: { width: 0 }
+  }));
+   const terminology = document.getElementById("termenologySelect").value;
+    const label = getTerminologyChar(terminology);
+
+    const annotations = (matches || []).map(m => ({
+      x: ((m.start + m.end) / 2) / fs,   // center of match
+      y: 1.03,
+      xref: "x",
+      yref: "paper",
+      text: `<b>${label}</b>`,
+      showarrow: false,
+      font: {
+        size: 14,
+        color: theme === 'dark' ? '#f8fafc' : '#0f172a'
+      },
+      bgcolor: theme === 'dark' 
+        ? 'rgba(59, 130, 246, 0.9)' 
+        : 'rgba(37, 99, 235, 0.9)',
+      bordercolor: "rgba(255,255,255,0.2)",
+      borderwidth: 1,
+      borderpad: 4
+    }));
+  const layout = {
+    shapes,
+    annotations,
+    margin: { t: 50, l: 60, r: 30, b: 50 },
+      zeroline: false,
+        showline: false,
+    showgrid: false,
+    xaxis: { 
+       zeroline: false,
+         showline: false,
+    showgrid: false,
+      title: { text: 'Time (seconds)', font: { size: 13, weight: 600 } },
+    //  gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+      color: theme === 'dark' ? '#cbd5e1' : '#475569'
+    },
+    yaxis: { 
+       zeroline: false,
+        showline: false,
+    showgrid: false,
+      title: { text: 'Amplitude (mV)', font: { size: 13, weight: 600 } },
+    //gridcolor: theme === 'dark' ? '#334155' : '#e5e7eb',
+      color: theme === 'dark' ? '#cbd5e1' : '#475569'
+    },
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    font: { 
+      size: 12, 
+      color: theme === 'dark' ? '#cbd5e1' : '#475569'
+    },
+    legend: {
+      orientation: 'h',
+      x: 0.5,
+      xanchor: 'center',
+      y: 1.1
+    }
+  };
+
+  const config = {
+    displayModeBar: false,
+    responsive: true
+  };
+
+  Plotly.react("resultChart", traces, layout, config);
+
+  document.getElementById("resultMeta").innerHTML = `
+    <strong>${csv}</strong> | Lead: <strong>${lead}</strong> | 
+    Matches Found: <strong style="color: var(--accent-success)">${meta?.matches ?? 0}</strong> | 
+    Result <strong>${idx + 1}</strong> of <strong>${results.length}</strong>
+  `;
 }
 
-function showImage() {
-  if (!images.length) return;
-  document.getElementById("resultImage").src =`/Beat_Search/image/${images[idx].id}/`;
-  document.getElementById("resultMeta").innerText =
-    `Result ${idx + 1} of ${images.length}`;
+// ========================================
+// NAVIGATION
+// ========================================
+function nextImg() {
+  if (idx < results.length - 1) {
+    idx++;
+    renderResult(results[idx]);
+  } else if (!streamFinished) {
+    showNotification('More results are still loading...', 'info');
+  } else {
+    showNotification('No more results available', 'info');
+  }
 }
 
-function nextImg() { if (idx < images.length - 1) { idx++; showImage(); } }
-function prevImg() { if (idx > 0) { idx--; showImage(); } }
+function prevImg() {
+  if (idx > 0) {
+    idx--;
+    renderResult(results[idx]);
+  } else {
+    showNotification('Already at first result', 'info');
+  }
+}
 
-async function downloadPDF(show=true) {
-  const loader = document.getElementById("globalLoader").classList.toggle("d-none", !show);
+// ========================================
+// PDF DOWNLOAD
+// ========================================
+async function downloadPDF() {
+  const loader = document.getElementById("globalLoader");
   const text = document.getElementById("loaderText");
-  console.log(loader, text);
-  if (loader) loader.style.display = "flex";
-  if (text) text.innerText = "Downloading PDF...";
+
+  loader.classList.remove("d-none");
+  text.innerText = "Generating PDF Report...";
 
   try {
-    const res = await fetch(`/Beat_Search/download-pdf/${batchId}/`);
-    const blob = await res.blob();
+    const { jsPDF } = window.jspdf;
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${batchId}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [1600, 400]
+    });
+
+    for (let i = 0; i < results.length; i++) {
+      idx = i;
+      renderResult(results[i]);
+
+      await new Promise(r => setTimeout(r, 300));
+
+      const chart = document.getElementById("resultChart");
+
+      const imgData = await Plotly.toImage(chart, {
+        format: "png",
+        width: 1600,
+        height: 400,
+        scale: 2
+      });
+
+      if (i > 0) pdf.addPage([1600, 400], "landscape");
+
+      pdf.addImage(
+        imgData,
+        "PNG",
+        20,
+        20,
+        1560,
+        360
+      );
+    }
+
+    pdf.save(`ECG_Report_${batchId}.pdf`);
+    showNotification("PDF downloaded successfully", "success");
+
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to generate PDF", "error");
   } finally {
-    showLoader(false);
-    loader.style.display = "none";
+    loader.classList.add("d-none");
     text.innerText = "Processing ECG Batch…";
   }
 }
 
+// ========================================
+// UTILITY FUNCTIONS
+// ========================================
 function getCSRFToken() {
   return document.cookie.split("; ")
     .find(r => r.startsWith("csrftoken="))
@@ -582,5 +1292,39 @@ function showLoader(show) {
     .classList.toggle("d-none", !show);
 }
 
+function showNotification(message, type = 'info') {
+  // Check if alertSystem exists (from your base template)
+  if (typeof alertSystem !== 'undefined') {
+    switch(type) {
+      case 'success':
+        alertSystem.success('Success', message);
+        break;
+      case 'error':
+        alertSystem.error('Error', message);
+        break;
+      case 'warning':
+        alertSystem.warning('Warning', message);
+        break;
+      default:
+        alertSystem.info('Info', message);
+    }
+  } else {
+    // Fallback to console
+    console.log(`[${type.toUpperCase()}] ${message}`);
+  }
+}
+
+// ========================================
+// KEYBOARD SHORTCUTS
+// ========================================
+document.addEventListener('keydown', (e) => {
+  if (results.length === 0) return;
+  
+  if (e.key === 'ArrowRight') {
+    nextImg();
+  } else if (e.key === 'ArrowLeft') {
+    prevImg();
+  }
+});
 </script>
 {% endblock %}
