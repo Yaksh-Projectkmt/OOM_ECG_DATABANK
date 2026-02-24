@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+  <meta name="description" content="Secure login for ECG Databank to access and manage your electrocardiogram data with advanced analytics.">
+  <title>ECG Databank Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(to bottom right, #f9fafb, #eff6ff, #fef3c7);
+      min-height: 100vh;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .login-section {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .info-section {
+      flex: 1;
+      background: linear-gradient(135deg, #3b82f6, #1e40af, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==');
+      opacity: 0.3;
+    }
+
+    .login-content {
+      width: 100%;
+      max-width: 500px;
+      animation: slideInLeft 0.6s ease-out;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      border: 1px solid #fed7aa;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .logo-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, #ea580c, #dc2626);
+      border-radius: 0.75rem;
+      color: white;
+      font-size: 1.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .login-card {
+      background: white;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      animation: fadeIn 1s ease-out;
+    }
+
+    .login-card h2 {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .login-card > p {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .user-type-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .user-type-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .user-type-buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .user-type-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+    }
+
+    .user-type-btn:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
+    .user-type-btn.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .user-type-btn.active.doctor {
+      border-color: #ea580c;
+      background: #fed7aa;
+      color: #92400e;
+    }
+
+    .user-type-btn i {
+      font-size: 1.25rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: #9ca3af;
+      font-size: 1.25rem;
+      pointer-events: none;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    select {
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: white;
+      color: #1f2937;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    input.doctor-focus:focus {
+      border-color: #ea580c;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+    }
+
+    .phone-wrapper {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .country-code {
+      width: 30%;
+      padding: 0.75rem 1rem !important;
+      appearance: none;
+      background: white url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNCZwdDtNNDJMOCA4TDEyIDQiIHN0cm9rZT0iIzZCNzI4MCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=') no-repeat right 0.5rem center;
+      padding-right: 2rem !important;
+    }
+
+    .phone-input {
+      flex: 1;
+    }
+
+    .error-message {
+      color: #dc2626;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .doctor-id-group {
+      animation: slideDown 0.3s ease-out;
+    }
+
+    button[type="submit"] {
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: linear-gradient(90deg, #ea580c, #dc2626);
+      color: white;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      background: linear-gradient(90deg, #d97706, #b91c1c);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px rgba(234, 88, 12, 0.3);
+    }
+
+    button[type="submit"]:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .register-link {
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin-top: 1rem;
+    }
+
+    .register-link a {
+      color: #ea580c;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .register-link a:hover {
+      color: #d97706;
+    }
+
+    /* Info Section Styles */
+    .info-content {
+      position: relative;
+      z-index: 10;
+      max-width: 550px;
+      color: white;
+      animation: slideInRight 0.6s ease-out;
+    }
+
+    .info-content h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .info-content > p {
+      font-size: 1.125rem;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .features-list li {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 0.875rem 1.5rem 0.875rem 2.75rem;
+      border-radius: 0.75rem;
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 1rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .features-list li:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateX(4px);
+    }
+
+    .features-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0.75rem;
+      color: #fcd34d;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(234, 88, 12, 0);
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .login-section,
+      .info-section {
+        padding: 1.5rem;
+      }
+
+      .info-content h1 {
+        font-size: 1.75rem;
+      }
+
+      .login-card h2 {
+        font-size: 1.5rem;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="tel"],
+      select {
+        padding: 0.75rem 1rem 0.75rem 2.2rem;
+      }
+
+      .phone-wrapper {
+        flex-direction: column;
+      }
+
+      .country-code {
+        width: 100% !important;
+      }
+
+      .phone-input {
+        width: 100% !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .login-section {
+        padding: 1rem;
+      }
+
+      .login-card {
+        padding: 1.5rem;
+      }
+
+      .user-type-buttons {
+        flex-direction: column;
+      }
+
+      .logo {
+        margin-bottom: 1rem;
+      }
+
+      .login-card h2 {
+        font-size: 1.25rem;
+      }
+
+      form {
+        gap: 1rem;
+      }
+    }
+        .required {
+  color: #dc2626;
+  font-weight: bold;
+}
+input.error, select.error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+#page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(249, 250, 251, 0.66); /* Light background */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .ecg-loader {
+            width: 150px; /* Increased width */
+            height: 60px;
+            position: relative;
+        }
+
+        .ecg-loader svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ecg-line {
+            fill: none;
+            stroke:rgb(227, 6, 6);
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 50 50;
+                stroke-dashoffset: -25;
+            }
+            100% {
+                stroke-dasharray: 0 100;
+                stroke-dashoffset: -50;
+            }
+        }
+  </style>
+</head>
+<body>
+
+  <main class="container" role="main">
+  <div id="page-loader">
+    <div class="ecg-loader">
+        <svg viewBox="0 0 100 60">
+            <path class="ecg-line" d="M0 30 H20 L30 10 L40 50 L50 20 L60 40 L70 10 L80 30 H100"/>
+        </svg>
+    </div>
+  </div>
+    <section class="login-section" aria-labelledby="login-heading">
+      <div class="login-content">
+        <div class="logo" aria-label="ECG Databank logo">
+          <div class="logo-icon">
+          <i class="fas fa-heartbeat"></i>
+        </div>
+        <span class="logo-text">OOM ECG Databank</span>
+      </div>
+      <div class="login-card">
+          <h2 id="login-heading">Access Your ECG Portal</h2>
+          <p>Sign in to unlock advanced ECG analytics and secure patient data management.</p>
+          {% if messages %}
+            {% for message in messages %}
+              {% if message.tags == "success" %}
+                <div class="alert-message success show"
+                     style="margin-bottom: 1rem; border: 1px solid #bbf7d0; background: #dcfce7; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#166534; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% else %}
+                <div class="alert-message error show"
+                     style="margin-bottom: 1rem; border: 1px solid #fecaca; background: #fee2e2; padding: 0.75rem; border-radius: 0.5rem;">
+                  <p style="color:#b91c1c; font-weight:600; margin:0;">{{ message }}</p>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" action="{% url 'login' %}" id="loginForm">
+            {% csrf_token %}
+            <label for="username">Username<span class="required">*</span></label>
+            <input type="text" name="username" id="username" placeholder="Enter your username" required aria-describedby="username-error">
+
+            <label for="password">Password<span class="required">*</span></label>
+            <input type="password" name="password" id="password" placeholder="Enter your password" required aria-describedby="password-error">
+
+            <button type="submit" class="sign-in">Sign In</button>
+
+            {% if form.errors %}
+              <div class="error-message" id="username-error password-error" role="alert">
+                Invalid credentials. Please try again or reset your password.
+              </div>
+            {% endif %}
+          </form>
+          
+        </div>
+      </div>
+    </section>
+
+    <section class="info-section" aria-labelledby="info-heading">
+      <div class="info-content">
+        <h1 id="info-heading">Transforming Cardiac Care</h1>
+        <p>Empower your practice with our secure platform for ECG data storage, analysis, and collaboration.</p>
+        <ul class="features-list">
+          <li>Effortless ECG record management</li>
+          <li>AI-driven diagnostic tools</li>
+          <li>Secure data sharing with specialists</li>
+          <li>HIPAA-compliant security standards</li>
+        </ul>
+      </div>
+    </section>
+    
+  </main>
+  <script>
+  const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+  loginForm.addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevent immediate submission
+    showLoader(); // Show the loader
+
+    // Delay form submission by 3.5 seconds (3500ms)
+    setTimeout(() => {
+      loginForm.submit(); // Submit the form after delay
+    }, 3000);
+  });
+}
+
+function showLoader() {
+  document.getElementById('page-loader').style.display = 'flex';
+}
+
+function hideLoader() {
+  document.getElementById('page-loader').style.display = 'none';
+}
+      function showError(element, message, inputElement = null) {
+    element.textContent = message;
+    element.classList.add('show');
+    if (inputElement) inputElement.classList.add('error');
+    
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      hideError(element, inputElement);
+    }, 3000);
+  }
+
+  function hideError(element, inputElement = null) {
+    element.classList.remove('show');
+    if (inputElement) inputElement.classList.remove('error');
+  }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const alerts = document.querySelectorAll('.alert-message.show');
+  alerts.forEach(alert => {
+    setTimeout(() => {
+      alert.classList.remove('show');
+      alert.style.opacity = "0";
+      setTimeout(() => alert.remove(), 500);
+    }, 6000);
+  });
+});
+  // Prevent caching of login page
+  if (window.history && window.history.pushState) {
+    window.history.pushState('forward', null, null);
+    window.history.forward();
+  }
+
+  // Remove back history
+  history.replaceState(null, document.title, location.pathname + "#no-back");
+  history.pushState(null, document.title, location.pathname);
+
+  window.addEventListener("popstate", function () {
+    history.pushState(null, document.title, location.pathname);
+  });
+
+  // Strict no-cache headers (client side)
+  document.addEventListener("DOMContentLoaded", () => {
+    const meta1 = document.createElement("meta");
+    meta1.httpEquiv = "Cache-Control";
+    meta1.content = "no-cache, no-store, must-revalidate";
+
+    const meta2 = document.createElement("meta");
+    meta2.httpEquiv = "Pragma";
+    meta2.content = "no-cache";
+
+    const meta3 = document.createElement("meta");
+    meta3.httpEquiv = "Expires";
+    meta3.content = "0";
+
+    document.head.appendChild(meta1);
+    document.head.appendChild(meta2);
+    document.head.appendChild(meta3);
+  });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,669 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>{% block title %}ECG Dashboard{% endblock %}</title>
+    <link rel="icon" href="{% static 'images/Oom Logo Black (1).jpg' %}" type="image/x-icon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'CSS/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-user-role="{{ user.role }}" data-user-package="{{ user.package }}" data-user-wallet_balance="{{wallet_balance}}">
+<div id="alertWrapper"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar sidebar-open">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="sidebar-header-content">
+                <div class="logo-section">
+                    <div class="logo-container">
+                        <div class="logo-glow"></div>
+                        <img src="{% static 'images/Oom Logo Black (1).jpg' %}" 
+     alt="Logo" 
+     style="width: 36px; height: 36px; border-radius: 50%; margin-bottom: 10px; border: 1.5px solid #bc1a00; animation: pulse 2s infinite;">
+                    </div>
+                  <div>
+                    <h1 class="sidebar-title">OOM ECG DataBank</h1>
+                    <p class="sidebar-subtitle">
+                      Powered by 
+                      <span>
+                        <a href="https://projectkmt.com/" target="_blank" rel="noopener noreferrer">Kali MedTech Pvt. Ltd.</a>
+                      </span>
+                    </p>
+                  </div>
+                                    
+                </div>
+            </div>
+        </div>
+<div class="sidebar-content">
+    <div class="nav-section">
+        <nav class="nav-menu">
+
+            <a href="{% url 'Beat_Search' %}" class="nav-link">
+                <button class="nav-item" data-page="Beat_Search">
+                    <div class="nav-shimmer"></div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span class="nav-label">Beat Search</span>
+                </button>
+            </a>
+            <a href="{% url 'St_Segment' %}" class="nav-link">
+                <button class="nav-item" data-page="St_Segment">
+                    <div class="nav-shimmer"></div>
+                   <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" 
+                                fill="none" stroke="currentColor" stroke-width="2" 
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                    <span class="nav-label">ST Segment</span>
+                </button>
+            </a>
+        </nav>
+    </div>
+</div>
+            <!-- Stats Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-glow"></div>
+                    <div>
+                      <div class="stat-header">
+                          <p class="stat-label">Total Patients</p>
+                          <svg class="stat-icon glow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="9" cy="7" r="4"></circle>
+                              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                          </svg>
+                      </div>
+                      <div class="stat-value secondary" id="count_patients">Loading...</div>
+                      <div class="stat-progress"></div>
+                    </div>
+                </div>
+                <div class="stat-card" id="timeCard">
+                    <div class="stat-header">
+                        <p class="stat-label">Total Time</p>
+                        <svg class="stat-icon glow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+
+                    <div class="stat-value-container">
+                        <div id="convertedTime"></div>
+                        <div class="stat-value secondary" id="totalTime" style="font-size:20px;">Loading...</div>
+                        
+                    </div>
+                    <div class="stat-progress"></div>
+                </div>
+            </div>  
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <button class="footer-btn logout-btn" onclick="confirmLogout()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Sign Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content main-content-shifted">
+        <!-- Header -->
+        <div id="page-loader">
+            <div class="ecg-loader">
+                <svg viewBox="0 0 100 60">
+                    <path class="ecg-line" d="M0 30 H20 L30 10 L40 50 L50 20 L60 40 L70 10 L80 30 H100"/>
+                </svg>
+            </div>
+        </div>
+
+        <header class="main-header">
+            <div class="header-left">
+                    <button class="menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <div>
+                    <h2 class="page-title">{% block page_title %}{% endblock %}</h2>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn1 theme-toggle" onclick="toggleTheme()">
+                    <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>      
+               
+            </div>
+        </header>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+    <script>
+        // Advanced Alert System - Pure JavaScript
+class AlertSystem {
+        constructor(options = {}) {
+            this.config = {
+                autoClose: true,
+                autoCloseDelay: 2000,
+                maxAlerts: 5,
+                position: 'top-right',
+                animations: true,
+                ...options
+            };
+            
+            this.alertCounter = 0;
+            this.alerts = new Map();
+            this.container = null;
+            
+            this.init();
+        }
+        
+        init() {
+            this.createContainer();
+            this.bindKeyboardShortcuts();
+        }
+        
+        createContainer() {
+            if (document.getElementById('alert-system-container')) return;
+            
+            this.container = document.createElement('div');
+            this.container.id = 'alert-system-container';
+            this.container.className = `alert-system-container position-${this.config.position}`;
+            document.body.appendChild(this.container);
+        }
+        
+        show(type, title, message, options = {}) {
+            const alertId = `alert-${++this.alertCounter}`;
+            const config = { ...this.config, ...options };
+            
+            // Limit max alerts
+            if (this.alerts.size >= this.config.maxAlerts) {
+                const oldestAlert = this.alerts.keys().next().value;
+                this.remove(oldestAlert);
+            }
+            
+            const alertElement = this.createAlertElement(alertId, type, title, message, config);
+            this.container.appendChild(alertElement);
+            
+            // Store alert reference
+            this.alerts.set(alertId, {
+                element: alertElement,
+                config: config,
+                timer: null
+            });
+            
+            // Trigger show animation
+            requestAnimationFrame(() => {
+                alertElement.classList.add('show');
+            });
+            
+            // Auto close if enabled
+            if (config.autoClose && !config.persistent) {
+                this.setAutoClose(alertId, config.autoCloseDelay || this.config.autoCloseDelay);
+            }
+            
+            // Add progress bar animation
+            if (config.progress && config.autoClose) {
+                this.animateProgress(alertId, config.autoCloseDelay || this.config.autoCloseDelay);
+            }
+            
+            return alertId;
+        }
+        
+        createAlertElement(id, type, title, message, config) {
+            const alert = document.createElement('div');
+            alert.className = `alert-item type-${type}`;
+            alert.id = id;
+            
+            const icons = {
+                success: '<svg viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>',
+                error: '<svg viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/></svg>',
+                warning: '<svg viewBox="0 0 20 20"><path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/></svg>',
+                info: '<svg viewBox="0 0 20 20"><path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"/></svg>',
+                primary: '<svg viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                secondary: '<svg viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path d="M10 2C5.58 2 2 5.58 2 10s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zM8 13a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0z"/></svg>'
+            };
+            
+            let html = `
+                <div class="alert-content">
+                    <div class="alert-icon">
+                        ${icons[type] || icons.info}
+                    </div>
+                    <div class="alert-body">
+                        <div class="alert-title">${title}</div>
+                        <div class="alert-message">${message}</div>
+            `;
+            
+            // Add actions
+            if (config.actions && config.actions.length > 0) {
+                html += '<div class="alert-actions">';
+                config.actions.forEach((action, index) => {
+                    html += `
+                        <button class="alert-action ${action.type || 'primary'}" 
+                                onclick="window.alertSystem.handleAction('${id}', ${index})">
+                            ${action.text}
+                        </button>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            
+            // Add close button
+            if (!config.persistent) {
+                html += `
+                    <button class="alert-close" onclick="window.alertSystem.remove('${id}')">
+                        <svg viewBox="0 0 20 20">
+                            <path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/>
+                        </svg>
+                    </button>
+                `;
+            }
+            
+            html += '</div>';
+            
+            // Add progress bar
+            if (config.progress) {
+                html += '<div class="alert-progress" style="width: 100%"></div>';
+            }
+            
+            alert.innerHTML = html;
+            
+            // Store action handlers
+            if (config.actions) {
+                alert._actionHandlers = config.actions.map(action => action.handler);
+            }
+            
+            return alert;
+        }
+        
+        setAutoClose(alertId, delay) {
+            const alert = this.alerts.get(alertId);
+            if (!alert) return;
+            
+            alert.timer = setTimeout(() => {
+                this.remove(alertId);
+            }, delay);
+        }
+        
+        animateProgress(alertId, duration) {
+            const alert = this.alerts.get(alertId);
+            if (!alert) return;
+            
+            const progressBar = alert.element.querySelector('.alert-progress');
+            if (!progressBar) return;
+            
+            let width = 100;
+            const interval = setInterval(() => {
+                width -= (100 / (duration / 100));
+                progressBar.style.width = Math.max(0, width) + '%';
+                
+                if (width <= 0) {
+                    clearInterval(interval);
+                }
+            }, 100);
+        }
+        
+        remove(alertId) {
+            const alert = this.alerts.get(alertId);
+            if (!alert) return;
+            
+            // Clear timer
+            if (alert.timer) {
+                clearTimeout(alert.timer);
+            }
+            
+            // Animate out
+            alert.element.classList.add('hide');
+            
+            setTimeout(() => {
+                if (alert.element.parentNode) {
+                    alert.element.parentNode.removeChild(alert.element);
+                }
+                this.alerts.delete(alertId);
+            }, 300);
+        }
+        
+        removeAll() {
+            const alertIds = Array.from(this.alerts.keys());
+            alertIds.forEach((id, index) => {
+                setTimeout(() => {
+                    this.remove(id);
+                }, index * 100);
+            });
+        }
+        
+        handleAction(alertId, actionIndex) {
+            const alert = this.alerts.get(alertId);
+            if (!alert || !alert.element._actionHandlers) return;
+            
+            const handler = alert.element._actionHandlers[actionIndex];
+            if (typeof handler === 'function') {
+                handler(alertId);
+            } else if (typeof handler === 'string') {
+                try {
+                    eval(handler);
+                } catch (e) {
+                    console.error('Error executing action handler:', e);
+                }
+            }
+        }
+        
+        bindKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Escape to clear all
+                if (e.key === 'Escape') {
+                    this.removeAll();
+                }
+                
+                // Ctrl/Cmd + number for quick alerts
+                if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '6') {
+                    e.preventDefault();
+                    const types = ['success', 'error', 'warning', 'info', 'primary', 'secondary'];
+                    const type = types[parseInt(e.key) - 1];
+                    this.show(type, `${type.charAt(0).toUpperCase() + type.slice(1)}`, `Quick ${type} alert!`);
+                }
+            });
+        }
+        
+        // Utility methods
+        success(title, message, options = {}) {
+            return this.show('success', title, message, options);
+        }
+        
+        error(title, message, options = {}) {
+            return this.show('error', title, message, options);
+        }
+        
+        warning(title, message, options = {}) {
+            return this.show('warning', title, message, options);
+        }
+        
+        info(title, message, options = {}) {
+            return this.show('info', title, message, options);
+        }
+        
+        primary(title, message, options = {}) {
+            return this.show('primary', title, message, options);
+        }
+        
+        secondary(title, message, options = {}) {
+            return this.show('secondary', title, message, options);
+        }
+    }
+
+        // Task Management System
+
+    // Initialize global systems
+    window.alertSystem = new AlertSystem({
+        autoCloseDelay: 2000,
+        progress: true
+    });
+
+   
+    
+
+    function showUpgradeToast() {
+    alertSystem.error("Error", "This feature is locked. Upgrade your plan.");
+}
+
+document.addEventListener("click", function (event) {
+    const link = event.target.closest("a[data-locked='1']");
+
+    if (link) {
+        // STOP ALL OTHER CLICK HANDLERS
+        event.preventDefault();
+        event.stopImmediatePropagation();  // THIS is the key
+        showUpgradeToast();
+        return false;
+    }
+}, true); // USING CAPTURE MODE
+// ======================================================
+// ELEMENT REFERENCES
+// ======================================================
+const countPatientsEl = document.getElementById("count_patients");
+const totalTimeEl = document.getElementById("totalTime");
+const timeCard = document.getElementById("timeCard");
+const loader = document.getElementById("page-loader");
+
+const subscriptionBtn = document.getElementById("subscriptionBtn");
+const modal = document.getElementById("subscriptionModal");
+const closeModal = document.getElementById("closeModal");
+const statusToast = document.getElementById("statusToast");
+
+const username = "{{ user_session.username|default:'' }}";
+
+function showStatusToast(message, type = "info") {
+    statusToast.style.background =
+        type === "error"
+            ? "#ff4d4f"
+            : type === "success"
+            ? "#4caf50"
+            : "#3b82f6";
+
+    statusToast.textContent = message;
+    statusToast.style.display = "block";
+
+    setTimeout(() => {
+        statusToast.style.display = "none";
+    }, 4000);
+}
+
+
+    // === STATE VARIABLES ===
+    let totalHours = 0;
+    const units = ["hours", "minutes", "seconds"];
+    let currentIndex = 0;
+
+    // === PATIENT COUNT FETCH ===
+    async function fetchPatientCount() {
+    try {
+        const response = await fetch("/auth/get_patients_data/");
+        if (!response.ok) throw new Error("Failed");
+
+        const data = await response.json();
+        const count = data.count_patients || 0;
+
+        countPatientsEl.textContent = count.toLocaleString("en-IN");
+        localStorage.setItem("count_patients", count);
+    } catch (err) {
+        countPatientsEl.textContent = "Error";
+    }
+}
+
+
+    // === TOTAL TIME FETCH ===
+    async function fetchTotalTime() {
+        try {
+            const response = await fetch("{% url 'get_patients_data' %}", {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+            if (!response.ok) throw new Error("Failed to fetch total time");
+
+            const data = await response.json();
+            console.log("Total time data:", data);
+            if (data.recording_hours !== undefined) {
+                totalHours = parseInt(data.recording_hours, 10);
+                console.log("Total hours:", totalHours);
+                updateTimeDisplay(units[currentIndex]);
+            }
+        } catch (err) {
+            console.error("Error fetching total time:", err);
+            totalTimeEl.textContent = "Error";
+        }
+    }
+
+    // === TIME DISPLAY UPDATE ===
+    function updateTimeDisplay(unit) {
+        let value = "";
+
+        switch (unit) {
+            case "hours":
+                value = totalHours.toLocaleString("en-IN") + " Hours";
+                break;
+
+            case "minutes":
+                value = (totalHours * 60).toLocaleString("en-IN") + " Minutes";
+                break;
+
+            case "seconds":
+                value = (totalHours * 3600).toLocaleString("en-IN") + " Seconds";
+                break;
+        }
+
+        totalTimeEl.textContent = value;
+    }
+
+    // === CYCLE THROUGH TIME UNITS ON CLICK ===
+    if (timeCard) {
+        timeCard.addEventListener("click", () => {
+            currentIndex = (currentIndex + 1) % units.length;
+            updateTimeDisplay(units[currentIndex]);
+        });
+    }
+
+    // === INITIALIZATION ===
+    // Load cached patient count
+    const storedPatients = localStorage.getItem("count_patients");
+    if (storedPatients)
+        countPatientsEl.textContent = parseInt(storedPatients).toLocaleString("en-IN");
+
+    // Fetch latest data
+    fetchPatientCount();
+    fetchTotalTime();
+
+    // Auto refresh every 5 minutes
+    setInterval(() => {
+        fetchPatientCount();
+        fetchTotalTime();
+    }, 1000 * 60 * 1000);
+
+    // === PAGE LOADER ===
+    document.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", function () {
+            if (link.href && !link.href.startsWith("javascript:") && !link.target) {
+                loader.style.display = "flex";
+            }
+        });
+    });
+
+    window.addEventListener("load", () => {
+        loader.style.display = "none";
+    });
+
+// Toggle Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+
+            sidebar.classList.toggle('sidebar-open');
+            mainContent.classList.toggle('main-content-shifted');
+        }
+
+        // Toggle Theme
+        function toggleTheme() {
+            const body = document.body;
+            const isDark = body.classList.contains('dark-mode');
+
+            if (isDark) {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+      
+        document.addEventListener("DOMContentLoaded", function () {
+        // Check stored theme on load
+        const savedTheme = localStorage.getItem("theme");
+
+        if (savedTheme === "dark") {
+            document.body.classList.add("dark-mode");
+            document.body.classList.remove("light-mode");
+        } else {
+            // Default is light if not saved
+            document.body.classList.add("light-mode");
+            document.body.classList.remove("dark-mode");
+        }
+    });
+
+// ======================================================
+// LOGOUT CONFIRMATION
+// ======================================================
+function confirmLogout() {
+  const alertId = alertSystem.show(
+    'warning',
+    'Confirm Logout',
+    'Are you sure you want to sign out?',
+    {
+      actions: [
+        {
+          text: 'Logout',
+          type: 'primary',
+          handler: () => {
+            // Close alert
+            document.getElementById(alertId)?.remove();
+            window.location.href =  "{% url 'logout' %}";
+          }
+        },
+        {
+          text: 'Cancel',
+          type: 'secondary',
+          handler: () => {
+            document.getElementById(alertId)?.remove();
+            alertSystem.info('Cancelled', 'Logout cancelled.');
+          }
+        }
+      ],
+      persistent: true
+    }
+  );
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>
