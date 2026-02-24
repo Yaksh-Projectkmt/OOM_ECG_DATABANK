@@ -111,6 +111,23 @@ Open your browser and go to:
 All required Python packages are listed in `requirements.txt`. Install
 them using pip before running the project.
 
+## Environment & Model Configuration
+
+The `.env` file or project configuration is not uploaded to the repository due to security purposes. It contains sensitive information such as secret keys, database settings, and model paths.
+
+All ML/DL models used in this project are stored inside:
+Scripts_Models/model/
+
+Whenever models are updated or replaced, they are uploaded to the `Scripts_Models/model/` directory and the corresponding paths/configurations are updated in the `.env` file.
+
+For running the project properly, make sure to:
+- Create your own `.env` file in the project root directory
+- Configure secret key, debug mode, and required paths
+- Set the correct model directory path in the `.env`
+- Restart the server after updating models or environment configurations
+
+Note: We do not upload `.env`, model files, or datasets to the repository for security and privacy reasons.
+
 ## Notes
 
 -   Ensure media and static directories are properly configured in
